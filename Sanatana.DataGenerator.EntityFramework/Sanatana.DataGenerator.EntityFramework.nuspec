@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Sanatana.DataGenerator.EntityFramework</id>
+    <version>$version$</version>
+    <authors>Sanatana</authors>
+    <owners>Sanatana</owners>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>EntityFramework storage for related entities generator</description>
+	  <licenseUrl>https://github.com/RodionKulin/Sanatana.DataGenerator/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/RodionKulin/Sanatana.DataGenerator</projectUrl>
+    <tags>DataGenerator Generation Related NET EntityFramework</tags>
+    <copyright>Copyright ©2019 RodionKulin</copyright>
+    <releaseNotes></releaseNotes>
+
+    <dependencies>
+      <dependency id="Sanatana.EntityFramework.Batch" version="1.0.3" />
+    </dependencies>   
+  </metadata>
+  <files>
+    <file src="bin\release\Sanatana.DataGenerator.EntityFramework.dll" target="lib\net461\" />
+  </files>
+</package>

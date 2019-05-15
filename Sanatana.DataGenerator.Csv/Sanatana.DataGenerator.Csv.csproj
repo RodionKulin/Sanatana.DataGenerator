@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageTags>DataGenerator Generation Related NET Csv</PackageTags>
+    <Description>Csv storage for related entities generator</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="12.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sanatana.DataGenerator\Sanatana.DataGenerator.csproj" />
+  </ItemGroup>
+
+</Project>
