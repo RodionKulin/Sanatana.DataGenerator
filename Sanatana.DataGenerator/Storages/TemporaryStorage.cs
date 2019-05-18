@@ -61,22 +61,22 @@ namespace Sanatana.DataGenerator.Storages
         /// Insert to temporary storage
         /// </summary>
         /// <param name="entityContext"></param>
-        /// <param name="entities"></param>
-        public virtual void InsertToTemporary(EntityContext entityContext, IList entities)
+        /// <param name="generatedEntities"></param>
+        public virtual void InsertToTemporary(EntityContext entityContext, IList generatedEntities)
         {
-            IList list;
+            IList storageList;
             if (_entities.ContainsKey(entityContext.Type) == false)
             {
-                list = _reflectionInvoker.CreateEntityList(entityContext.Type);
-                _entities.Add(entityContext.Type, list);
+                storageList = _reflectionInvoker.CreateEntityList(entityContext.Type);
+                _entities.Add(entityContext.Type, storageList);
             }
 
-            list = _entities[entityContext.Type];
-            if(entities != null)
+            storageList = _entities[entityContext.Type];
+            if(generatedEntities != null)
             {
-                foreach (var item in entities)
+                foreach (var entity in generatedEntities)
                 {
-                    list.Add(item);
+                    storageList.Add(entity);
                 }
             }
         }
@@ -120,13 +120,17 @@ namespace Sanatana.DataGenerator.Storages
 
             EntityProgress progress = entityContext.EntityProgress;
             int numberOfItemsToFlush = (int)(progress.NextFlushCount - progress.FlushedCount);
-            progress.FlushedCount = progress.NextFlushCount;
 
             //take number of items to flush
             IList nextItems = _listOperations
                 .Take(entityContext, entitiesInTemporaryStorage, numberOfItemsToFlush);
+
+            //remove items from temporary storage
             _entities[entityContext.Type] = _listOperations
                 .Skip(entityContext, entitiesInTemporaryStorage, numberOfItemsToFlush);
+
+            //update progess
+            progress.FlushedCount += nextItems.Count;
 
             return _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems);
         } 
@@ -156,8 +160,8 @@ namespace Sanatana.DataGenerator.Storages
         protected virtual void WaitRunningTask()
         {
             _runningTasks.RemoveAll(p => p.Status == TaskStatus.RanToCompletion
-                   || p.Status == TaskStatus.Canceled
-                   || p.Status == TaskStatus.Faulted);
+                || p.Status == TaskStatus.Canceled
+                || p.Status == TaskStatus.Faulted);
 
             bool isMaxTasksRunning = _runningTasks.Count >= MaxTasksRunning;
             if (isMaxTasksRunning)

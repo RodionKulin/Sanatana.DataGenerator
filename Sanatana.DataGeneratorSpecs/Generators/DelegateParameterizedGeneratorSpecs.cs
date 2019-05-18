@@ -14,15 +14,15 @@ namespace Sanatana.DataGeneratorSpecs.Generators
         public void Generate_WhenParametersOutOfOrder_ReturnsEntity()
         {
             //Prepare
-            var t = new DelegateParameterizedGenerator();
-            t.RegisterDelegate((GeneratorContext ctx, Category cat, Post pst) =>
-            {
-                return new Comment
+            var t = DelegateParameterizedGenerator<Comment>.Factory.Create(
+                (GeneratorContext ctx, Category cat, Post pst) =>
                 {
-                    PostId = pst.Id,
-                    CommentText = "text"
-                };
-            });
+                    return new Comment
+                    {
+                        PostId = pst.Id,
+                        CommentText = "text"
+                    };
+                });
 
             //Invoke
             var generatorContext = new GeneratorContext()
@@ -33,8 +33,8 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                     { typeof(Category), new Category() },
                 }
             };
-            List<Comment> comment = t.Generate<Comment>(generatorContext);
-            List<Comment> comment2 = t.Generate<Comment>(generatorContext);
+            List<Comment> comment = (List<Comment>)t.Generate(generatorContext);
+            List<Comment> comment2 = (List<Comment>)t.Generate(generatorContext);
 
             //Assert 
             Assert.IsNotNull(comment);

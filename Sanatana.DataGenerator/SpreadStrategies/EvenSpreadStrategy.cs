@@ -34,7 +34,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return totalParentsCountRequiredRounded;
         }
 
-        public virtual bool CheckIfMoreChildrenCanBeGeneratedFromParentsNextFlushCount(
+        public virtual bool CanGenerateMoreFromParentsNextFlushCount(
             EntityContext parentEntity, EntityContext childEntity)
         {
             decimal childrenPerParent = (decimal)childEntity.EntityProgress.TargetCount / parentEntity.EntityProgress.TargetCount;

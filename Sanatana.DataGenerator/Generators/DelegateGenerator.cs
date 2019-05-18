@@ -1,85 +1,88 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
+using Sanatana.DataGenerator.Internals;
 
 namespace Sanatana.DataGenerator.Generators
 {
-    public class DelegateGenerator : IGenerator
+    public class DelegateGenerator<TEntity> : IGenerator
+        where TEntity : class
     {
-        //properties
-        public object GenerateFunc { get; set; }
+        //fields
+        protected bool _isMultiDelegate;
+        protected object _generateFunc;
 
 
         //init
-        public DelegateGenerator(object generateFunc)
+        protected DelegateGenerator(object generateFunc, bool isMultiDelegate)
         {
             if(generateFunc == null)
             {
                 throw new ArgumentNullException(nameof(generateFunc));
             }
 
-            GenerateFunc = generateFunc;
+            _generateFunc = generateFunc;
+            _isMultiDelegate = isMultiDelegate;
         }
 
-        public static DelegateGenerator CreateMulti<TEntity>(
-            Func<GeneratorContext, List<TEntity>> generateFunc)
-            where TEntity : class
+        public static class Factory
         {
-            return new DelegateGenerator(generateFunc);
-        }
+            public static DelegateGenerator<TEntity> Create(
+                Func<GeneratorContext, TEntity> generateFunc)
+            {
+                return new DelegateGenerator<TEntity>(generateFunc, false);
+            }
 
-        public static DelegateGenerator Create<TEntity>(
-            Func<GeneratorContext, TEntity> generateFunc)
-            where TEntity : class
-        {
-            return new DelegateGenerator(generateFunc);
+            public static DelegateGenerator<TEntity> CreateMulti(
+                Func<GeneratorContext, List<TEntity>> generateFunc)
+            {
+                return new DelegateGenerator<TEntity>(generateFunc, true);
+            }
         }
 
 
         //methods
-        public virtual List<TEntity> Generate<TEntity>(GeneratorContext context)
-            where TEntity : class
+        public virtual IList Generate(GeneratorContext context)
         {
-            if(GenerateFunc is Func<GeneratorContext, List<TEntity>>)
+            if(_generateFunc is Func<GeneratorContext, List<TEntity>>)
             {
-                return InvokeMultiResult<TEntity>(context);
+                return InvokeMultiResult(context);
             }
-            else if (GenerateFunc is Func<GeneratorContext, TEntity>)
+            else if (_generateFunc is Func<GeneratorContext, TEntity>)
             {
-                return InvokeSingleResult<TEntity>(context);
+                return InvokeSingleResult(context);
             }
             else
             {
                 throw new NotImplementedException(
-                    $"Unexpected {nameof(GenerateFunc)} of type {GenerateFunc.GetType()}");
+                    $"Unexpected {nameof(_generateFunc)} of type {_generateFunc.GetType()}");
             }
         }
 
-        protected virtual List<TEntity> InvokeMultiResult<TEntity>(GeneratorContext context)
-            where TEntity : class
+        protected virtual List<TEntity> InvokeMultiResult(GeneratorContext context)
         {
-            var generateFunc = GenerateFunc as Func<GeneratorContext, List<TEntity>>;
-            List<TEntity> res = generateFunc.Invoke(context);
+            var generateFunc = _generateFunc as Func<GeneratorContext, List<TEntity>>;
+            List<TEntity> entities = generateFunc.Invoke(context);
 
-            if (res == null)
+            if (entities == null)
             {
                 return new List<TEntity>();
             }
 
-            return res;
+            return entities;
         }
 
-        protected virtual List<TEntity> InvokeSingleResult<TEntity>(GeneratorContext context)
-            where TEntity : class
+        protected virtual List<TEntity> InvokeSingleResult(GeneratorContext context)
         {
-            var generateFunc = GenerateFunc as Func<GeneratorContext, TEntity>;
-            TEntity res = generateFunc.Invoke(context);
+            var generateFunc = _generateFunc as Func<GeneratorContext, TEntity>;
+            TEntity entity = generateFunc.Invoke(context);
 
-            if (res == null)
+            if (entity == null)
             {
                 return new List<TEntity>();
             }
 
-            return new List<TEntity>() { res };
+            return new List<TEntity>() { entity };
         }
     }
 }

@@ -1,63 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Text;
 using Sanatana.DataGenerator.Generators;
 
 namespace Sanatana.DataGenerator.Modifiers
 {
-    public class DelegateModifier : IModifier
+    public class DelegateModifier<TEntity> : IModifier
+        where TEntity : class
     {
-        //properties
-        public object ModifyFunc { get; set; }
+        //fields
+        protected bool _isMultiDelegate;
+        protected object _modifyFunc;
 
 
         //init
-        public DelegateModifier(object modifyFunc)
+        protected DelegateModifier(object modifyFunc, bool isMultiDelegate)
         {
-            ModifyFunc = modifyFunc;
+            _modifyFunc = modifyFunc;
+            _isMultiDelegate = isMultiDelegate;
         }
 
-        public static DelegateModifier CreateMulti<TEntity>(
-            Func<GeneratorContext, List<TEntity>, List<TEntity>> modifyFunc)
-            where TEntity : class
+        public static class Factory
         {
-            return new DelegateModifier(modifyFunc);
-        }
+            public static DelegateModifier<TEntity> Create(
+                Func<GeneratorContext, List<TEntity>, TEntity> modifyFunc)
+            {
+                return new DelegateModifier<TEntity>(modifyFunc, false);
+            }
 
-        public static DelegateModifier Create<TEntity>(
-            Func<GeneratorContext, List<TEntity>, TEntity> modifyFunc)
-            where TEntity : class
-        {
-            return new DelegateModifier(modifyFunc);
+            public static DelegateModifier<TEntity> CreateMulti(
+                 Func<GeneratorContext, List<TEntity>, List<TEntity>> modifyFunc)
+            {
+                return new DelegateModifier<TEntity>(modifyFunc, true);
+            }
         }
 
 
         //methods
-        public virtual List<TEntity> Modify<TEntity>(
-            GeneratorContext context, List<TEntity> entities)
-            where TEntity : class
+        public virtual IList Modify(GeneratorContext context, IList entities)
         {
-            if (ModifyFunc is Func<GeneratorContext, List<TEntity>, List<TEntity>>)
+            if (_isMultiDelegate)
             {
                 return InvokeMultiResult(context, entities);
             }
-            else if (ModifyFunc is Func<GeneratorContext, List<TEntity>, TEntity>)
+            else
             {
                 return InvokeSingleResult(context, entities);
             }
-            else
-            {
-                throw new NotImplementedException(
-                    $"Unexpected {nameof(ModifyFunc)} of type {ModifyFunc.GetType()}");
-            }
         }
 
-        protected virtual List<TEntity> InvokeMultiResult<TEntity>(
-            GeneratorContext context, List<TEntity> entities)
-            where TEntity : class
+        protected virtual IList InvokeMultiResult(GeneratorContext context, IList entities)
         {
-            var func = ModifyFunc as Func<GeneratorContext, List<TEntity>, List<TEntity>>;
-            List<TEntity> res = func.Invoke(context, entities);
+            var func = _modifyFunc as Func<GeneratorContext, List<TEntity>, List<TEntity>>;
+            var entitiesList = (List<TEntity>)entities;
+            List <TEntity> res = func.Invoke(context, entitiesList);
 
             if (res == null)
             {
@@ -67,12 +64,12 @@ namespace Sanatana.DataGenerator.Modifiers
             return res;
         }
 
-        protected virtual List<TEntity> InvokeSingleResult<TEntity>(
-            GeneratorContext context, List<TEntity> entities)
-            where TEntity : class
+        protected virtual List<TEntity> InvokeSingleResult(
+            GeneratorContext context, IList entities)
         {
-            var func = ModifyFunc as Func<GeneratorContext, List<TEntity>, TEntity>;
-            TEntity res = func.Invoke(context, entities);
+            var func = _modifyFunc as Func<GeneratorContext, List<TEntity>, TEntity>;
+            var entitiesList = (List<TEntity>)entities;
+            TEntity res = func.Invoke(context, entitiesList);
 
             if (res == null)
             {

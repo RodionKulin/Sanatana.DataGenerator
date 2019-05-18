@@ -21,17 +21,16 @@ namespace Sanatana.DataGenerator.Demo
 
             setup.RegisterEntity(new EntityDescription<Buyer>()
                 .SetGenerator(GenerateBuyer)
-                .SetPersistentStorage(new CsvPersistentStorage("Set-Workers.csv"))
+                .SetPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
                 .SetTargetCount(10));
             setup.RegisterEntity(new EntityDescription<Supplier>()
                 .SetGenerator(GenerateSupplier)
-                .SetPersistentStorage(new CsvPersistentStorage("Set-Jobs.csv"))
+                .SetPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
                 .SetTargetCount(10));
             setup.RegisterEntity(new EntityDescription<PurchaseOrder>()
                 .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
-                .SetModifierMulti<Supplier, Buyer>(ModifyOfferHistory)
-                .SetPersistentStorage(new DropOutPersistentStorage(
-                    new CsvPersistentStorage("Set-OfferHistory.csv"), 0.5))
+                .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
+                .SetPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
                 .SetSpreadStrategy(new CartesianProductSpreadStrategy())
                 .SetTargetCount(100));
 
@@ -44,25 +43,25 @@ namespace Sanatana.DataGenerator.Demo
 
         private static Buyer GenerateBuyer(GeneratorContext context)
         {
-            int id = (int)IdHelper.GetNextId(context.Description.Type);
+            int id = (int)IdIterator.GetNextId(context.Description.Type);
             return new Buyer()
             {
                 BuyerId = id,
                 Name = "Company " + id,
-                Latitude = RandomHelper.Random.Next(75),
-                Longitude = RandomHelper.Random.Next(75)
+                Latitude = RandomPicker.Random.Next(75),
+                Longitude = RandomPicker.Random.Next(75)
             };
         }
 
         private static Supplier GenerateSupplier(GeneratorContext context)
         {
-            int id = (int)IdHelper.GetNextId(context.Description.Type);
+            int id = (int)IdIterator.GetNextId(context.Description.Type);
             return new Supplier()
             {
                 SupplierId = id,
                 Name = "Company " + id,
-                Latitude = RandomHelper.Random.Next(75),
-                Longitude = RandomHelper.Random.Next(75)
+                Latitude = RandomPicker.Random.Next(75),
+                Longitude = RandomPicker.Random.Next(75)
             };
         }
 
@@ -75,7 +74,7 @@ namespace Sanatana.DataGenerator.Demo
                 new[] { supplier.Longitude, supplier.Latitude });
             bool purchasePositive = distance <= 50;
 
-            int id = (int)IdHelper.GetNextId(context.Description.Type);
+            int id = (int)IdIterator.GetNextId(context.Description.Type);
             return new PurchaseOrder()
             {
                 PurchaseOrderId = id,
@@ -85,7 +84,7 @@ namespace Sanatana.DataGenerator.Demo
             };
         }
 
-        private static List<PurchaseOrder> ModifyOfferHistory(GeneratorContext context,
+        private static List<PurchaseOrder> ModifyPurchaseOrders(GeneratorContext context,
            List<PurchaseOrder> purchaseOrders, Supplier supplier, Buyer buyer)
         {
             purchaseOrders.ForEach(x => x.RegisteredDate = DateTime.Now);

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator
 {
-    public class RandomHelper
+    public class RandomPicker
     {
         //fields
         private static Lazy<Random> _globalSeed =

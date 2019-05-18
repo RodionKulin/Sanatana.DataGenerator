@@ -4,8 +4,9 @@ using System.Text;
 
 namespace Sanatana.DataGenerator
 {
-    public class IdHelper
+    public class IdIterator
     {
+        //fields
         private static Dictionary<Type, long> _typeIds = new Dictionary<Type, long>();
 
 

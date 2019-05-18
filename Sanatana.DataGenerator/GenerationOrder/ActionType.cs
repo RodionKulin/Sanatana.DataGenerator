@@ -11,11 +11,11 @@ namespace Sanatana.DataGenerator.GenerationOrder
         /// </summary>
         Generate,
         /// <summary>
-        /// Insert entities to PersistentStorage and remove from Temporary storage
+        /// Insert entities to Persistent storage and remove from Temporary storage
         /// </summary>
-        FlushToPersistentStorare,
+        FlushToPersistentStorage,
         /// <summary>
-        /// Insert entities to PersistentStorage but do not remove from Temporary stora
+        /// Insert entities to Persistent storage but do not remove from Temporary storage
         /// </summary>
         GenerateStorageIds,
         /// <summary>

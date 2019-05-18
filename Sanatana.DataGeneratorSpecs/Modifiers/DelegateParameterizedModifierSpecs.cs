@@ -9,21 +9,21 @@ using System.Text;
 namespace Sanatana.DataGeneratorSpecs.Modifiers
 {
     [TestClass]
-    public class DelegateParameterizedPostProcessorSpecs
+    public class DelegateParameterizedModifierSpecs
     {
         [TestMethod]
         public void Process_WhenParametersOutOfOrder_ReturnsEntity()
         {
             //Prepare
-            var t = new DelegateParameterizedModifier();
-            t.RegisterDelegate((GeneratorContext ctx, List<Comment> comments, Category cat, Post pst) =>
-            {
-                return new Comment
+            var t = DelegateParameterizedModifier<Comment>.Factory.Create(
+                (GeneratorContext ctx, List<Comment> comments, Category cat, Post pst) =>
                 {
-                    PostId = pst.Id,
-                    CommentText = "text"
-                };
-            });
+                    return new Comment
+                    {
+                        PostId = pst.Id,
+                        CommentText = "text"
+                    };
+                });
 
             //Invoke
             var generatorContext = new GeneratorContext()
@@ -37,8 +37,8 @@ namespace Sanatana.DataGeneratorSpecs.Modifiers
             List<Comment> inputComments = new List<Comment> {
                 new Comment()
             };
-            List<Comment> comment = t.Modify<Comment>(generatorContext, inputComments);
-            List<Comment> comment2 = t.Modify<Comment>(generatorContext, inputComments);
+            List<Comment> comment = (List<Comment>)t.Modify(generatorContext, inputComments);
+            List<Comment> comment2 = (List<Comment>)t.Modify(generatorContext, inputComments);
 
             //Assert 
             Assert.IsNotNull(comment);

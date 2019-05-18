@@ -33,9 +33,10 @@ namespace Sanatana.DataGenerator.GenerationOrder.Subset
         protected override EntityContext FindChildThatCanGenerate(
             EntityContext parentContext, bool onlyCheckCanGenerate)
         {
-            List<IEntityDescription> notCompletedChildren = parentContext.ChildEntities
+            List<EntityContext> notCompletedChildren = parentContext.ChildEntities
                 .Where(x => _entitiesSubset.Contains(x.Type))   //only subset of types
                 .Where(child => !_progressState.CompletedEntityTypes.Contains(child.Type))
+                .Select(x => _entityContexts[x.Type])
                 .ToList();
             if (notCompletedChildren.Count == 0)
             {

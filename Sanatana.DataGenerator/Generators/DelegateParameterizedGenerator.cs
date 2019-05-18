@@ -1,29 +1,214 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Reflection;
 
 namespace Sanatana.DataGenerator.Generators
 {
-    public class DelegateParameterizedGenerator : IGenerator
+    public class DelegateParameterizedGenerator<TEntity> : IDelegateParameterizedGenerator
+        where TEntity : class
     {
         //fields
         protected MethodInfo _delegateInvokeMethod;
         protected Dictionary<Type, int[]> _delegateMapping;
+        protected object _generateFunc;
 
-        //properties
-        public object GenerateFunc { get; set; }
 
         //init
-        public DelegateParameterizedGenerator()
+        protected DelegateParameterizedGenerator(object generateFunc)
         {
             _delegateMapping = new Dictionary<Type, int[]>();
+
+            _generateFunc = generateFunc;
         }
         
+        public static class Factory
+        {
+            public static DelegateParameterizedGenerator<TEntity> Create<T1>(
+                Func<GeneratorContext, T1, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2>(
+                Func<GeneratorContext, T1, T2, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3>(
+                Func<GeneratorContext, T1, T2, T3, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4>(
+                Func<GeneratorContext, T1, T2, T3, T4, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1>(
+                Func<GeneratorContext, T1, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2>(
+                Func<GeneratorContext, T1, T2, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3>(
+                Func<GeneratorContext, T1, T2, T3, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4>(
+                Func<GeneratorContext, T1, T2, T3, T4, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+
+            public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
+                Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, List<TEntity>> generateFunc)
+            {
+                return new DelegateParameterizedGenerator<TEntity>(generateFunc);
+            }
+        }
+
 
         //Invoke generate method
-        public virtual List<TEntity> Generate<TEntity>(GeneratorContext context)
-            where TEntity : class
+        public virtual IList Generate(GeneratorContext context)
         {
             //order required types according to delegate parameters order
             int[] argsOrder = GetRequiredTypesOrder(context);
@@ -35,7 +220,7 @@ namespace Sanatana.DataGenerator.Generators
             Array.Copy(requiredValues, 0, arguments, 1, requiredValues.Length);
             
             //invoke delegate
-            object res = _delegateInvokeMethod.Invoke(GenerateFunc, arguments);
+            object res = _delegateInvokeMethod.Invoke(_generateFunc, arguments);
 
             //convert results
             if (res == null)
@@ -56,7 +241,7 @@ namespace Sanatana.DataGenerator.Generators
 
         protected virtual int[] GetRequiredTypesOrder(GeneratorContext context)
         {
-            Type delegateType = GenerateFunc.GetType();
+            Type delegateType = _generateFunc.GetType();
 
             if (_delegateInvokeMethod == null)
             {
@@ -78,9 +263,9 @@ namespace Sanatana.DataGenerator.Generators
             return _delegateMapping[delegateType].ToArray();
         }
 
-        internal virtual List<Type> GetRequiredEntitiesFuncParameters()
+        public virtual List<Type> GetRequiredEntitiesFuncParameters()
         {
-            Type delegateType = GenerateFunc.GetType();
+            Type delegateType = _generateFunc.GetType();
 
             Type[] genericArgs = delegateType.GetGenericArguments();
             List<Type> requiredParametersTypes = genericArgs
@@ -89,190 +274,6 @@ namespace Sanatana.DataGenerator.Generators
                 .ToList();                   //the rest are required entity types
 
             return requiredParametersTypes;
-        }
-
-    
-
-
-        //Register
-        public virtual void RegisterDelegate<T1, TEntity>(
-            Func<GeneratorContext, T1, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, TEntity>(
-            Func<GeneratorContext, T1, T2, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegate<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, TEntity>(
-            Func<GeneratorContext, T1, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, TEntity>(
-            Func<GeneratorContext, T1, T2, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-        
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
-        }
-
-        public virtual void RegisterDelegateMulti<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity>(
-            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, List<TEntity>> generateFunc)
-        {
-            GenerateFunc = generateFunc;
         }
 
     }

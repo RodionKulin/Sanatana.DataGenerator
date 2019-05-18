@@ -145,9 +145,10 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
             if (entityContext.Description.InsertToPersistentStorageBeforeUse)
             {
-                //for entities that generate Id on database will generate as much as possible before flushing.
-                //the number to generate will be determined by IFlushTrigger
-                bool completed = entityContext.EntityProgress.TargetCount <= entityContext.EntityProgress.CurrentCount;
+                //for entities that generate Id on database, will generate as much as possible before flushing.
+                //the number to generate will be determined by IFlushTrigger.
+                EntityProgress progress = entityContext.EntityProgress;
+                bool completed = progress.TargetCount <= progress.CurrentCount;
                 if (flushRequired || completed)
                 {
                     Queue.Pop();
@@ -155,7 +156,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 return;
             }
 
-            //for other entities with InsertToDatabaseBeforeUse=false use GenerateCount number determined by RequiredQueueBuilder
+            //for other entities with InsertToDatabaseBeforeUse=false use GenerateCount number to stop
             next.GenerateCount -= generatedEntities.Count;
             if (next.GenerateCount <= 0)
             {

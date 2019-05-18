@@ -84,7 +84,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 flushActions.ForEach(action => _actionsQueue.Enqueue(action));
             }
 
-            //update state variables
+            //update progress state variables
             ProgressState.UpdateCounters(entityContext, generatedEntities);
             _requiredQueueBuilder.UpdateCounters(type, generatedEntities, flushRequired);
         }

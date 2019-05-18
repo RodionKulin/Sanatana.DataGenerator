@@ -96,7 +96,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
 
             //Invoke
-            bool actualCanBeGenerated = target.CheckIfMoreChildrenCanBeGeneratedFromParentsNextFlushCount(
+            bool actualCanBeGenerated = target.CanGenerateMoreFromParentsNextFlushCount(
                 parentProgress, childProgress);
 
             //Assert

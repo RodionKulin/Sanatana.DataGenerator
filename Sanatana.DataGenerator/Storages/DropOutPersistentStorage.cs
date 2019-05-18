@@ -32,7 +32,7 @@ namespace Sanatana.DataGenerator.Storages
             List<TEntity> newList = new List<TEntity>();
             foreach (TEntity item in entities)
             {
-                bool drop = RandomHelper.NextBoolean(_dropOutChance);
+                bool drop = RandomPicker.NextBoolean(_dropOutChance);
                 if (drop)
                 {
                     continue;

@@ -68,7 +68,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return parentEntityCount;
         }
 
-        public virtual bool CheckIfMoreChildrenCanBeGeneratedFromParentsNextFlushCount(
+        public virtual bool CanGenerateMoreFromParentsNextFlushCount(
             EntityContext parentEntity, EntityContext childEntity)
         {
             //Always accumulate parent entities in memory and never release to persistent storage

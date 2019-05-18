@@ -68,6 +68,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             {
                 _flushCandidates.Add(entityContext);
 
+                //has dependent children and needs to create ids by database.
+                //will write to persitent storage, but won't remove from temporary storage.
                 if (entityContext.Description.InsertToPersistentStorageBeforeUse)
                 {
                     flushActions.Add(new EntityAction
@@ -82,16 +84,19 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             //has no dependent children, so can flush to persistent storage
             flushActions.Add(new EntityAction
             {
-                ActionType = ActionType.FlushToPersistentStorare,
+                ActionType = ActionType.FlushToPersistentStorage,
                 EntityContext = entityContext
             });
             
             //also check parent entities, if they are no longer required and can be flushed too
-            CheckParentFlushCandidatesAreFlushReady(entityContext, flushActions);
+            AppendParentsFlushActions(entityContext, flushActions);
+
+            //same flush action can be added multiple times if multiple entities depend on same parent
+            flushActions = flushActions.Distinct().ToList();
             return flushActions;
         }
 
-        protected virtual void CheckParentFlushCandidatesAreFlushReady(
+        protected virtual void AppendParentsFlushActions(
             EntityContext childContext, List<EntityAction> flushActions)
         {
             foreach (IEntityDescription parent in childContext.ParentEntities)
@@ -109,10 +114,10 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                     _flushCandidates.Remove(parentEntityContext);
                     flushActions.Add(new EntityAction
                     {
-                        ActionType = ActionType.FlushToPersistentStorare,
+                        ActionType = ActionType.FlushToPersistentStorage,
                         EntityContext = parentEntityContext
                     });
-                    CheckParentFlushCandidatesAreFlushReady(parentEntityContext, flushActions);
+                    AppendParentsFlushActions(parentEntityContext, flushActions);
                 }
             }
         }
@@ -127,8 +132,9 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         /// <returns></returns>
         protected virtual EntityContext FindChildThatCanGenerate(EntityContext parentContext, bool onlyCheckCanGenerate)
         {
-            List<IEntityDescription> notCompletedChildren = parentContext.ChildEntities
+            List<EntityContext> notCompletedChildren = parentContext.ChildEntities
                .Where(child => !_progressState.CompletedEntityTypes.Contains(child.Type))
+               .Select(x => _entityContexts[x.Type])
                .ToList();
             if (notCompletedChildren.Count == 0)
             {
@@ -140,20 +146,18 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             return childContext;
         }
 
-        protected virtual EntityContext FindChildThatCanGenerate(List<IEntityDescription> notCompletedChildren,
+        protected virtual EntityContext FindChildThatCanGenerate(List<EntityContext> notCompletedChildren,
             EntityContext parentContext, bool onlyCheckCanGenerate)
         {
             Type typeToFlush = parentContext.Type;
-            EntityContext childContext = null;
 
-            IEntityDescription canGenerateChild = notCompletedChildren.FirstOrDefault(child =>
+            EntityContext canGenerateChild = notCompletedChildren.FirstOrDefault(childContext =>
             {
-                childContext = _entityContexts[child.Type];
-                RequiredEntity parent = child.Required.First(x => x.Type == typeToFlush);
-                ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(child, parent);
+                RequiredEntity parent = childContext.Description.Required.First(x => x.Type == typeToFlush);
+                ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(childContext.Description, parent);
 
                 //check if child can still use parent entities from temporary storage to generate
-                bool canGenerateMore = spreadStrategy.CheckIfMoreChildrenCanBeGeneratedFromParentsNextFlushCount(
+                bool canGenerateMore = spreadStrategy.CanGenerateMoreFromParentsNextFlushCount(
                     parentContext, childContext);
                 if (onlyCheckCanGenerate)
                 {
@@ -165,7 +169,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 return !childIsFlushCandidate && canGenerateMore;
             });
 
-            return childContext;
+            return canGenerateChild;
         }
 
 

@@ -210,7 +210,7 @@ namespace Sanatana.DataGenerator
                     case ActionType.Generate:
                         GenerateEntity(action);
                         break;
-                    case ActionType.FlushToPersistentStorare:
+                    case ActionType.FlushToPersistentStorage:
                         persistentStorage = GetPersistentStorage(action.EntityContext.Description);
                         TemporaryStorage.FlushToPermanent(action.EntityContext, persistentStorage);
                         break;
@@ -231,20 +231,23 @@ namespace Sanatana.DataGenerator
             var context = new GeneratorContext
             {
                 Description = entityDescription,
-                TargetQuantity = action.EntityContext.EntityProgress.TargetCount,
-                RequiredEntities = GetRequiredEntities(action)
+                TargetCount = action.EntityContext.EntityProgress.TargetCount,
+                CurrentCount = action.EntityContext.EntityProgress.CurrentCount,
+                RequiredEntities = GetRequiredEntities(action),
             };
 
-            object entities = _reflectionInvoker.InvokeGenerate(generator, context);
+            
+            IList entities = generator.Generate(context);
+            Validator.CheckGeneratedCount(entities, entityDescription.Type, generator);
+
             foreach (IModifier modifier in modifiers)
             {
-                entities = _reflectionInvoker.InvokePostProcess(modifier, context, entities);
+                entities = modifier.Modify(context, entities);
+                Validator.CheckModifiedCount(entities, entityDescription.Type, modifier);
             }
 
-            var entitiesList = (IList) entities;
-            Validator.CheckGeneratedCount(entitiesList, entityDescription.Type, generator, modifiers);
-            TemporaryStorage.InsertToTemporary(action.EntityContext, entitiesList);
-            OrderProvider.UpdateCounters(action.EntityContext.Type, entitiesList);
+            TemporaryStorage.InsertToTemporary(action.EntityContext, entities);
+            OrderProvider.UpdateCounters(action.EntityContext.Type, entities);
         }
         
         protected virtual Dictionary<Type, object> GetRequiredEntities(EntityAction action)
@@ -268,7 +271,7 @@ namespace Sanatana.DataGenerator
 
         protected virtual void UpdateProgress()
         {
-            long generateCalls = IdHelper.GetNextId<IProgressState>();
+            long generateCalls = IdIterator.GetNextId<IProgressState>();
 
             //trigger handler only every N generated entities
             long onEveryNCall = 100;
@@ -286,6 +289,7 @@ namespace Sanatana.DataGenerator
                 progressChanged(this, percents);
             }
         }
+
 
 
         //Flush all and dispose

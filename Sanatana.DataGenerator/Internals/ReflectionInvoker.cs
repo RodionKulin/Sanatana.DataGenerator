@@ -16,7 +16,7 @@ namespace Sanatana.DataGenerator.Internals
     {
         //fields
         protected static Dictionary<Type, MethodInfo> _generateMethods;
-        protected static Dictionary<Type, MethodInfo> _processMethods;
+        protected static Dictionary<Type, MethodInfo> _modifyMethods;
         protected static Dictionary<Type, MethodInfo> _insertMethods;
 
 
@@ -24,48 +24,29 @@ namespace Sanatana.DataGenerator.Internals
         public ReflectionInvoker()
         {
             _generateMethods = new Dictionary<Type, MethodInfo>();
-            _processMethods = new Dictionary<Type, MethodInfo>();
+            _modifyMethods = new Dictionary<Type, MethodInfo>();
             _insertMethods = new Dictionary<Type, MethodInfo>();
         }
 
 
         //methods
-        public virtual object InvokeGenerate(IGenerator generator, GeneratorContext context)
+        public virtual IList InvokeModify(IModifier modifier, 
+            GeneratorContext context, object generatedEntities)
         {
             Type targetType = context.Description.Type;
-            MethodInfo generateMethod;
+            MethodInfo modifyMethod;
 
-            if (!_generateMethods.ContainsKey(targetType))
-            {
-                Type generatorType = typeof(IGenerator);
-                generateMethod = generatorType.GetMethods()
-                    .First(x => x.Name == nameof(IGenerator.Generate));
-                generateMethod = generateMethod.MakeGenericMethod(targetType);
-                _generateMethods.Add(targetType, generateMethod);
-            }
-
-            generateMethod = _generateMethods[targetType];
-            object result = generateMethod.Invoke(generator, new object[] { context });
-            return result;
-        }
-
-        public virtual IList InvokePostProcess(IModifier modifier, 
-            GeneratorContext context, object entities)
-        {
-            Type targetType = context.Description.Type;
-            MethodInfo processMethod;
-
-            if (!_processMethods.ContainsKey(targetType))
+            if (!_modifyMethods.ContainsKey(targetType))
             {
                 Type generatorType = typeof(IModifier);
-                processMethod = generatorType.GetMethods()
+                modifyMethod = generatorType.GetMethods()
                     .First(x => x.Name == nameof(IModifier.Modify));
-                processMethod = processMethod.MakeGenericMethod(targetType);
-                _processMethods.Add(targetType, processMethod);
+                modifyMethod = modifyMethod.MakeGenericMethod(targetType);
+                _modifyMethods.Add(targetType, modifyMethod);
             }
 
-            processMethod = _processMethods[targetType];
-            object result = processMethod.Invoke(modifier, new object[] { context, entities });
+            modifyMethod = _modifyMethods[targetType];
+            object result = modifyMethod.Invoke(modifier, new object[] { context, generatedEntities });
             return (IList)result;
         }
 

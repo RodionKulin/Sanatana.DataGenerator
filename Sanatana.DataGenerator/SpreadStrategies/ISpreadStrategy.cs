@@ -36,6 +36,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         /// <param name="parentProgress"></param>
         /// <param name="childProgress"></param>
         /// <returns></returns>
-        bool CheckIfMoreChildrenCanBeGeneratedFromParentsNextFlushCount(EntityContext parentEntity, EntityContext childEntity);
+        bool CanGenerateMoreFromParentsNextFlushCount(EntityContext parentEntity, EntityContext childEntity);
     }
 }

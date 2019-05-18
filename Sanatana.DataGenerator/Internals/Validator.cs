@@ -210,21 +210,23 @@ namespace Sanatana.DataGenerator.Internals
         {
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
-                List<Type> requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToList();
+                List<Type> requiredEntitiesTypes = entity.Required
+                    .Select(x => x.Type)
+                    .ToList();
                 IGenerator generator = _generatorSetup.GetGenerator(entity);
-                Type generatorType = generator.GetType();
 
-                if (!(generator is DelegateParameterizedGenerator))
+                Type generatorInstaceType = generator.GetType();
+                if (!(generator is IDelegateParameterizedGenerator))
                 {
                     continue;
                 }
 
-                Type[] generatorParams = (generator as DelegateParameterizedGenerator)
+                Type[] generatorParams = (generator as IDelegateParameterizedGenerator)
                     .GetRequiredEntitiesFuncParameters()
                     .ToArray();
 
-                CheckDuplicates(generatorParams, entity, generatorType);
-                CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorType);
+                CheckDuplicates(generatorParams, entity, generatorInstaceType);
+                CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorInstaceType);
             }
         }
 
@@ -239,14 +241,14 @@ namespace Sanatana.DataGenerator.Internals
             {
                 List<Type> requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToList();
                 List<IModifier> modifiers = _generatorSetup.GetModifiers(entity);
-                modifiers.Where(x => x is DelegateParameterizedModifier)
+                modifiers.Where(x => x is IDelegateParameterizedModifier)
                     .ToList();
 
                 for (int i = 0; i < modifiers.Count; i++)
                 {
                     IModifier modifier = modifiers[i];
                     Type processorType = modifier.GetType();
-                    Type[] processorParams = (modifier as DelegateParameterizedModifier)
+                    Type[] processorParams = (modifier as IDelegateParameterizedModifier)
                         .GetRequiredEntitiesFuncParameters()
                         .ToArray();
 
@@ -297,31 +299,65 @@ namespace Sanatana.DataGenerator.Internals
         }
 
 
-
         //Generation runtime checks
         /// <summary>
-        /// Validate that number of generated entities is greater than 0
+        /// Validate that number of generated entities is greater than 0 and returned type is List<>
         /// </summary>
         /// <param name="entities"></param>
         /// <param name="entityType"></param>
         /// <param name="generator"></param>
-        /// <param name="modifier"></param>
-        public virtual void CheckGeneratedCount(IList entities, Type entityType
-            , IGenerator generator, List<IModifier> modifiers)
+        public virtual void CheckGeneratedCount(IList entities, Type entityType, IGenerator generator)
         {
             string generatorType = generator.GetType().FullName;
-            string processorTypes = string.Join(",", modifiers.Select(x => x.GetType().FullName));
+            string resultCountMsg = "Number of entities returned must be greater than 0. " +
+                $"{nameof(IGenerator)} {generatorType} for entity {entityType} returned 0 entities.";
+
+            if (entities == null)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+
+            Type entitiesListType = entities.GetType();
+            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
+            {
+                string resultTypeMessage = $"List returned from {nameof(IGenerator)} must be a generic List<>. {nameof(IGenerator)} {generatorType} returned list of type {entitiesListType}.";
+
+                throw new NotSupportedException(resultTypeMessage);
+            }
+
+            if (entities.Count == 0)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+        }
+
+        /// <summary>
+        /// Validate that number of modified entities is greater than 0 and returned type is List<>
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="entityType"></param>
+        /// <param name="modifier"></param>
+        public virtual void CheckModifiedCount(IList entities, Type entityType, IModifier modifier)
+        {
+            string modifierType = modifier.GetType().FullName;
+            string resultCountMsg = "Number of entities returned must be greater than 0. " +
+                $"Modifier {modifierType} for entity {entityType} returned 0 entities.";
+
+            if (entities == null)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+
+            Type entitiesListType = entities.GetType();
+            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
+            {
+                string resultTypeMessage = $"List returned from {nameof(IModifier)} must be a generic List<>. Modifier {modifierType} returned list of type {entitiesListType}.";
+                throw new NotSupportedException(resultTypeMessage);
+            }
 
             if (entities == null || entities.Count == 0)
             {
-                string processorMsg = modifiers.Count == 0
-                    ? ""
-                    : $"followed by modifiers: {processorTypes} ";
-
-                string resultMsg = "Number of entities generated must be greater than 0. " +
-                    $"Generator {generatorType} for entity {entityType} {processorMsg}returned 0 entities.";
-
-                throw new NotSupportedException(resultMsg);
+                throw new NotSupportedException(resultCountMsg);
             }
         }
 
