@@ -25,7 +25,6 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         /// Next actions to execute between generate entity actions
         /// </summary>
         protected Queue<EntityAction> _actionsQueue;
-
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;
         protected IRequiredQueueBuilder _requiredQueueBuilder;
         protected INextNodeFinder _nextNodeFinder;
@@ -68,10 +67,9 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //Update current counters
-        public virtual void UpdateCounters(Type type, IList generatedEntities)
+        public virtual void HandleGenerateCompleted(EntityContext entityContext, IList generatedEntities)
         {
             //increment total number of generated entities
-            EntityContext entityContext = _entityContexts[type];
             entityContext.EntityProgress.CurrentCount += generatedEntities.Count;
 
             //check if flush to permanent storage required
@@ -79,16 +77,30 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
             if (flushRequired)
             {
-                List<EntityAction> flushActions = _flushCandidatesRegistry.
-                    GetFlushActions(entityContext, generatedEntities);
+                List<EntityAction> flushActions = _flushCandidatesRegistry.GetNextFlushActions(entityContext);
                 flushActions.ForEach(action => _actionsQueue.Enqueue(action));
             }
 
             //update progress state variables
             ProgressState.UpdateCounters(entityContext, generatedEntities);
-            _requiredQueueBuilder.UpdateCounters(type, generatedEntities, flushRequired);
+            _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, flushRequired);
         }
 
+        public virtual void HandleFlushCompleted(EntityAction entityAction)
+        {
+            if(entityAction.ActionType != ActionType.FlushToPersistentStorage)
+            {
+                return;
+            }
 
+            EntityContext entityContext = entityAction.EntityContext;
+
+            bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
+            if (flushRequired)
+            {
+                List<EntityAction> flushActions = _flushCandidatesRegistry.GetNextFlushActions(entityContext);
+                flushActions.ForEach(action => _actionsQueue.Enqueue(action));
+            }
+        }
     }
 }

@@ -23,9 +23,12 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             _combinationsBuffer = new Dictionary<long, long[]>();
         }
 
-        public void Setup(Dictionary<Type, EntityContext> parentEntities)
+        public virtual void Setup(EntityContext childEntity, Dictionary<Type, EntityContext> allEntities)
         {
-            _parentEntities = parentEntities;
+            _parentEntities = childEntity.Description.Required
+                .Where(x => x != null)
+                .Select(x => allEntities[x.Type])
+                .ToDictionary(x => x.Type, x => x);
 
             _parentsCombinationPlacements = _parentEntities.Keys
                 .Select((x, i) => new { Type = x, Placement = i })
@@ -68,12 +71,13 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return parentEntityCount;
         }
 
-        public virtual bool CanGenerateMoreFromParentsNextFlushCount(
+        public virtual bool CanGenerateFromParentNextReleaseCount(
             EntityContext parentEntity, EntityContext childEntity)
         {
             //Always accumulate parent entities in memory and never release to persistent storage
-            //They are required to build combinations.
-            return true;
+            //until child item generates all instances.
+            //Parents are required to build combinations.
+            return childEntity.EntityProgress.CurrentCount < childEntity.EntityProgress.TargetCount;
         }
 
 

@@ -9,9 +9,11 @@ script:
   - dotnet pack Sanatana.DataGenerator.Csv/Sanatana.DataGenerator.Csv.csproj -o ../nuget -c Release
   - dotnet pack Sanatana.DataGenerator.MongoDb/Sanatana.DataGenerator.MongoDb.csproj -o ../nuget -c Release
   - dotnet pack Sanatana.DataGenerator.EntityFrameworkCore/Sanatana.DataGenerator.EntityFrameworkCore.csproj -o ../nuget -c Release
-
+  - dotnet pack Sanatana.DataGenerator.AutoBogus/Sanatana.DataGenerator.AutoBogus.csproj -o ../nuget -c Release
+ 
   - dotnet nuget push nuget/Sanatana.DataGenerator.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
   - dotnet nuget push nuget/Sanatana.DataGenerator.Csv.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
   - dotnet nuget push nuget/Sanatana.DataGenerator.MongoDb.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
   - dotnet nuget push nuget/Sanatana.DataGenerator.EntityFrameworkCore.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+  - dotnet nuget push nuget/Sanatana.DataGenerator.AutoBogus.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
   

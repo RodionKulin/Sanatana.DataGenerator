@@ -199,8 +199,14 @@ namespace Sanatana.DataGenerator.Entities
             validator.CheckGeneratorSetupComplete(requiredDescriptions);
 
             //Setup spread strategy
+            var entityContext = new EntityContext
+            {
+                Description = this,
+                EntityProgress = new EntityProgress(),
+                Type = Type
+            };
             Dictionary<Type, EntityContext> requiredEntities = generatorSetup.SetupEntityContexts(requiredDescriptions);
-            spreadStrategy.Setup(requiredEntities);
+            spreadStrategy.Setup(entityContext, requiredEntities);
 
             //Get total count of combinations
             long totalCount = spreadStrategy.GetTotalCount();

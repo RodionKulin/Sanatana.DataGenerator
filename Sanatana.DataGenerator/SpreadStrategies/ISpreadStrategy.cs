@@ -12,7 +12,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         /// Setup before serving any results
         /// </summary>
         /// <param name="parentEntities"></param>
-        void Setup(Dictionary<Type, EntityContext> parentEntities);
+        void Setup(EntityContext childEntity, Dictionary<Type, EntityContext> allEntities);
         /// <summary>
         /// Index of parent(Required) entity that will be used for child entity. 
         /// First item in the Index should be starting with 0.
@@ -31,11 +31,11 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         long GetNextIterationParentsCount(EntityContext parentEntity, EntityContext childEntity);
         /// <summary>
         /// Check if all children were generated from provided parent. 
-        /// If so then parents stored in temporary storage will be flushed to permanent storage.
+        /// If so then parents stored in temporary storage will be released from temp storage.
         /// </summary>
         /// <param name="parentProgress"></param>
         /// <param name="childProgress"></param>
         /// <returns></returns>
-        bool CanGenerateMoreFromParentsNextFlushCount(EntityContext parentEntity, EntityContext childEntity);
+        bool CanGenerateFromParentNextReleaseCount(EntityContext parentEntity, EntityContext childEntity);
     }
 }

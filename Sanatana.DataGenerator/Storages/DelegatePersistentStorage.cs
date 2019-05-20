@@ -24,7 +24,7 @@ namespace Sanatana.DataGenerator.Storages
             return insertFunc.Invoke(entities);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
         }
     }

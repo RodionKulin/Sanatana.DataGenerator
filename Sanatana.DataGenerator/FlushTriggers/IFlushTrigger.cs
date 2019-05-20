@@ -13,5 +13,6 @@ namespace Sanatana.DataGenerator.FlushTriggers
     {
         bool IsFlushRequired(EntityContext entityContext);
         void SetNextFlushCount(EntityContext entityContext);
+        void SetNextReleaseCount(EntityContext entityContext);
     }
 }

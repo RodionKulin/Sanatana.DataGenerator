@@ -11,16 +11,28 @@ namespace Sanatana.DataGenerator.AutoBogus
     public class AutoBogusGenerator<TEntity> : IGenerator
         where TEntity : class
     {
+        //fields
         protected Faker<TEntity> _faker;
+
 
         //init
         public AutoBogusGenerator(Faker<TEntity> faker)
         {
+            if (faker == null)
+            {
+                throw new ArgumentNullException(nameof(faker));
+            }
+
             _faker = faker;
         }
 
         public AutoBogusGenerator(AutoFaker<TEntity> faker)
         {
+            if (faker == null)
+            {
+                throw new ArgumentNullException(nameof(faker));
+            }
+
             _faker = faker;
         }
 

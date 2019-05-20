@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Collections;
 
 namespace Sanatana.DataGenerator.Internals
@@ -19,14 +17,14 @@ namespace Sanatana.DataGenerator.Internals
 
 
         //methods
-        public IList Take(EntityContext entityContext, IList list, int number)
+        public IList Take(Type newListType, IList list, int number)
         {
-            IList newList = _reflectionInvoker.CreateEntityList(entityContext.Type);
+            IList newList = _reflectionInvoker.CreateEntityList(newListType);
 
             //take larger than list length with take all
             int takeCount = Math.Min(number, list.Count);
 
-            //take negative number of 0 will return empty list
+            //taking negative number of 0 will return empty list
             for (int i = 0; i < takeCount; i++)
             {
                 newList.Add(list[i]);
@@ -35,15 +33,15 @@ namespace Sanatana.DataGenerator.Internals
             return newList;
         }
 
-        public IList Skip(EntityContext entityContext, IList list, int number)
+        public IList Skip(Type newListType, IList list, int number)
         {
-            IList newList = _reflectionInvoker.CreateEntityList(entityContext.Type);
+            IList newList = _reflectionInvoker.CreateEntityList(newListType);
 
             //skip negative number will behave as skip 0 and return full list
-            int skipIndex = number - 1;
+            int skipIndex = number;
             skipIndex = Math.Max(skipIndex, 0);
 
-            //take larger than list length with return empty list
+            //skipping larger than list length will return empty list
             for (int i = skipIndex; i < list.Count; i++)
             {
                 newList.Add(list[i]);
@@ -52,5 +50,17 @@ namespace Sanatana.DataGenerator.Internals
             return newList;
         }
 
+        public void AddRange(IList list, IList anotherList)
+        {
+            if (anotherList == null)
+            {
+                return;
+            }
+
+            foreach (var entity in anotherList)
+            {
+                list.Add(entity);
+            }
+        }
     }
 }

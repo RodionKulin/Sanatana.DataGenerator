@@ -43,9 +43,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Subset
                 return null;
             }
 
-            EntityContext childContext = FindChildThatCanGenerate(notCompletedChildren,
-                parentContext, onlyCheckCanGenerate);
-
+            EntityContext childContext = notCompletedChildren.Find(child =>
+                CheckChildCanGenerate(child, parentContext, onlyCheckCanGenerate));
             return childContext;
         }
     }

@@ -41,7 +41,7 @@ namespace Sanatana.DataGenerator.Storages
             return array;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
         }
     }

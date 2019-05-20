@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
+using Sanatana.DataGenerator.Internals;
 
 namespace Sanatana.DataGenerator.GenerationOrder.Contracts
 {
@@ -10,6 +11,6 @@ namespace Sanatana.DataGenerator.GenerationOrder.Contracts
     public interface IRequiredQueueBuilder
     {
         EntityAction GetNextAction();
-        void UpdateCounters(Type type, IList generatedEntities, bool flushRequired);
+        void UpdateCounters(EntityContext entityContext, IList generatedEntities, bool flushRequired);
     }
 }

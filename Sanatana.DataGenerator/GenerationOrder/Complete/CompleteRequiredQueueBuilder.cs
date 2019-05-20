@@ -16,13 +16,10 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         protected GeneratorSetup _generatorSetup;
         protected Dictionary<Type, EntityContext> _entityContexts;
         protected INextNodeFinder _nextNodeFinder;
-
-
-        //properties
         /// <summary>
-        /// Queue of next entities to generate.
+        /// Queue of next entities to generate
         /// </summary>
-        public Stack<OrderIterationType> Queue { get; set; }
+        protected Stack<OrderIterationType> _queue;
 
 
         //init
@@ -38,8 +35,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         //Get next action from queue
         public virtual EntityAction GetNextAction()
         {
-            if (Queue == null ||
-                Queue.Count == 0)
+            if (_queue == null ||
+                _queue.Count == 0)
             {
                 EntityContext nextNode = _nextNodeFinder.FindNextNode();
                 if (nextNode == null)
@@ -50,10 +47,10 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                     };
                 }
 
-                Queue = CreateNextQueue(nextNode);
+                _queue = CreateNextQueue(nextNode);
             }
 
-            OrderIterationType next = Queue.Peek();
+            OrderIterationType next = _queue.Peek();
             return new EntityAction
             {
                 ActionType = ActionType.Generate,
@@ -133,34 +130,52 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //Update counters
-        public virtual void UpdateCounters(Type type, IList generatedEntities, bool flushRequired)
+        public virtual void UpdateCounters(
+            EntityContext entityContext, IList generatedEntities, bool flushRequired)
         {
-            OrderIterationType next = Queue.Peek();
-            EntityContext entityContext = _entityContexts[type];
-
-            if (type != next.EntityType)
+            OrderIterationType next = _queue.Peek();
+            if (entityContext.Type != next.EntityType)
             {
-                throw new ArgumentException($"Type {type.Name} provided in {nameof(UpdateCounters)} does not match the latest action Type {next.EntityType}");
+                throw new ArgumentException($"Type {entityContext.Type.Name} provided in {nameof(UpdateCounters)} does not match the latest action Type {next.EntityType}");
             }
+
+            next.GenerateCount -= generatedEntities.Count;
 
             if (entityContext.Description.InsertToPersistentStorageBeforeUse)
             {
-                //for entities that generate Id on database, will generate as much as possible before flushing.
-                //the number to generate will be determined by IFlushTrigger.
-                EntityProgress progress = entityContext.EntityProgress;
-                bool completed = progress.TargetCount <= progress.CurrentCount;
-                if (flushRequired || completed)
+                UpdateCountersForInsertToPersistentStorageBeforeUse(
+                    entityContext, next, flushRequired);
+                return;
+            }
+
+            if (next.GenerateCount <= 0)
+            {
+                _queue.Pop();
+            }
+        }
+
+        private void UpdateCountersForInsertToPersistentStorageBeforeUse(
+            EntityContext entityContext, OrderIterationType next, bool flushRequired)
+        {
+            EntityProgress progress = entityContext.EntityProgress;
+
+            //if still flushing previous entities of that type, than do not generate too much
+            bool flushInProgress = progress.IsFlushInProgress();
+            if (flushInProgress)
+            {
+                if (next.GenerateCount <= 0)
                 {
-                    Queue.Pop();
+                    _queue.Pop();
                 }
                 return;
             }
 
-            //for other entities with InsertToDatabaseBeforeUse=false use GenerateCount number to stop
-            next.GenerateCount -= generatedEntities.Count;
-            if (next.GenerateCount <= 0)
+            //for entities that generate Id on database, will generate as much as possible before flushing.
+            //the number to generate will be determined by IFlushTrigger.
+            bool completed = progress.TargetCount <= progress.CurrentCount;
+            if (flushRequired || completed)
             {
-                Queue.Pop();
+                _queue.Pop();
             }
         }
     }

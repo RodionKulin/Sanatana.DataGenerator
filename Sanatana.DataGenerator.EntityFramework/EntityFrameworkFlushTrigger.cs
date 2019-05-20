@@ -11,48 +11,27 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
-    public class EntityFrameworkFlushTrigger : IFlushTrigger
+    public class EntityFrameworkFlushTrigger : FlushTriggerBase
     {
         //fields
         protected DbContext _db;
-        protected Dictionary<Type, int> _entityMaxCount;
+        protected Dictionary<Type, long> _entityMaxCount;
 
 
         //init
         public EntityFrameworkFlushTrigger(DbContext db)
         {
             _db = db;
-            _entityMaxCount = new Dictionary<Type, int>();
+            _entityMaxCount = new Dictionary<Type, long>();
         }
 
 
         //methods
-        public virtual bool IsFlushRequired(EntityContext entityContext)
-        {
-            int maxEntitiesInBatch = GetMaxEntitiesInBatch(entityContext);
-
-            EntityProgress progress = entityContext.EntityProgress;
-            long tempStorageCount = progress.CurrentCount - progress.FlushedCount;
-            return tempStorageCount >= maxEntitiesInBatch;
-        }
-
-        public virtual void SetNextFlushCount(EntityContext entityContext)
-        {
-            int maxEntitiesInBatch = GetMaxEntitiesInBatch(entityContext);
-
-            EntityProgress progress = entityContext.EntityProgress;
-            long tempStorageCount = progress.CurrentCount - progress.FlushedCount;
-            if (tempStorageCount >= maxEntitiesInBatch)
-            {
-                progress.NextFlushCount = progress.FlushedCount + maxEntitiesInBatch;
-            }
-        }
-
-        protected virtual int GetMaxEntitiesInBatch(EntityContext entityContext)
+        protected override long GetCapacity(EntityContext entityContext)
         {
             int maxEntitiesInBatch = 0;
 
-            if (_entityMaxCount.ContainsKey(entityContext.Type))
+            if (!_entityMaxCount.ContainsKey(entityContext.Type))
             {
                 List<string> mappedProps = _db.GetAllMappedProperties(entityContext.Type);
                 List<string> generatedProps = _db.GetDatabaseGeneratedProperties(entityContext.Type);

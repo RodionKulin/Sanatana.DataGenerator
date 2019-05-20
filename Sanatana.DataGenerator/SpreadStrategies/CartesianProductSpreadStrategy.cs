@@ -12,12 +12,11 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         //methods
         public override long GetTotalCount()
         {
-            List<EntityProgress> typesToCombine = _parentEntities.Values
-                .Select(x => x.EntityProgress)
+            List<long> targetCounts = _parentEntities.Values
+                .Select(x => x.EntityProgress.TargetCount)
                 .ToList();
 
-            long totalCount = typesToCombine
-                .Select(x => x.TargetCount)
+            long totalCount = targetCounts
                 .Aggregate((long)1, (targetCount, total) => total * targetCount);
 
             return totalCount;

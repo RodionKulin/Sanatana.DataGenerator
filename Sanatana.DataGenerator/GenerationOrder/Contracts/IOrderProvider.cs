@@ -11,6 +11,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Contracts
         IProgressState ProgressState { get; }
         void Setup(GeneratorSetup generatorSetup, Dictionary<Type, EntityContext> entityContexts);
         EntityAction GetNextAction();
-        void UpdateCounters(Type type, IList generatedEntities);
+        void HandleGenerateCompleted(EntityContext entityContext, IList generatedEntities);
+        void HandleFlushCompleted(EntityAction entityAction);
     }
 }

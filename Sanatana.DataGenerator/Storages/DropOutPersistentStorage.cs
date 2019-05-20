@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.Storages
 {
+    /// <summary>
+    /// Randomly removes some percent of entities and inserts only remaining
+    /// </summary>
     public class DropOutPersistentStorage : IPersistentStorage
     {
         //fields
@@ -13,6 +16,11 @@ namespace Sanatana.DataGenerator.Storages
 
 
         //init
+        /// <summary>
+        /// Initialize with another persistent storage that will actually insert entities and a dropOutChance between 0 and 1 to remove some portion on entities.
+        /// </summary>
+        /// <param name="persistentStorage"></param>
+        /// <param name="dropOutChance"></param>
         public DropOutPersistentStorage(IPersistentStorage persistentStorage, double dropOutChance)
         {
             if (dropOutChance < 0 || 1 < dropOutChance)
@@ -44,7 +52,7 @@ namespace Sanatana.DataGenerator.Storages
             return _persistentStorage.Insert(newList);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _persistentStorage.Dispose();
         }

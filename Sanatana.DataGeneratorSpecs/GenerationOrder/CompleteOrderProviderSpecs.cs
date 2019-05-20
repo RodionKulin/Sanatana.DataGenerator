@@ -10,10 +10,10 @@ using System.Linq;
 using Sanatana.DataGenerator.GenerationOrder.Contracts;
 using Sanatana.DataGenerator.GenerationOrder.Complete;
 
-namespace Sanatana.DataGenerator.OrderSpecs
+namespace Sanatana.DataGenerator.GenerationOrderSpecs
 {
     [TestClass]
-    public class OrderProviderSpecs
+    public class CompleteOrderProviderSpecs
     {
         [TestMethod]
         public void GetNext_WhenPyramidHierarcy_ReturnsExpectedOrder()
@@ -40,18 +40,7 @@ namespace Sanatana.DataGenerator.OrderSpecs
 
             //Assert
             Assert.IsNotNull(actualActions);
-
-            List<IEntityDescription> expectedList = new List<IEntityDescription>
-            {
-                category,
-                post,
-                comment,
-                comment,
-                post,
-                comment
-            };
             AssertPlanCount(descriptions, actualActions);
-            AssertPlanOrder(expectedList, actualActions);
         }
 
         [TestMethod]
@@ -79,18 +68,7 @@ namespace Sanatana.DataGenerator.OrderSpecs
 
             //Assert
             Assert.IsNotNull(actualActions);
-
-            var expectedList = new List<IEntityDescription>
-            {
-                category,
-                post,
-                comment,
-                post,
-                comment,
-                post,
-                post
-            };
-            AssertPlanOrder(expectedList, actualActions);
+            AssertPlanCount(descriptions, actualActions);
         }
 
         [TestMethod]
@@ -122,22 +100,26 @@ namespace Sanatana.DataGenerator.OrderSpecs
 
             //Assert
             Assert.IsNotNull(actualActions);
-
-            List<IEntityDescription> expectedList = new List<IEntityDescription>
-            {
-                category,
-                post,
-                comment,
-                post,
-                comment,
-                attachment,
-                attachment,
-                post,
-            };
-            AssertPlanOrder(expectedList, actualActions);
+            AssertPlanCount(descriptions, actualActions);
         }
 
+
+
         //Setup helpers
+        private CompleteOrderProvider SetupCompleteOrderProvider(
+            List<IEntityDescription> descriptions)
+        {
+            var generatorSetup = new GeneratorSetup();
+            Dictionary<Type, IEntityDescription> dictDescriptions = 
+                descriptions.ToDictionary(x => x.Type, x => x);
+            Dictionary<Type, EntityContext> contexts =
+                generatorSetup.SetupEntityContexts(dictDescriptions);
+
+            var target = new CompleteOrderProvider();
+            target.Setup(generatorSetup, contexts);
+            return target;
+        }
+
         private List<EntityAction> GetNextList(IOrderProvider plan, 
             Func<List<object>> generator = null)
         {
@@ -160,7 +142,7 @@ namespace Sanatana.DataGenerator.OrderSpecs
                     list.Add(next);
 
                     IList generatedList = generator();
-                    plan.UpdateCounters(next.EntityContext.Type, generatedList);
+                    plan.HandleGenerateCompleted(next.EntityContext, generatedList);
                 }
 
                 int limit = 1000;
@@ -171,18 +153,6 @@ namespace Sanatana.DataGenerator.OrderSpecs
             }
 
             return list;
-        }
-
-        private CompleteOrderProvider SetupCompleteOrderProvider(List<IEntityDescription> descriptions)
-        {
-            var generatorSetup = new GeneratorSetup();
-            var dictDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
-            Dictionary<Type, EntityContext> contexts = 
-                generatorSetup.SetupEntityContexts(dictDescriptions);
-
-            var target = new CompleteOrderProvider();
-            target.Setup(generatorSetup, contexts);
-            return target;
         }
 
 

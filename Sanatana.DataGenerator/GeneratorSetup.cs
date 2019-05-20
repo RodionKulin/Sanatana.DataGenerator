@@ -79,6 +79,7 @@ namespace Sanatana.DataGenerator
         /// </summary>
         public IFlushTrigger DefaultFlushTrigger { get; set; }
 
+        
 
         //init
         public GeneratorSetup()
@@ -134,27 +135,47 @@ namespace Sanatana.DataGenerator
 
         protected virtual void SetupSpreadStrategies()
         {
-            foreach (EntityContext entityContext in _entityContexts.Values)
+            foreach (EntityContext entity in _entityContexts.Values)
             {
-                Dictionary<Type, EntityContext> parentEntities = 
-                    entityContext.Description.Required
-                    .Select(x => _entityContexts[x.Type])
-                    .ToDictionary(x => x.Type, x => x);
-
-                foreach (RequiredEntity required in entityContext.Description.Required)
+                if(entity.Description.Required == null)
                 {
-                    required.SpreadStrategy.Setup(parentEntities);
+                    continue;
+                }
+
+                foreach (RequiredEntity required in entity.Description.Required)
+                {
+                    required.SpreadStrategy.Setup(entity, _entityContexts);
                 }
             }
         }
+        
 
 
-        //Register entitity
+        //Register entitities
+        public virtual EntityDescription<TEntity> RegisterEntity<TEntity>()
+            where TEntity : class
+        {
+            var entityDescription = new EntityDescription<TEntity>();
+            EntityDescriptions.Add(entityDescription.Type, entityDescription);
+            return entityDescription;
+        }
+
         public virtual GeneratorSetup RegisterEntity(IEntityDescription entityDescription)
         {
             EntityDescriptions.Add(entityDescription.Type, entityDescription);
             return this;
         }
+
+        public virtual GeneratorSetup RegisterEntities(
+            IEnumerable<IEntityDescription> entityDescriptions)
+        {
+            foreach (IEntityDescription item in entityDescriptions)
+            {
+                EntityDescriptions.Add(item.Type, item);
+            }
+            return this;
+        }
+        
 
 
         //Generation main steps
@@ -188,7 +209,7 @@ namespace Sanatana.DataGenerator
             SetupSpreadStrategies();
             OrderProvider.Setup(this, _entityContexts);
         }
-
+        
 
 
         //Execution loop
@@ -198,6 +219,14 @@ namespace Sanatana.DataGenerator
             {
                 UpdateProgress();
 
+                //handle completed flush actions
+                List<EntityAction> completedActions = TemporaryStorage.GetCompletedActions();
+                foreach (EntityAction completedAction in completedActions)
+                {
+                    OrderProvider.HandleFlushCompleted(completedAction);
+                }
+
+                //get next action
                 EntityAction action = OrderProvider.GetNextAction();
                 if (action.ActionType == ActionType.Finish)
                 {
@@ -212,16 +241,17 @@ namespace Sanatana.DataGenerator
                         break;
                     case ActionType.FlushToPersistentStorage:
                         persistentStorage = GetPersistentStorage(action.EntityContext.Description);
-                        TemporaryStorage.FlushToPermanent(action.EntityContext, persistentStorage);
+                        TemporaryStorage.FlushToPersistent(action, persistentStorage);
                         break;
                     case ActionType.GenerateStorageIds:
                         persistentStorage = GetPersistentStorage(action.EntityContext.Description);
-                        TemporaryStorage.InsertToPermanentAndKeep(action.EntityContext, persistentStorage);
+                        TemporaryStorage.GenerateStorageIds(action, persistentStorage);
+
                         break;
                 }
             }
         }
-
+        
         protected virtual void GenerateEntity(EntityAction action)
         {
             IEntityDescription entityDescription = action.EntityContext.Description;
@@ -247,7 +277,7 @@ namespace Sanatana.DataGenerator
             }
 
             TemporaryStorage.InsertToTemporary(action.EntityContext, entities);
-            OrderProvider.UpdateCounters(action.EntityContext.Type, entities);
+            OrderProvider.HandleGenerateCompleted(action.EntityContext, entities);
         }
         
         protected virtual Dictionary<Type, object> GetRequiredEntities(EntityAction action)
@@ -271,11 +301,11 @@ namespace Sanatana.DataGenerator
 
         protected virtual void UpdateProgress()
         {
-            long generateCalls = IdIterator.GetNextId<IProgressState>();
+            long actionCalls = IdIterator.GetNextId<IProgressState>();
 
             //trigger handler only every N generated entities
             long onEveryNCall = 100;
-            bool invoke = generateCalls % onEveryNCall == 0;
+            bool invoke = actionCalls % onEveryNCall == 0;
             if (!invoke)
             {
                 return;
@@ -298,9 +328,27 @@ namespace Sanatana.DataGenerator
             foreach (EntityContext entityContext in _entityContexts.Values)
             {
                 entityContext.EntityProgress.NextFlushCount = entityContext.EntityProgress.CurrentCount;
+                entityContext.EntityProgress.NextReleaseCount = entityContext.EntityProgress.CurrentCount;
+
                 IPersistentStorage storage = GetPersistentStorage(entityContext.Description);
-                TemporaryStorage.FlushToPermanent(entityContext, storage);
+
+                if (entityContext.Description.InsertToPersistentStorageBeforeUse)
+                {
+                    TemporaryStorage.GenerateStorageIds(new EntityAction
+                    {
+                        ActionType = ActionType.GenerateStorageIds,
+                        EntityContext = entityContext
+                    }, storage);
+                }
+
+                TemporaryStorage.FlushToPersistent(new EntityAction
+                {
+                    ActionType = ActionType.FlushToPersistentStorage,
+                    EntityContext = entityContext
+                }, storage);
             }
+
+            TemporaryStorage.WaitAllTasks();
         }
 
         protected virtual void Dispose()
@@ -309,6 +357,8 @@ namespace Sanatana.DataGenerator
             {
                 IPersistentStorage storage = GetPersistentStorage(entityContext.Description);
                 storage.Dispose();
+
+                entityContext.Dispose();
             }
         }
 

@@ -46,12 +46,33 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         //Flush required checks
         public virtual bool CheckIsFlushRequired(EntityContext entityContext)
         {
-            IFlushTrigger flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
-            bool isFlushRequired = flushTrigger.IsFlushRequired(entityContext);
-
-            if (isFlushRequired)
+            EntityProgress progress = entityContext.EntityProgress;
+            bool isFlushInProgress = progress.IsFlushInProgress();
+            if (isFlushInProgress)
             {
-                flushTrigger.SetNextFlushCount(entityContext);
+                return false;
+            }
+
+            //NextReleaseCount will be used by child entities to check if they still can generate from this parent
+            IFlushTrigger flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
+            flushTrigger.SetNextReleaseCount(entityContext);
+
+            //if flush is not required NextFlushCount should not be updated
+            //isFlushInProgress is using NextFlushCount 
+            bool isFlushRequired = flushTrigger.IsFlushRequired(entityContext);
+            if (!isFlushRequired)
+            {
+                return isFlushRequired;
+            }
+
+            //update next flush count
+            flushTrigger.SetNextFlushCount(entityContext);
+
+            //add to flush candidates if will be used by dependent children
+            bool hasDependentChild = FindChildThatCanGenerate(entityContext, true) != null;
+            if (hasDependentChild)
+            {
+                _flushCandidates.Add(entityContext);
             }
 
             return isFlushRequired;
@@ -59,69 +80,71 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //Flush actions
-        public virtual List<EntityAction> GetFlushActions(EntityContext entityContext, IList generatedEntities)
+        public virtual List<EntityAction> GetNextFlushActions(EntityContext entityContext)
         {
             var flushActions = new List<EntityAction>();
+
+            //needs to create ids by database before using as required by children
+            //will write to persitent storage, but won't remove from temporary storage
+            if (entityContext.Description.InsertToPersistentStorageBeforeUse)
+            {
+                flushActions.Add(new EntityAction
+                {
+                    ActionType = ActionType.GenerateStorageIds,
+                    EntityContext = entityContext
+                });
+            }
+
+            //also check parent entities, if they are no longer required and can be flushed too
+            AppendParentsFlushActions(entityContext.ParentEntities, flushActions);
 
             bool hasDependentChild = FindChildThatCanGenerate(entityContext, true) != null;
             if (hasDependentChild)
             {
-                _flushCandidates.Add(entityContext);
-
-                //has dependent children and needs to create ids by database.
-                //will write to persitent storage, but won't remove from temporary storage.
-                if (entityContext.Description.InsertToPersistentStorageBeforeUse)
-                {
-                    flushActions.Add(new EntityAction
-                    {
-                        ActionType = ActionType.GenerateStorageIds,
-                        EntityContext = entityContext
-                    });
-                }
                 return flushActions;
             }
 
             //has no dependent children, so can flush to persistent storage
+            //in case of InsertToPersistentStorageBeforeUse will remove from Temp storage
             flushActions.Add(new EntityAction
             {
                 ActionType = ActionType.FlushToPersistentStorage,
                 EntityContext = entityContext
             });
-            
-            //also check parent entities, if they are no longer required and can be flushed too
-            AppendParentsFlushActions(entityContext, flushActions);
 
-            //same flush action can be added multiple times if multiple entities depend on same parent
-            flushActions = flushActions.Distinct().ToList();
             return flushActions;
         }
 
         protected virtual void AppendParentsFlushActions(
-            EntityContext childContext, List<EntityAction> flushActions)
+            List<IEntityDescription> parents, List<EntityAction> flushActions)
         {
-            foreach (IEntityDescription parent in childContext.ParentEntities)
+            foreach (IEntityDescription parent in parents)
             {
-                EntityContext parentEntityContext = _entityContexts[parent.Type];
-                bool isFlushCandidate = _flushCandidates.Contains(parentEntityContext);
+                EntityContext parentContext = _entityContexts[parent.Type];
+                bool isFlushCandidate = _flushCandidates.Contains(parentContext);
                 if (isFlushCandidate == false)
                 {
-                    continue;
+                    return;
                 }
 
-                bool hasDependentChild = FindChildThatCanGenerate(parentEntityContext, true) != null;
-                if (hasDependentChild == false)
+                bool hasDependentChild = FindChildThatCanGenerate(parentContext, true) != null;
+                if (hasDependentChild)
                 {
-                    _flushCandidates.Remove(parentEntityContext);
-                    flushActions.Add(new EntityAction
-                    {
-                        ActionType = ActionType.FlushToPersistentStorage,
-                        EntityContext = parentEntityContext
-                    });
-                    AppendParentsFlushActions(parentEntityContext, flushActions);
+                    return;
                 }
+
+                _flushCandidates.Remove(parentContext);
+
+                flushActions.Add(new EntityAction
+                {
+                    ActionType = ActionType.FlushToPersistentStorage,
+                    EntityContext = parentContext
+                });
+
+                AppendParentsFlushActions(parentContext.ParentEntities, flushActions);
             }
         }
-        
+
         /// <summary>  
         /// FlushCandidates are Entities in temporary storage, that still have child entities requiring em.
         /// Will generate all children that require FlushCandidates as a parent before flushing em.
@@ -130,7 +153,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         /// <param name="parentContext">Parent entity that is a candidate to flush generated entities to permanent storage</param>
         /// <param name="onlyCheckCanGenerate">When onlyCheckCanGenerate=true, is used to deside if parent entity if flush ready. If false then parent entity won't be ready to flush, but skip generating children that should generage their children first. Leaf nodes go first, then their parents.</param>
         /// <returns></returns>
-        protected virtual EntityContext FindChildThatCanGenerate(EntityContext parentContext, bool onlyCheckCanGenerate)
+        protected virtual EntityContext FindChildThatCanGenerate(
+            EntityContext parentContext, bool onlyCheckCanGenerate)
         {
             List<EntityContext> notCompletedChildren = parentContext.ChildEntities
                .Where(child => !_progressState.CompletedEntityTypes.Contains(child.Type))
@@ -141,35 +165,28 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 return null;
             }
 
-            EntityContext childContext = FindChildThatCanGenerate(notCompletedChildren,
-                parentContext, onlyCheckCanGenerate);
+            EntityContext childContext = notCompletedChildren.Find(child => 
+                CheckChildCanGenerate(child, parentContext, onlyCheckCanGenerate));
             return childContext;
         }
 
-        protected virtual EntityContext FindChildThatCanGenerate(List<EntityContext> notCompletedChildren,
-            EntityContext parentContext, bool onlyCheckCanGenerate)
+        protected virtual bool CheckChildCanGenerate(EntityContext child,
+            EntityContext parent, bool onlyCheckCanGenerate)
         {
-            Type typeToFlush = parentContext.Type;
+            Type typeToFlush = parent.Type;
+            RequiredEntity requiredParent = child.Description.Required.First(x => x.Type == typeToFlush);
+            ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(child.Description, requiredParent);
 
-            EntityContext canGenerateChild = notCompletedChildren.FirstOrDefault(childContext =>
+            //check if child can still use parent entities from temporary storage to generate
+            bool canGenerateMore = spreadStrategy.CanGenerateFromParentNextReleaseCount(parent, child);
+            if (onlyCheckCanGenerate)
             {
-                RequiredEntity parent = childContext.Description.Required.First(x => x.Type == typeToFlush);
-                ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(childContext.Description, parent);
+                return canGenerateMore;
+            }
 
-                //check if child can still use parent entities from temporary storage to generate
-                bool canGenerateMore = spreadStrategy.CanGenerateMoreFromParentsNextFlushCount(
-                    parentContext, childContext);
-                if (onlyCheckCanGenerate)
-                {
-                    return canGenerateMore;
-                }
-
-                //check if child is not a flush candidate itself
-                bool childIsFlushCandidate = _flushCandidates.Contains(childContext);
-                return !childIsFlushCandidate && canGenerateMore;
-            });
-
-            return canGenerateChild;
+            //check if child is not a flush candidate itself
+            bool childIsFlushCandidate = _flushCandidates.Contains(child);
+            return !childIsFlushCandidate && canGenerateMore;
         }
 
 
@@ -178,11 +195,14 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         {
             //find child nodes of flush candidates
             EntityContext childCanGenerate = null;
-            bool hasChildOfFlushCandidate = _flushCandidates.Any(parentContext =>
+
+            foreach (EntityContext entity in _flushCandidates)
             {
-                childCanGenerate = FindChildThatCanGenerate(parentContext, false);
-                return childCanGenerate != null;
-            });
+                childCanGenerate = FindChildThatCanGenerate(entity, false);
+                if(childCanGenerate != null){
+                    break;
+                }
+            }
 
             return childCanGenerate;
         }
