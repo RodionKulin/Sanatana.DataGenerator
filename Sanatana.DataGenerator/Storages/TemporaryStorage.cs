@@ -64,11 +64,11 @@ namespace Sanatana.DataGenerator.Storages
                 throw new NullReferenceException($"No entities of type [{entityContext.Type}] are stored in {nameof(TemporaryStorage)}");
             }
 
-            IList list = _entitiesAwaitingFlush[entityContext.Type];
-
             object itemAtIndex = null;
             entityContext.RunWithReadLock(() =>
             {
+                IList list = _entitiesAwaitingFlush[entityContext.Type];
+
                 int currentIndex = (int)(index - entityContext.EntityProgress.ReleasedCount);
                 if (currentIndex < 0 || currentIndex >= list.Count)
                 {
@@ -100,9 +100,9 @@ namespace Sanatana.DataGenerator.Storages
                 _entitiesAwaitingFlush.Add(entityContext.Type, entitiesAwaitingFlush);
             }
 
-            entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
             entityContext.RunWithWriteLock(() =>
             {
+                entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
                 _listOperations.AddRange(entitiesAwaitingFlush, generatedEntities);
             });
         }
@@ -142,16 +142,12 @@ namespace Sanatana.DataGenerator.Storages
                 return Task.FromResult(0);
             }
 
-            IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
-            if (entitiesAwaitingFlush.Count == 0)
-            {
-                return Task.FromResult(0);
-            }
-
             //lock operations on list for same Type
             IList nextItems = null;
             entityContext.RunWithWriteLock(() =>
             {
+                IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
+
                 long numberToFlush = progress.NextFlushCount - progress.FlushedCount;
 
                 //take number of items to flush
@@ -164,7 +160,7 @@ namespace Sanatana.DataGenerator.Storages
 
                 //update progess
                 progress.AddFlushedCount(nextItems.Count);
-                progress.AddRemovedFromTempStorageCount(nextItems.Count);
+                progress.AddReleasedCount(nextItems.Count);
             });
 
             if (nextItems.Count == 0)
@@ -191,16 +187,12 @@ namespace Sanatana.DataGenerator.Storages
                 return;
             }
 
-            IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
-            if (entitiesAwaitingFlush.Count == 0)
-            {
-                return;
-            }
-
             //lock operations on list for same Type
             IList nextItems = null;
             entityContext.RunWithReadLock(() =>
             {
+                IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
+
                 long numberToSkip = progress.FlushedCount - progress.ReleasedCount;
                 long numberToFlush = progress.NextFlushCount - progress.FlushedCount;
 
@@ -221,7 +213,9 @@ namespace Sanatana.DataGenerator.Storages
                 return;
             }
 
-            _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems);
+            _reflectionInvoker
+                .InvokeInsert(storage, entityContext.Description, nextItems)
+                .Wait();
         }
 
         public virtual void ReleaseFromTempStorage(EntityAction action, IPersistentStorage storage)
@@ -234,15 +228,11 @@ namespace Sanatana.DataGenerator.Storages
                 return;
             }
 
-            IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
-            if (entitiesAwaitingFlush.Count == 0)
-            {
-                return;
-            }
-
             //lock operations on list for same Type
             entityContext.RunWithWriteLock(() =>
             {
+                IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
+
                 long numberToRemove = progress.NextReleaseCount - progress.ReleasedCount;
 
                 //remove items from temporary storage
@@ -250,7 +240,7 @@ namespace Sanatana.DataGenerator.Storages
                     .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToRemove);
 
                 //update progress
-                progress.AddRemovedFromTempStorageCount(numberToRemove);
+                progress.AddReleasedCount(numberToRemove);
             });
         }
 

@@ -15,15 +15,15 @@ namespace Sanatana.DataGenerator.EntityFramework
     public class EntityFrameworkCoreFlushTrigger : FlushTriggerBase
     {
         //fields
-        protected DbContext _db;
-        protected Dictionary<Type, int> _entityMaxCount;
+        protected Func<DbContext> _dbContextFactory;
+        protected Dictionary<Type, long> _entityMaxCount;
 
 
         //init
-        public EntityFrameworkCoreFlushTrigger(DbContext db)
+        public EntityFrameworkCoreFlushTrigger(Func<DbContext> dbContextFactory)
         {
-            _db = db;
-            _entityMaxCount = new Dictionary<Type, int>();
+            _dbContextFactory = dbContextFactory;
+            _entityMaxCount = new Dictionary<Type, long>();
         }
 
 
@@ -34,11 +34,14 @@ namespace Sanatana.DataGenerator.EntityFramework
 
             if (!_entityMaxCount.ContainsKey(entityContext.Type))
             {
-                List<string> mappedProps = _db.GetAllMappedProperties(entityContext.Type);
-                List<string> generatedProps = _db.GetDatabaseGeneratedProperties(entityContext.Type);
-                int paramsPerEntity = mappedProps.Count - generatedProps.Count;
-                maxEntitiesInBatch = EntityFrameworkConstants.MAX_NUMBER_OF_SQL_COMMAND_PARAMETERS / paramsPerEntity;
-                _entityMaxCount.Add(entityContext.Type, maxEntitiesInBatch);
+                using (DbContext db = _dbContextFactory())
+                {
+                    List<string> mappedProps = db.GetAllMappedProperties(entityContext.Type);
+                    List<string> generatedProps = db.GetDatabaseGeneratedProperties(entityContext.Type);
+                    int paramsPerEntity = mappedProps.Count - generatedProps.Count;
+                    maxEntitiesInBatch = EntityFrameworkConstants.MAX_NUMBER_OF_SQL_COMMAND_PARAMETERS / paramsPerEntity;
+                    _entityMaxCount.Add(entityContext.Type, maxEntitiesInBatch);
+                }
             }
 
             return maxEntitiesInBatch;

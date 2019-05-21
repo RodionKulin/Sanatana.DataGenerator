@@ -156,7 +156,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set custom SpreadStrategy to all Required Entities. 
+        /// Set custom SpreadStrategy for all Required Entities. 
         /// Required Entities should already be registered when calling this method.
         /// All Required Entities registered after this method call will not be effected and will have default SpreadStrategy value.
         /// </summary>

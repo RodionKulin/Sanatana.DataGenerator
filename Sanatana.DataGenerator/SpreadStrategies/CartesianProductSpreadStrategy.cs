@@ -16,9 +16,13 @@ namespace Sanatana.DataGenerator.SpreadStrategies
                 .Select(x => x.EntityProgress.TargetCount)
                 .ToList();
 
+            if(targetCounts.Count == 0)
+            {
+                return 0;
+            }
+
             long totalCount = targetCounts
                 .Aggregate((long)1, (targetCount, total) => total * targetCount);
-
             return totalCount;
         }
 

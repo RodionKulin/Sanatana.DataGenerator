@@ -111,11 +111,13 @@ namespace Sanatana.DataGenerator.Internals
             var allDescriptions = new List<IEntityDescription>(entityDescriptions.Values);
             var resolvedTypesList = new List<Type>();
 
+            allDescriptions.ForEach(
+                entity => entity.Required = entity.Required ?? new List<RequiredEntity>());
+
             while (allDescriptions.Count > 0)
             {
                 List<IEntityDescription> resolvedDependencyEntities = allDescriptions.Where(
-                    p => p.Required == null
-                    || p.Required.Count == 0
+                    p => p.Required.Count == 0
                     || p.Required.Select(req => req.Type)
                         .Distinct()
                         .All(req => resolvedTypesList.Contains(req))

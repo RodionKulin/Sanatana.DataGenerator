@@ -57,11 +57,17 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             IFlushTrigger flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
             flushTrigger.SetNextReleaseCount(entityContext);
 
-            //if flush is not required NextFlushCount should not be updated
-            //isFlushInProgress is using NextFlushCount 
+            //when all entities are generated also should flush
             bool isFlushRequired = flushTrigger.IsFlushRequired(entityContext);
+            bool isCompleted = progress.CurrentCount >= progress.TargetCount;
+            if (isCompleted)
+            {
+                isFlushRequired = true;
+            }
             if (!isFlushRequired)
             {
+                //if flush is not required NextFlushCount should not be updated
+                //isFlushInProgress is using NextFlushCount 
                 return isFlushRequired;
             }
 

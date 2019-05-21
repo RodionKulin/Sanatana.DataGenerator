@@ -26,7 +26,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         public virtual void Setup(EntityContext childEntity, Dictionary<Type, EntityContext> allEntities)
         {
             _parentEntities = childEntity.Description.Required
-                .Where(x => x != null)
                 .Select(x => allEntities[x.Type])
                 .ToDictionary(x => x.Type, x => x);
 
@@ -56,7 +55,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return parentEntityIndex;
         }
 
-        public virtual long GetNextIterationParentsCount(
+        public virtual long GetNextIterationParentCount(
             EntityContext parentEntity, EntityContext childEntity)
         {
             //Convert child number 1-based count to zero-based index

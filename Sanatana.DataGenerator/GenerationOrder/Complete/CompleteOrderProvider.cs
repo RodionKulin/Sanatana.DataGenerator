@@ -74,8 +74,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
             //check if flush to permanent storage required
             //and enqueue flush actions
-            bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
-            if (flushRequired)
+            bool isFlushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
+            if (isFlushRequired)
             {
                 List<EntityAction> flushActions = _flushCandidatesRegistry.GetNextFlushActions(entityContext);
                 flushActions.ForEach(action => _actionsQueue.Enqueue(action));
@@ -83,7 +83,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
             //update progress state variables
             ProgressState.UpdateCounters(entityContext, generatedEntities);
-            _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, flushRequired);
+            _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, isFlushRequired);
         }
 
         public virtual void HandleFlushCompleted(EntityAction entityAction)

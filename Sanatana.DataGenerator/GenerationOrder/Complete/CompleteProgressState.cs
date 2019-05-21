@@ -68,14 +68,14 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         protected virtual decimal ConvertEntitiesCompletionPercents(IEnumerable<EntityContext> entityContexts)
         {
             long totalCurrentCount = entityContexts
-                //to prevent showing more that 100% percent do not take larget than Target number
+                //to prevent showing more that 100% percent do not take larger than Target number
                 .Select(x => Math.Min(x.EntityProgress.CurrentCount, x.EntityProgress.TargetCount))
                 .Sum();
             long totalTargetCount = entityContexts
                 .Select(x => x.EntityProgress.TargetCount)
                 .Sum();
 
-            decimal completedPercent = totalCurrentCount / totalTargetCount;
+            decimal completedPercent = (decimal)totalCurrentCount / totalTargetCount;
 
             //convert to percents
             completedPercent *= 100;

@@ -7,6 +7,7 @@ using System.Linq;
 using Sanatana.DataGeneratorSpecs.Samples;
 using System.Diagnostics;
 using Sanatana.DataGenerator.SpreadStrategies;
+using Sanatana.DataGenerator.Entities;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {
@@ -17,159 +18,158 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         [DataRow(50, 10, 5)]
         [DataRow(1, 1, 1)]
         [DataRow(2, 1, 2)]
-        [Ignore]
         public void GetTotalCount_ReturnsExpectedProductsLength(
             int expectedCombinationsCount, int categoriesCount, int postsCount)
         {
             //Prepare
-            Dictionary<Type, EntityContext> entities = ToEntityDictionary(new[]
+            CartesianProductSpreadStrategy target = SetupTarget<Comment>(new[]
             {
                 (typeof(Category), categoriesCount),
-                (typeof(Post), postsCount),
+                (typeof(Post), postsCount)
             });
-            var target = new CartesianProductSpreadStrategy();
-            //target.Setup(entities);
 
             //Invoke
-            //long actual = target.GetTotalCount();
+            long actual = target.GetTotalCount();
 
             //Assert
-            //Assert.AreEqual(expectedCombinationsCount, actual);
+            Assert.AreEqual(expectedCombinationsCount, actual);
         }
 
         [TestMethod]
-        [Ignore]
+        public void GetTotalCount_WhenNoRequired_ReturnsExpectedProductsLength()
+        {
+            //Prepare
+            var parentCounts = new (Type, int)[0];
+            Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
+            CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
+
+            //Invoke
+            long actual = target.GetTotalCount();
+
+            //Assert
+            Assert.AreEqual(0, actual);
+        }
+
+        [TestMethod]
         public void GetParentIndex_WhenTargetCountIncludeAllCombinations_ReturnDistinct()
         {
             //Prepare
-            Dictionary<Type, EntityContext> entities = ToEntityDictionary(new[]
+            (Type, int)[] parentCounts = new[]
             {
                 (typeof(Category), 10),
-                (typeof(Post), 5),
-            });
-            var target = new CartesianProductSpreadStrategy();
-            //target.Setup(entities);
-            //long expectedCombinationsCount = target.GetTotalCount();
+                (typeof(Post), 5)
+            };
+            Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
+            CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            ////Invoke
-            //List<long[]> resultingCombinations = InvokeGetParentIndex(target,
-            //    entities.Keys.ToList(), expectedCombinationsCount);
+            //Invoke
+            long expectedCombinationsCount = target.GetTotalCount();
+            List<long[]> resultingCombinations = InvokeGetParentIndex(target,
+                parentEntities.Keys.ToList(), expectedCombinationsCount);
 
-            ////Assert
-            //Assert.AreEqual(expectedCombinationsCount, resultingCombinations.Count);
+            //Assert
+            Assert.AreEqual(expectedCombinationsCount, resultingCombinations.Count);
 
-            //long distinctCount = resultingCombinations
-            //    .Select(x => string.Join(",", x))
-            //    .Distinct()
-            //    .Count();
-            //Assert.AreEqual(expectedCombinationsCount, distinctCount);
+            long distinctCount = resultingCombinations
+                .Select(x => string.Join(",", x))
+                .Distinct()
+                .Count();
+            Assert.AreEqual(expectedCombinationsCount, distinctCount);
         }
 
         [TestMethod]
-        [Ignore]
         public void GetParentIndex_WhenTargetCountExceedsAllCombinations_ResetAndRepeat()
         {
             //Prepare
-            Dictionary<Type, EntityContext> entities = ToEntityDictionary(new[]
+            (Type, int)[] parentCounts = new[]
             {
                 (typeof(Category), 10),
-                (typeof(Post), 5),
-            });
-            var target = new CartesianProductSpreadStrategy();
-            //target.Setup(entities);
-            //long expectedDistinctCount = target.GetTotalCount();
-            //int numberOfRepeats = 2;
-            //long expectedCombinationsCount = expectedDistinctCount * numberOfRepeats;
+                (typeof(Post), 5)
+            };
+            Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
+            CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            ////Invoke
-            //List<long[]> resultingCombinations = InvokeGetParentIndex(target,
-            //    entities.Keys.ToList(), expectedCombinationsCount);
+            long expectedDistinctCount = target.GetTotalCount();
+            int numberOfRepeats = 2;
+            long expectedCombinationsCount = expectedDistinctCount * numberOfRepeats;
 
-            ////Assert
-            //Assert.AreEqual(expectedCombinationsCount, resultingCombinations.Count);
+            //Invoke
+            List<long[]> resultingCombinations = InvokeGetParentIndex(target,
+                parentEntities.Keys.ToList(), expectedCombinationsCount);
 
-            //int distinctCount = resultingCombinations
-            //    .Select(x => string.Join(",", x))
-            //    .GroupBy(x => x)
-            //    .Count();
-            //Assert.AreEqual(expectedDistinctCount, distinctCount);
+            //Assert
+            Assert.AreEqual(expectedCombinationsCount, resultingCombinations.Count);
 
-            //bool eachCombinationRepeated = resultingCombinations
-            //    .Select(x => string.Join(",", x))
-            //    .GroupBy(x => x)
-            //    .Select(x => x.Count())
-            //    .All(x => x == numberOfRepeats);
-            //Assert.IsTrue(eachCombinationRepeated);
+            int distinctCount = resultingCombinations
+                .Select(x => string.Join(",", x))
+                .GroupBy(x => x)
+                .Count();
+            Assert.AreEqual(expectedDistinctCount, distinctCount);
+
+            bool eachCombinationRepeated = resultingCombinations
+                .Select(x => string.Join(",", x))
+                .GroupBy(x => x)
+                .Select(x => x.Count())
+                .All(x => x == numberOfRepeats);
+            Assert.IsTrue(eachCombinationRepeated);
         }
 
         [TestMethod]
-        [Ignore]
         public void GetNextIterationParentsCount_Increment_ResetAndRepeat()
         {
             //Prepare
-            Dictionary<Type, EntityContext> entities = ToEntityDictionary(new[]
-            {
+            (Type, int)[] parentCounts = new[]
+           {
                 (typeof(Category), 10),
-                (typeof(Post), 5),
-            });
-            var target = new CartesianProductSpreadStrategy();
-            //target.Setup(entities);
-            //long expectedCombinationsCount = target.GetTotalCount();
-            //int nextIterationIncrement = 5;
+                (typeof(Post), 5)
+            };
+            Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
+            CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
+            int nextIterationIncrement = 5;
 
-            ////Invoke
-            //List<long[]> actualParentsCount = InvokeGetNextIterationParentsCount(target,
-            //    entities.Keys.ToList(), expectedCombinationsCount, nextIterationIncrement);
-            //List<long[]> actualParentIndex = InvokeGetParentIndex(target,
-            //    entities.Keys.ToList(), expectedCombinationsCount);
+            //Invoke
+            long expectedCombinationsCount = target.GetTotalCount();
+            List<long[]> actualParentsCount = InvokeGetNextIterationParentsCount(target,
+                parentEntities.Keys.ToList(), expectedCombinationsCount, nextIterationIncrement);
+            List<long[]> actualParentIndex = InvokeGetParentIndex(target,
+                parentEntities.Keys.ToList(), expectedCombinationsCount);
 
-            ////Assert
-            //Assert.AreEqual(expectedCombinationsCount, actualParentIndex.Count);
+            //Assert
+            Assert.AreEqual(expectedCombinationsCount, actualParentIndex.Count);
 
-            //int distinctCount = actualParentIndex
-            //    .Select(x => string.Join(",", x))
-            //    .GroupBy(x => x)
-            //    .Count();
-            //Assert.AreEqual(expectedCombinationsCount, distinctCount);
+            int distinctCount = actualParentIndex
+                .Select(x => string.Join(",", x))
+                .GroupBy(x => x)
+                .Count();
+            Assert.AreEqual(expectedCombinationsCount, distinctCount);
 
-            ////Assert same combinations on ParentIndex and ParentsCount
-            //List<long[]> parentIndexesMatchingParentCountSteps = actualParentIndex
-            //    .Where((x, i) => i % nextIterationIncrement == 0)
-            //    .ToList();
+            //Assert same combinations on ParentIndex and ParentsCount
+            List<long[]> parentIndexesMatchingParentCountSteps = actualParentIndex
+                .Where((x, i) => i % nextIterationIncrement == 0)
+                .ToList();
 
-            //for (int i = 0; i < parentIndexesMatchingParentCountSteps.Count; i++)
-            //{
-            //    long[] parentIndexStep = parentIndexesMatchingParentCountSteps[i];
-            //    long[] parentsCountStep = actualParentsCount[i];
+            for (int i = 0; i < parentIndexesMatchingParentCountSteps.Count; i++)
+            {
+                long[] parentIndexStep = parentIndexesMatchingParentCountSteps[i];
+                long[] parentsCountStep = actualParentsCount[i];
 
-            //    for (int place = 0; place < parentIndexStep.Length; place++)
-            //    {
-            //        long parentIndex = parentIndexStep[place];
-            //        long parentsCount = parentsCountStep[place];
-            //        bool parentIndexInBoundsOfCount = parentIndex < parentsCount;
-            //        Assert.IsTrue(parentIndexInBoundsOfCount);
-            //    }
-            //}
+                for (int place = 0; place < parentIndexStep.Length; place++)
+                {
+                    long parentIndex = parentIndexStep[place];
+                    long parentsCount = parentsCountStep[place];
+                    bool parentIndexInBoundsOfCount = parentIndex < parentsCount;
+                    Assert.IsTrue(parentIndexInBoundsOfCount);
+                }
+            }
         }
+
 
 
         //Prepare Helpers
-        private CartesianProductSpreadStrategy GetConfiguredTarget()
-        {
-            Dictionary<Type, EntityContext> entities = ToEntityDictionary(new[]
-            {
-                (typeof(Category), 10),
-                (typeof(Post), 5),
-            });
-            var target = new CartesianProductSpreadStrategy();
-            //target.Setup(entities);
-            return target;
-        }
-
-        private Dictionary<Type, EntityContext> ToEntityDictionary(
+        private Dictionary<Type, EntityContext> GetEntities(
             IEnumerable<(Type, int)> targetCounts)
         {
-            Dictionary<Type, EntityContext> entities = targetCounts
+            return targetCounts
                 .Select(x => new EntityContext
                 {
                     Type = x.Item1,
@@ -179,9 +179,35 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                     }
                 })
                 .ToDictionary(x => x.Type, x => x);
-
-            return entities;
         }
+
+        private CartesianProductSpreadStrategy SetupTarget<TChild>(
+            IEnumerable<(Type, int)> targetCounts)
+            where TChild : class
+        {
+            //child entity
+            var desc = new EntityDescription<TChild>();
+            foreach ((Type, int) parentType in targetCounts)
+            {
+                desc.SetRequired(parentType.Item1);
+            }
+
+            var childEntity = new EntityContext
+            {
+                Type = typeof(TChild),
+                Description = desc
+            };
+
+            //all entities
+            Dictionary<Type, EntityContext> allEntities = GetEntities(targetCounts);
+
+            //spread strategy
+            var spread = new CartesianProductSpreadStrategy();
+            spread.Setup(childEntity, allEntities);
+
+            return spread;
+        }
+
 
 
         //Invoke helpers
@@ -225,7 +251,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             List<Type> parents, long combosCount, int nextIterationIncrement)
         {
             var combos = new List<long[]>();
-            Debug.WriteLine($"Starting {nameof(spreadStrategy.GetNextIterationParentsCount)} invocations");
+            Debug.WriteLine($"Starting {nameof(spreadStrategy.GetNextIterationParentCount)} invocations");
 
             long nextIterationInvokes = combosCount / nextIterationIncrement;
 
@@ -248,7 +274,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                         }
                     };
 
-                    long parentIndex = spreadStrategy.GetNextIterationParentsCount(parentEntity, childEntity);
+                    long parentIndex = spreadStrategy.GetNextIterationParentCount(parentEntity, childEntity);
                     nextCombo.Add(parentIndex);
                 }
 
@@ -258,7 +284,6 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 
             return combos;
         }
-
 
     }
 }

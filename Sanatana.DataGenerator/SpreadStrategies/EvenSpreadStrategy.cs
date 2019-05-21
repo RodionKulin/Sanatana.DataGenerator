@@ -24,16 +24,15 @@ namespace Sanatana.DataGenerator.SpreadStrategies
 
             //CurrentCount is 0 by default and incremented after entity generation.
             //GetParentIndex is called before generation to collect Required entities.
+            long childCount = childEntity.EntityProgress.CurrentCount + 1;
             long matchingParentCount = GetParentMatchingSpread(
-                parentEntity, childEntity, childEntity.EntityProgress.CurrentCount);
+                parentEntity, childEntity, childCount);
 
             //convert count to index
-            return matchingParentCount == 0
-                ? 0
-                : matchingParentCount - 1;
+            return matchingParentCount - 1;
         }
         
-        public virtual long GetNextIterationParentsCount(
+        public virtual long GetNextIterationParentCount(
             EntityContext parentEntity, EntityContext childEntity)
         {
             if (parentEntity.EntityProgress.TargetCount == 0
@@ -75,6 +74,12 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         {
             decimal childrenPerParent = (decimal)childEntity.EntityProgress.TargetCount / parentEntity.EntityProgress.TargetCount;
             decimal parentsCountRequired = childCountToMatch / childrenPerParent;
+
+            //Truncate extra decimal artifacts of division
+            //When dividing 1 by 0.3 will return 3.0000003
+            //Truncate it to just 3
+            //So Ceiling will also return 3
+            parentsCountRequired = Math.Truncate(parentsCountRequired * 10) / 10;
             long parentsCountRequiredRounded = (long)Math.Ceiling(parentsCountRequired);
 
             //don't require more than parent's TargetCount

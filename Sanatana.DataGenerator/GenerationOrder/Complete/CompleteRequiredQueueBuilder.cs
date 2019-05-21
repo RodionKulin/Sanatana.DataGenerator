@@ -117,7 +117,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 EntityContext parent = _entityContexts[requiredEntity.Type];
                 ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(child.Description, requiredEntity);
 
-                long parentRequiredCount = spreadStrategy.GetNextIterationParentsCount(parent, child);
+                long parentRequiredCount = spreadStrategy.GetNextIterationParentCount(parent, child);
                 long parentNewItemsCount = parentRequiredCount - parent.EntityProgress.CurrentCount;
 
                 bool added = PushQueueItem(generationOrder, requiredEntity.Type, parentNewItemsCount);
@@ -131,7 +131,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
         //Update counters
         public virtual void UpdateCounters(
-            EntityContext entityContext, IList generatedEntities, bool flushRequired)
+            EntityContext entityContext, IList generatedEntities, bool isFlushRequired)
         {
             OrderIterationType next = _queue.Peek();
             if (entityContext.Type != next.EntityType)
@@ -143,37 +143,18 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
             if (entityContext.Description.InsertToPersistentStorageBeforeUse)
             {
-                UpdateCountersForInsertToPersistentStorageBeforeUse(
-                    entityContext, next, flushRequired);
-                return;
-            }
-
-            if (next.GenerateCount <= 0)
-            {
-                _queue.Pop();
-            }
-        }
-
-        private void UpdateCountersForInsertToPersistentStorageBeforeUse(
-            EntityContext entityContext, OrderIterationType next, bool flushRequired)
-        {
-            EntityProgress progress = entityContext.EntityProgress;
-
-            //if still flushing previous entities of that type, than do not generate too much
-            bool flushInProgress = progress.IsFlushInProgress();
-            if (flushInProgress)
-            {
-                if (next.GenerateCount <= 0)
+                //for entities that generate Id on database, will generate as much as possible before flushing.
+                //the number to generate will be determined by IFlushTrigger.
+                EntityProgress progress = entityContext.EntityProgress;
+                bool isCompleted = progress.CurrentCount >= progress.TargetCount;
+                if (isFlushRequired || isCompleted)
                 {
                     _queue.Pop();
                 }
                 return;
             }
 
-            //for entities that generate Id on database, will generate as much as possible before flushing.
-            //the number to generate will be determined by IFlushTrigger.
-            bool completed = progress.TargetCount <= progress.CurrentCount;
-            if (flushRequired || completed)
+            if (next.GenerateCount <= 0)
             {
                 _queue.Pop();
             }

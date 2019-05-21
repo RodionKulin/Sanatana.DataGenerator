@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Related entities generator</Description>
-    <PackageReleaseNotes />
+    <PackageReleaseNotes>Added flushing to persistent storage on completed</PackageReleaseNotes>
     <PackageTags>DataGenerator Generation Related NET EntityFramework Csv MongoDb</PackageTags>
   </PropertyGroup>
 

@@ -16,15 +16,15 @@ namespace Sanatana.DataGenerator.MongoDb
 
 
         //init
-        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase
-            , Dictionary<Type, string> collectionNames)
+        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase,
+            Dictionary<Type, string> collectionNames)
         {
             _mongoDatabase = mongoDatabase;
             _collectionNames = collectionNames;
         }
 
-        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase
-            , string collectionName)
+        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase,
+            string collectionName)
         {
             _mongoDatabase = mongoDatabase;
             _collectionName = collectionName;
@@ -32,7 +32,7 @@ namespace Sanatana.DataGenerator.MongoDb
 
 
         //methods
-        public async Task Insert<TEntity>(List<TEntity> entities) 
+        public virtual async Task Insert<TEntity>(List<TEntity> entities) 
             where TEntity : class
         {
             string collectionName = _collectionName == null
@@ -47,7 +47,7 @@ namespace Sanatana.DataGenerator.MongoDb
             }).ConfigureAwait(false);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
         }
     }

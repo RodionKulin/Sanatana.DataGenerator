@@ -74,7 +74,7 @@ namespace Sanatana.DataGenerator.Internals
             Interlocked.Add(ref _flushedCount, numberOfFlushed);
         }
 
-        public virtual void AddRemovedFromTempStorageCount(long numberOfRemoved)
+        public virtual void AddReleasedCount(long numberOfRemoved)
         {
             Interlocked.Add(ref _releasedCount, numberOfRemoved);
         }

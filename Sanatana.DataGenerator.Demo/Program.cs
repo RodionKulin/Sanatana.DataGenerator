@@ -15,31 +15,34 @@ namespace Sanatana.DataGenerator.Demo
         {
             //Setup
             var setup = new GeneratorSetup();
-
-            //CSV does not need multithreaded writes
-            setup.TemporaryStorage.MaxTasksRunning = 1;
-
-            setup.RegisterEntity(new EntityDescription<Buyer>()
+            
+            setup.RegisterEntity<Buyer>()
                 .SetGenerator(GenerateBuyer)
                 .SetPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
-                .SetTargetCount(10));
-            setup.RegisterEntity(new EntityDescription<Supplier>()
+                .SetTargetCount(100);
+            setup.RegisterEntity<Supplier>()
                 .SetGenerator(GenerateSupplier)
                 .SetPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
-                .SetTargetCount(10));
-            setup.RegisterEntity(new EntityDescription<PurchaseOrder>()
+                .SetTargetCount(100);
+            setup.RegisterEntity<PurchaseOrder>()
                 .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
                 .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
                 .SetPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
                 .SetSpreadStrategy(new CartesianProductSpreadStrategy())
-                .SetTargetCount(100));
+                .SetTargetCount(100000);
 
             //Generate
+            setup.ProgressChanged += PrintProgress;
             setup.Generate();
-            Console.WriteLine("Finished");
-            Console.ReadLine();
+            Console.WriteLine("Completed");
+            Console.ReadKey();
         }
 
+        private static void PrintProgress(GeneratorSetup setup, decimal percent)
+        {
+            Console.CursorTop = 0;
+            Console.WriteLine(percent.ToString("F"));
+        }
 
         private static Buyer GenerateBuyer(GeneratorContext context)
         {

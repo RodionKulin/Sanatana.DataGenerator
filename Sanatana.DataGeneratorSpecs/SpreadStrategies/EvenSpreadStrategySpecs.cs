@@ -6,9 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using FluentAssertions;
+using System.Diagnostics;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {
+    //CurrentCount is incremented after entity generation and 
+    //this GetParentIndex query is happening before generation
+    //So CurrentCount will be 0 when first query happens
+    //and CurrentCount = TargetCount - 1 when last query happens
+
     [TestClass]
     public class EvenSpreadStrategySpecs
     {
@@ -21,6 +27,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         [DataRow(6, 2)]
         [DataRow(7, 2)]
         [DataRow(8, 2)]
+        [DataRow(9, 2)]
         [DataRow(100, 2)]   //child count beyond child's TargetCount
         public void GetParentIndex_WhenParentCountLower_ReturnsExpected(
             long currentChildCount, long expectedParentIndex)
@@ -34,7 +41,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             EntityContext childProgress = ToEntityContext(new EntityProgress
             {
                 CurrentCount = currentChildCount,
-                TargetCount = 8
+                TargetCount = 9
             });
             
             //Invoke
@@ -46,12 +53,11 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 
 
         [TestMethod]
-        [DataRow(0, 0)]       //no children planned on next iteration
-        [DataRow(1, 2)]
-        [DataRow(2, 5)]
-        [DataRow(3, 7)]
-        [DataRow(4, 7)]       //child count beyond child's TargetCount
-        [DataRow(100, 7)]     //child count beyond child's TargetCount
+        [DataRow(0, 2)]       //no children planned on next iteration
+        [DataRow(1, 5)]
+        [DataRow(2, 8)]
+        [DataRow(3, 8)]       //child count beyond child's TargetCount. 
+        [DataRow(100, 8)]     //child count beyond child's TargetCount
         public void GetParentIndex_WhenParentCountHigher_ReturnsExpected(
             long currentChildCount, long expectedParentIndex)
         {
@@ -59,7 +65,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
-                TargetCount = 8
+                TargetCount = 9
             });
             EntityContext childProgress = ToEntityContext(new EntityProgress
             {
@@ -71,7 +77,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             long actualParentIndex = target.GetParentIndex(parentProgress, childProgress);
 
             //Assert
-            Assert.AreEqual(expectedParentIndex, actualParentIndex);
+            actualParentIndex.Should().Be(expectedParentIndex);
         }
 
 
@@ -101,7 +107,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
 
             //Invoke
-            long actualParentCount = target.GetNextIterationParentsCount(parentProgress, childProgress);
+            long actualParentCount = target.GetNextIterationParentCount(parentProgress, childProgress);
 
             //Assert
             Assert.AreEqual(expectedParentCount, actualParentCount);
@@ -131,7 +137,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
 
             //Invoke
-            long actualParentCount = target.GetNextIterationParentsCount(parentProgress, childProgress);
+            long actualParentCount = target.GetNextIterationParentCount(parentProgress, childProgress);
 
             //Assert
             Assert.AreEqual(expectedParentCount, actualParentCount);
@@ -207,36 +213,124 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        [DataRow(1, 1)]      
-        [DataRow(2, 2)]      
-        [DataRow(10, 3)]     //parent/children were generated
-        [DataRow(100, 3)]    //more parents were generated than required
-        [DataRow(10, 100)]   //more children were generated than required
+        [DataRow(1)]      
+        [DataRow(2)]      
+        [DataRow(3)]     //child finished generation 
+        [DataRow(100)]   //more children were generated than required
         public void GetParentIndexAndGetParentCount_ReturnConsistentResults(
-            long parentNextFlushCount, long childCurrentCount)
+            long childCurrentCount)
         {
             //Prepare
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
-                TargetCount = 10,
-                NextFlushCount = parentNextFlushCount
+                TargetCount = 10
             });
             EntityContext childProgress = ToEntityContext(new EntityProgress
             {
                 TargetCount = 3,
                 CurrentCount = childCurrentCount,
-                NextIterationCount = childCurrentCount
+                NextIterationCount = childCurrentCount + 1
             });
 
             //Invoke
             long actualParentIndex = target.GetParentIndex(
                 parentProgress, childProgress);
-            long actualParentsCount = target.GetNextIterationParentsCount(
+            long actualParentsCount = target.GetNextIterationParentCount(
                 parentProgress, childProgress);
 
             //Assert
-            actualParentsCount.Should().BeGreaterThan(actualParentIndex);
+            actualParentsCount.Should().Be(actualParentIndex + 1);
+        }
+
+        [TestMethod]
+        [DataRow(10, 27, true, 9)]
+        [DataRow(10, 28, true, 9)]
+        [DataRow(10, 29, true, 9)]
+        [DataRow(10, 30, false, 10)]
+        [DataRow(10, 31, false, 10)]
+        public void GetParentCountAndCanGenerate_ReturnConsistentResults(
+            long parentNextReleaseCount, long childCurrentCount, 
+            bool expectedCanGenerate, int expectedParentIndex)
+        {
+            //Prepare
+            var target = new EvenSpreadStrategy();
+            EntityContext parentProgress = ToEntityContext(new EntityProgress
+            {
+                TargetCount = 30,
+                NextReleaseCount = parentNextReleaseCount
+            });
+            EntityContext childProgress = ToEntityContext(new EntityProgress
+            {
+                TargetCount = 90,
+                CurrentCount = childCurrentCount,
+                NextIterationCount = childCurrentCount + 1
+            });
+
+            //Invoke
+            long actualParentIndex = target.GetParentIndex(
+                parentProgress, childProgress);
+            long actualParentCount = target.GetNextIterationParentCount(
+                parentProgress, childProgress);
+            bool actualCanGenerate = target.CanGenerateFromParentNextReleaseCount(
+                parentProgress, childProgress);
+
+            //Assert
+            actualParentIndex.Should().Be(expectedParentIndex);
+            actualParentIndex.Should().Be(actualParentCount -1);
+            actualCanGenerate.Should().Be(expectedCanGenerate);
+
+            if (actualCanGenerate)
+            {
+                actualParentCount.Should().BeLessOrEqualTo(parentNextReleaseCount);
+            }
+            else
+            {
+                actualParentCount.Should().BeGreaterThan(parentNextReleaseCount);
+            }            
+        }
+
+        [TestMethod]
+        public void GetParentCountAndCanGenerate_WhenAllRangeIterated_ReturnConsistentResults()
+        {
+            long targetChildCount = 90;
+            long parentNextReleaseCount = 0;
+            for (int childCurrentCount = 0; childCurrentCount < targetChildCount; childCurrentCount++)
+            {
+                if (childCurrentCount % 30 == 0)
+                {
+                    parentNextReleaseCount += 10;
+                }
+
+                //Prepare
+                var target = new EvenSpreadStrategy();
+                EntityContext parentProgress = ToEntityContext(new EntityProgress
+                {
+                    TargetCount = 30,
+                    NextReleaseCount = parentNextReleaseCount
+                });
+                EntityContext childProgress = ToEntityContext(new EntityProgress
+                {
+                    TargetCount = 90,
+                    CurrentCount = childCurrentCount,
+                    NextIterationCount = childCurrentCount + 1
+                });
+
+                //Invoke
+                long actualParentIndex = target.GetParentIndex(
+                    parentProgress, childProgress);
+                long actualParentCount = target.GetNextIterationParentCount(
+                    parentProgress, childProgress);
+                bool actualCanGenerate = target.CanGenerateFromParentNextReleaseCount(
+                    parentProgress, childProgress);
+
+                //Assert
+                bool expectedCanGenerate = actualParentCount <= parentNextReleaseCount;
+                actualParentIndex.Should().Be(actualParentCount - 1);
+                actualCanGenerate.Should().Be(expectedCanGenerate);
+
+                Debug.WriteLine($"Child: {childCurrentCount} Parent {actualParentCount} NextRelease {parentNextReleaseCount} CanGenerate {actualCanGenerate}");
+            }
         }
 
 

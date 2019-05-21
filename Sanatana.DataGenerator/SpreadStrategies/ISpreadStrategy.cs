@@ -28,7 +28,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         /// <param name="parentProgress"></param>
         /// <param name="childProgress"></param>
         /// <returns></returns>
-        long GetNextIterationParentsCount(EntityContext parentEntity, EntityContext childEntity);
+        long GetNextIterationParentCount(EntityContext parentEntity, EntityContext childEntity);
         /// <summary>
         /// Check if all children were generated from provided parent. 
         /// If so then parents stored in temporary storage will be released from temp storage.
