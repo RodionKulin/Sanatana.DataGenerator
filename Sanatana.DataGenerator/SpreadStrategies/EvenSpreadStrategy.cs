@@ -28,7 +28,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             long matchingParentCount = GetParentMatchingSpread(
                 parentEntity, childEntity, childCount);
 
-            //convert count to index
+            //convert 1-based count to 0-based index
             return matchingParentCount - 1;
         }
         
