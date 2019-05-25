@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.EntityFrameworkCore.Batch;
 using Sanatana.EntityFrameworkCore.Batch.Commands.Merge;
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
-    public class EntityFrameworkCoreFlushTrigger : FlushTriggerBase
+    public class EntityFrameworkCoreFlushTrigger : FlushStrategyBase
     {
         //fields
         protected Func<DbContext> _dbContextFactory;

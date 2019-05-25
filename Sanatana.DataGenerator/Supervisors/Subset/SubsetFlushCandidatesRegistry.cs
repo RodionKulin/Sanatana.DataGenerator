@@ -1,13 +1,13 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Complete;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Subset
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     public class SubsetFlushCandidatesRegistry : CompleteFlushCandidatesRegistry
     {

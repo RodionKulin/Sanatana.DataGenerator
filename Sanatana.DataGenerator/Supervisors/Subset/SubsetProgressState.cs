@@ -1,11 +1,11 @@
-﻿using Sanatana.DataGenerator.GenerationOrder.Complete;
+﻿using Sanatana.DataGenerator.Supervisors.Complete;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Subset
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     public class SubsetProgressState : CompleteProgressState
     {

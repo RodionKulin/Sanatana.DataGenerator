@@ -3,15 +3,16 @@ using Sanatana.DataGenerator.Internals;
 using System;
 using System.Collections.Generic;
 using System.Collections;
+using Sanatana.DataGenerator.Commands;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Contracts
+namespace Sanatana.DataGenerator.Supervisors.Contracts
 {
-    public interface IOrderProvider
+    public interface ISupervisor
     {
         IProgressState ProgressState { get; }
         void Setup(GeneratorSetup generatorSetup, Dictionary<Type, EntityContext> entityContexts);
-        EntityAction GetNextAction();
+        ICommand GetNextCommand();
         void HandleGenerateCompleted(EntityContext entityContext, IList generatedEntities);
-        void HandleFlushCompleted(EntityAction entityAction);
+        void EnqueueCommand(ICommand command);
     }
 }

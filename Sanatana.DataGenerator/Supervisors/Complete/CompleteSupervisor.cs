@@ -1,16 +1,18 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sanatana.DataGenerator.Commands;
+using System.Collections.Concurrent;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Complete
+namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     /// <summary>
-    /// Provides ordered actions to generate complete list of all entities configured.
+    /// Provides commands to generate complete list of all entities configured.
     /// </summary>
-    public class CompleteOrderProvider : IOrderProvider
+    public class CompleteSupervisor : ISupervisor
     {
         //fields
         /// <summary>
@@ -24,7 +26,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         /// <summary>
         /// Next actions to execute between generate entity actions
         /// </summary>
-        protected Queue<EntityAction> _actionsQueue;
+        protected ConcurrentQueue<ICommand> _commandsQueue;
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;
         protected IRequiredQueueBuilder _requiredQueueBuilder;
         protected INextNodeFinder _nextNodeFinder;
@@ -38,7 +40,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
         public virtual void Setup(GeneratorSetup generatorSetup, 
             Dictionary<Type, EntityContext> entityContexts)
         {
-            _actionsQueue = new Queue<EntityAction>();
+            _commandsQueue = new ConcurrentQueue<ICommand>();
 
             _entityContexts = entityContexts;
             _generatorSetup = generatorSetup;
@@ -54,15 +56,22 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //methods
-        public virtual EntityAction GetNextAction()
+        public virtual ICommand GetNextCommand()
         {
-            if(_actionsQueue.Count > 0)
+            ICommand nextCommand = null;
+            _commandsQueue.TryDequeue(out nextCommand);
+            if (nextCommand != null)
             {
-                return _actionsQueue.Dequeue();
+                return nextCommand;
             }
 
-            EntityAction nextAction = _requiredQueueBuilder.GetNextAction();
-            return nextAction;
+            nextCommand = _requiredQueueBuilder.GetNextCommand();
+            return nextCommand;
+        }
+
+        public virtual void EnqueueCommand(ICommand command)
+        {
+            _commandsQueue.Enqueue(command);
         }
 
 
@@ -77,8 +86,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             bool isFlushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
             if (isFlushRequired)
             {
-                List<EntityAction> flushActions = _flushCandidatesRegistry.GetNextFlushActions(entityContext);
-                flushActions.ForEach(action => _actionsQueue.Enqueue(action));
+                List<ICommand> flushCommands = _flushCandidatesRegistry.GetNextFlushCommands(entityContext);
+                flushCommands.ForEach(command => _commandsQueue.Enqueue(command));
             }
 
             //update progress state variables
@@ -86,21 +95,6 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, isFlushRequired);
         }
 
-        public virtual void HandleFlushCompleted(EntityAction entityAction)
-        {
-            if(entityAction.ActionType != ActionType.FlushToPersistentStorage)
-            {
-                return;
-            }
-
-            EntityContext entityContext = entityAction.EntityContext;
-
-            bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
-            if (flushRequired)
-            {
-                List<EntityAction> flushActions = _flushCandidatesRegistry.GetNextFlushActions(entityContext);
-                flushActions.ForEach(action => _actionsQueue.Enqueue(action));
-            }
-        }
+      
     }
 }

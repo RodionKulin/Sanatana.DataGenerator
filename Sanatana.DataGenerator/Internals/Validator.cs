@@ -1,9 +1,7 @@
 ﻿using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
-using Sanatana.DataGenerator.GenerationOrder;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.QuantityProviders;
 using Sanatana.DataGenerator.SpreadStrategies;
@@ -16,6 +14,9 @@ using System.Text;
 
 namespace Sanatana.DataGenerator.Internals
 {
+    /// <summary>
+    /// Configuration validator that will throw errors on missing or inconsistent setup
+    /// </summary>
     public class Validator
     {
         //fields
@@ -35,10 +36,10 @@ namespace Sanatana.DataGenerator.Internals
         /// <param name="entityDescriptions"></param>
         public virtual void CheckGeneratorSetupComplete(Dictionary<Type, IEntityDescription> entityDescriptions)
         {
-            IOrderProvider orderProvider = _generatorSetup.OrderProvider;
-            if (orderProvider == null)
+            ISupervisor supervisor = _generatorSetup.Supervisor;
+            if (supervisor == null)
             {
-                throw new ArgumentNullException(nameof(_generatorSetup.OrderProvider));
+                throw new ArgumentNullException(nameof(_generatorSetup.Supervisor));
             }
 
             foreach (IEntityDescription description in entityDescriptions.Values)
@@ -49,7 +50,7 @@ namespace Sanatana.DataGenerator.Internals
                     ?? _generatorSetup.DefaultQuantityProvider;
                 if (quantityProvider == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushTrigger);
+                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.QuantityProvider), defName);
                     throw new ArgumentNullException(defName, msg);
@@ -59,7 +60,7 @@ namespace Sanatana.DataGenerator.Internals
                     ?? _generatorSetup.DefaultGenerator;
                 if (generator == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushTrigger);
+                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.QuantityProvider), defName);
                     throw new ArgumentNullException(defName, msg);
@@ -75,11 +76,11 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentNullException(defName, msg);
                 }
 
-                IFlushTrigger insertTrigger = description.FlushTrigger
-                    ?? _generatorSetup.DefaultFlushTrigger;
+                IFlushStrategy insertTrigger = description.FlushTrigger
+                    ?? _generatorSetup.DefaultFlushStrategy;
                 if (insertTrigger == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushTrigger);
+                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.FlushTrigger), defName);
                     throw new ArgumentNullException(defName, msg);
@@ -202,9 +203,9 @@ namespace Sanatana.DataGenerator.Internals
 
 
 
-        //Generation prestart checks for Generators and Post Processors
+        //Generation prestart checks for Generators and Modifiers
         /// <summary>
-        /// Validate that Parameterized PostProcessors have the same parameters as list of Required types.
+        /// Validate that Parameterized Modifiers have the same parameters as list of Required types.
         /// </summary>
         /// <param name="entityDescriptions"></param>
         public virtual void CheckGeneratorsParams(
@@ -233,7 +234,7 @@ namespace Sanatana.DataGenerator.Internals
         }
 
         /// <summary>
-        /// Validate that Parameterized PostProcessors have the same parameters as list of Required types.
+        /// Validate that Parameterized Modifiers have the same parameters as list of Required types.
         /// </summary>
         /// <param name="entityDescriptions"></param>
         public virtual void CheckModifiersParams(
@@ -249,13 +250,13 @@ namespace Sanatana.DataGenerator.Internals
                 for (int i = 0; i < modifiers.Count; i++)
                 {
                     IModifier modifier = modifiers[i];
-                    Type processorType = modifier.GetType();
-                    Type[] processorParams = (modifier as IDelegateParameterizedModifier)
+                    Type modifierType = modifier.GetType();
+                    Type[] modifierParams = (modifier as IDelegateParameterizedModifier)
                         .GetRequiredEntitiesFuncParameters()
                         .ToArray();
 
-                    CheckDuplicates(processorParams, entity, processorType);
-                    CompareToRequiredParams(requiredEntitiesTypes, processorParams, entity, processorType);
+                    CheckDuplicates(modifierParams, entity, modifierType);
+                    CompareToRequiredParams(requiredEntitiesTypes, modifierParams, entity, modifierType);
                 }
             }
         }
@@ -366,13 +367,13 @@ namespace Sanatana.DataGenerator.Internals
         /// <summary>
         /// Throw exception on Next node finding misfunction, when next node is not found.
         /// </summary>
-        /// <param name="orderProgress"></param>
-        public virtual void ThrowNoNextGeneratorFound(IProgressState orderProgress)
+        /// <param name="progressState"></param>
+        public virtual void ThrowNoNextGeneratorFound(IProgressState progressState)
         {
-            string[] completedNames = orderProgress.CompletedEntityTypes
+            string[] completedNames = progressState.CompletedEntityTypes
                 .Select(x => $"[{x.Name}]")
                 .ToArray();
-            string[] notCompletedNames = orderProgress.NotCompletedEntities
+            string[] notCompletedNames = progressState.NotCompletedEntities
                 .Select(x => $"[{x.Type.Name}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
                 .ToArray();
 

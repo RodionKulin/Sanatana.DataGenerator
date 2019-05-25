@@ -17,8 +17,8 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             optionsBuilder.UseSqlServer($@"Data Source=(LocalDb)\MSSQLLocalDB;
-                 AttachDbFilename={basePath}GeneratorEfCoreContext-20190501.mdf;
-                 Initial Catalog=GeneratorEfCoreContext-20190501;
+                 AttachDbFilename={basePath}GeneratorEfCoreContext-20190522.mdf;
+                 Initial Catalog=GeneratorEfCoreContext-20190522;
                  Integrated Security=True");
         }
     }

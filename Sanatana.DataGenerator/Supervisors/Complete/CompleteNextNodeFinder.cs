@@ -4,10 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using System.Collections;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Complete
+namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     public class CompleteNextNodeFinder : INextNodeFinder
     {

@@ -1,6 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder;
 using Sanatana.DataGenerator.SpreadStrategies;
 using System;
 using System.Collections.Generic;

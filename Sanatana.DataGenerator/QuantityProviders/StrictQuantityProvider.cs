@@ -33,7 +33,7 @@ namespace Sanatana.DataGenerator.QuantityProviders
         }
 
 
-        public virtual long GetTargetTotalQuantity()
+        public virtual long GetTargetQuantity()
         {
             return TotalQuantity;
         }

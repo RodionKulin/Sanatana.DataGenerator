@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Collections;
 using System.Linq;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Supervisors.Contracts;
+using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.SpreadStrategies;
+using Sanatana.DataGenerator.Commands;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Complete
+namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     public class CompleteFlushCandidatesRegistry : IFlushCandidatesRegistry
     {
@@ -54,7 +55,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
             }
 
             //NextReleaseCount will be used by child entities to check if they still can generate from this parent
-            IFlushTrigger flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
+            IFlushStrategy flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
             flushTrigger.SetNextReleaseCount(entityContext);
 
             //when all entities are generated also should flush
@@ -86,43 +87,37 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //Flush actions
-        public virtual List<EntityAction> GetNextFlushActions(EntityContext entityContext)
+        public virtual List<ICommand> GetNextFlushCommands(EntityContext entityContext)
         {
-            var flushActions = new List<EntityAction>();
+            var flushCommands = new List<ICommand>();
 
             //needs to create ids by database before using as required by children
             //will write to persitent storage, but won't remove from temporary storage
             if (entityContext.Description.InsertToPersistentStorageBeforeUse)
             {
-                flushActions.Add(new EntityAction
-                {
-                    ActionType = ActionType.GenerateStorageIds,
-                    EntityContext = entityContext
-                });
+                flushCommands.Add(new GenerateStorageIdsCommand(entityContext, _generatorSetup));
             }
 
             //also check parent entities, if they are no longer required and can be flushed too
-            AppendParentsFlushActions(entityContext.ParentEntities, flushActions);
+            AppendParentsFlushActions(entityContext.ParentEntities, flushCommands);
 
             bool hasDependentChild = FindChildThatCanGenerate(entityContext, true) != null;
             if (hasDependentChild)
             {
-                return flushActions;
+                return flushCommands;
             }
 
             //has no dependent children, so can flush to persistent storage
-            //in case of InsertToPersistentStorageBeforeUse will remove from Temp storage
-            flushActions.Add(new EntityAction
-            {
-                ActionType = ActionType.FlushToPersistentStorage,
-                EntityContext = entityContext
-            });
+            ICommand command = entityContext.Description.InsertToPersistentStorageBeforeUse
+                ? new ReleaseFromTempStorageCommand(entityContext, _generatorSetup, this)
+                : (ICommand)new FlushCommand(entityContext, _generatorSetup, this);
+            flushCommands.Add(command);
 
-            return flushActions;
+            return flushCommands;
         }
 
         protected virtual void AppendParentsFlushActions(
-            List<IEntityDescription> parents, List<EntityAction> flushActions)
+            List<IEntityDescription> parents, List<ICommand> flushCommands)
         {
             foreach (IEntityDescription parent in parents)
             {
@@ -141,13 +136,12 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
                 _flushCandidates.Remove(parentContext);
 
-                flushActions.Add(new EntityAction
-                {
-                    ActionType = ActionType.FlushToPersistentStorage,
-                    EntityContext = parentContext
-                });
+                ICommand command = parentContext.Description.InsertToPersistentStorageBeforeUse
+                    ? new ReleaseFromTempStorageCommand(parentContext, _generatorSetup, this)
+                    : (ICommand)new FlushCommand(parentContext, _generatorSetup, this);
+                flushCommands.Add(command);
 
-                AppendParentsFlushActions(parentContext.ParentEntities, flushActions);
+                AppendParentsFlushActions(parentContext.ParentEntities, flushCommands);
             }
         }
 

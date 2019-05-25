@@ -4,11 +4,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.FlushTriggers
+namespace Sanatana.DataGenerator.Strategies
 {
-    public class LimitedCapacityFlushTrigger : FlushTriggerBase
+    public class LimitedCapacityFlushStrategy : FlushStrategyBase
     {
-        public LimitedCapacityFlushTrigger(long capacity)
+        public LimitedCapacityFlushStrategy(long capacity)
         {
             if (capacity < 1)
             {

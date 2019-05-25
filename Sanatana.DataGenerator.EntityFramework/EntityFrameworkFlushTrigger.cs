@@ -1,4 +1,4 @@
-﻿using Sanatana.DataGenerator.FlushTriggers;
+﻿using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.EntityFramework.Batch;
 using System;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
-    public class EntityFrameworkFlushTrigger : FlushTriggerBase
+    public class EntityFrameworkFlushTrigger : FlushStrategyBase
     {
         //fields
         protected Func<DbContext> _dbContextFactory;

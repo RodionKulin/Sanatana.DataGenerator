@@ -1,9 +1,8 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Complete;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections;
@@ -13,13 +12,17 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using Sanatana.DataGenerator.SpreadStrategies;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.QuantityProviders;
 using Sanatana.DataGenerator.Modifiers;
+using Sanatana.DataGenerator.Commands;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 namespace Sanatana.DataGenerator
 {
+    /// <summary>
+    /// Setup class to register all the entities with their generators and start to generate
+    /// </summary>
     public class GeneratorSetup
     {
         //fields
@@ -28,16 +31,19 @@ namespace Sanatana.DataGenerator
 
 
         //event
+        /// <summary>
+        /// Progress change event that will report overall completion percent in range from 0 to 100.
+        /// </summary>
         public event Action<GeneratorSetup, decimal> ProgressChanged;
 
 
         //properties
         /// <summary>
-        /// Configuration validator
+        /// Configuration validator that will throw errors on missing or inconsistent setup
         /// </summary>
         internal Validator Validator { get; set; }
         /// <summary>
-        /// In memory storage for generated entities with they are batch inserted to persistent storage.
+        /// In memory storage for generated entities to accumulate some descent batches before inserting to persistent storage.
         /// </summary>
         public TemporaryStorage TemporaryStorage { get; set; }
         /// <summary>
@@ -45,41 +51,47 @@ namespace Sanatana.DataGenerator
         /// </summary>
         public Dictionary<Type, IEntityDescription> EntityDescriptions { get; set; }
         /// <summary>
-        /// Provider of entity types to generate using entity configuration
+        /// Default strategy to trigger entity persistent storage writes.
+        /// Will be used for entity types that does not have a FlushStrategy specified.
+        /// LimitedCapacityFlushStrategy with a limit of 100 is set by default.
         /// </summary>
-        public IOrderProvider OrderProvider { get; set; }
+        public IFlushStrategy DefaultFlushStrategy { get; set; }
         /// <summary>
         /// Default entities generator. 
         /// Will be used for entity types that does not have a Generator specified.
+        /// By default is not set.
         /// </summary>
         public IGenerator DefaultGenerator { get; set; }
         /// <summary>
-        /// Default post processing method to make adjustments to entity after generated.
-        /// Will be used for entity types that does not have a PostProcessor specified.
+        /// Default modifiers to make adjustments to entity after generation.
+        /// Will be used for entity types that does not have Modifers specified.
         /// </summary>
         public List<IModifier> DefaultModifiers { get; set; }
         /// <summary>
-        /// Default persistent storage for generated entities.
-        /// Will be used for entity types that does not have a PersistentStorage specified.
-        /// </summary>
-        public IPersistentStorage DefaultPersistentStorage { get; set; }
-        /// <summary>
-        /// Default strategy to reuse same parent entities among multiple child entities.
-        /// Will be used for Required entity types that does not have a SpreadStrategy specified.
-        /// </summary>
-        public ISpreadStrategy DefaultSpreadStrategy { get; set; }
-        /// <summary>
         /// Default provider of total number of entities that needs to be generated.
         /// Will be used for entity types that does not have a QuantityProvider specified.
+        /// By default is not set.
         /// </summary>
         public IQuantityProvider DefaultQuantityProvider { get; set; }
         /// <summary>
-        /// Default entity persistent storage write trigger.
-        /// Will be used for entity types that does not have a FlushTrigger specified.
+        /// Default strategy to reuse same parent entities among multiple child entities.
+        /// Will be used for Required entity types that does not have a SpreadStrategy specified.
+        /// EvenSpreadStrategy is set by default
         /// </summary>
-        public IFlushTrigger DefaultFlushTrigger { get; set; }
+        public ISpreadStrategy DefaultSpreadStrategy { get; set; }
+        /// <summary>
+        /// Default persistent storage for generated entities.
+        /// Will be used for entity types that does not have a PersistentStorage specified.
+        /// By default is not set.
+        /// </summary>
+        public IPersistentStorage DefaultPersistentStorage { get; set; }
+        /// <summary>
+        /// Producer of generation and flush commands.
+        /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
+        /// </summary>
+        public ISupervisor Supervisor { get; set; }
 
-        
+
 
         //init
         public GeneratorSetup()
@@ -89,8 +101,8 @@ namespace Sanatana.DataGenerator
             TemporaryStorage = new TemporaryStorage();
 
             DefaultSpreadStrategy = new EvenSpreadStrategy();
-            DefaultFlushTrigger = new LimitedCapacityFlushTrigger(100);
-            OrderProvider = new CompleteOrderProvider();
+            DefaultFlushStrategy = new LimitedCapacityFlushStrategy(100);
+            Supervisor = new CompleteSupervisor();
         }
 
         internal virtual Dictionary<Type, EntityContext> SetupEntityContexts(
@@ -115,7 +127,7 @@ namespace Sanatana.DataGenerator
                 }
 
                 IQuantityProvider quantityProvider = GetQuantityProvider(description);
-                long targetTotalCount = quantityProvider.GetTargetTotalQuantity();
+                long targetTotalCount = quantityProvider.GetTargetQuantity();
 
                 entityContexts.Add(description.Type, new EntityContext
                 {
@@ -187,10 +199,7 @@ namespace Sanatana.DataGenerator
 
             ExecuteGenerationLoop();
 
-            //finish
-            FlushStorage();
             UpdateProgress();
-            Dispose();
         }
 
         protected virtual void Validate()
@@ -207,10 +216,10 @@ namespace Sanatana.DataGenerator
         {
             _entityContexts = SetupEntityContexts(EntityDescriptions);
             SetupSpreadStrategies();
-            OrderProvider.Setup(this, _entityContexts);
+            Supervisor.Setup(this, _entityContexts);
         }
         
-
+        
 
         //Execution loop
         protected virtual void ExecuteGenerationLoop()
@@ -219,86 +228,15 @@ namespace Sanatana.DataGenerator
             {
                 UpdateProgress();
 
-                //handle completed flush actions
-                List<EntityAction> completedActions = TemporaryStorage.GetCompletedActions();
-                foreach (EntityAction completedAction in completedActions)
-                {
-                    OrderProvider.HandleFlushCompleted(completedAction);
-                }
-
-                //get next action
-                EntityAction action = OrderProvider.GetNextAction();
-                if (action.ActionType == ActionType.Finish)
+                ICommand command = Supervisor.GetNextCommand();
+                bool continueCommands = command.Execute();
+                if (!continueCommands)
                 {
                     break;
                 }
-
-                IPersistentStorage persistentStorage = null;
-                switch (action.ActionType)
-                {
-                    case ActionType.Generate:
-                        GenerateEntity(action);
-                        break;
-                    case ActionType.FlushToPersistentStorage:
-                        persistentStorage = GetPersistentStorage(action.EntityContext.Description);
-                        TemporaryStorage.FlushToPersistent(action, persistentStorage);
-                        break;
-                    case ActionType.GenerateStorageIds:
-                        persistentStorage = GetPersistentStorage(action.EntityContext.Description);
-                        TemporaryStorage.GenerateStorageIds(action, persistentStorage);
-
-                        break;
-                }
             }
         }
         
-        protected virtual void GenerateEntity(EntityAction action)
-        {
-            IEntityDescription entityDescription = action.EntityContext.Description;
-            IGenerator generator = GetGenerator(entityDescription);
-            List<IModifier> modifiers = GetModifiers(entityDescription);
-            
-            var context = new GeneratorContext
-            {
-                Description = entityDescription,
-                TargetCount = action.EntityContext.EntityProgress.TargetCount,
-                CurrentCount = action.EntityContext.EntityProgress.CurrentCount,
-                RequiredEntities = GetRequiredEntities(action),
-            };
-
-            
-            IList entities = generator.Generate(context);
-            Validator.CheckGeneratedCount(entities, entityDescription.Type, generator);
-
-            foreach (IModifier modifier in modifiers)
-            {
-                entities = modifier.Modify(context, entities);
-                Validator.CheckModifiedCount(entities, entityDescription.Type, modifier);
-            }
-
-            TemporaryStorage.InsertToTemporary(action.EntityContext, entities);
-            OrderProvider.HandleGenerateCompleted(action.EntityContext, entities);
-        }
-        
-        protected virtual Dictionary<Type, object> GetRequiredEntities(EntityAction action)
-        {
-            var result = new Dictionary<Type, object>();
-
-            foreach (RequiredEntity requiredEntity in action.EntityContext.Description.Required)
-            {
-                Type parent = requiredEntity.Type;
-                EntityContext parentEntityContext = _entityContexts[parent];
-
-                ISpreadStrategy spreadStrategy = GetSpreadStrategy(action.EntityContext.Description, requiredEntity);
-                long parentEntityIndex = spreadStrategy.GetParentIndex(parentEntityContext, action.EntityContext);
-
-                object parentEntity = TemporaryStorage.Select(parentEntityContext, parentEntityIndex);
-                result.Add(parent, parentEntity);
-            }
-
-            return result;
-        }
-
         protected virtual void UpdateProgress()
         {
             long actionCalls = IdIterator.GetNextId<IProgressState>();
@@ -312,53 +250,11 @@ namespace Sanatana.DataGenerator
             }
 
             //invoke handler
-            decimal percents = OrderProvider.ProgressState.GetCompletionPercents();
+            decimal percents = Supervisor.ProgressState.GetCompletionPercents();
             var progressChanged = ProgressChanged;
             if (progressChanged != null)
             {
                 progressChanged(this, percents);
-            }
-        }
-
-
-
-        //Flush all and dispose
-        protected virtual void FlushStorage()
-        {
-            foreach (EntityContext entityContext in _entityContexts.Values)
-            {
-                entityContext.EntityProgress.NextFlushCount = entityContext.EntityProgress.CurrentCount;
-                entityContext.EntityProgress.NextReleaseCount = entityContext.EntityProgress.CurrentCount;
-
-                IPersistentStorage storage = GetPersistentStorage(entityContext.Description);
-
-                if (entityContext.Description.InsertToPersistentStorageBeforeUse)
-                {
-                    TemporaryStorage.GenerateStorageIds(new EntityAction
-                    {
-                        ActionType = ActionType.GenerateStorageIds,
-                        EntityContext = entityContext
-                    }, storage);
-                }
-
-                TemporaryStorage.FlushToPersistent(new EntityAction
-                {
-                    ActionType = ActionType.FlushToPersistentStorage,
-                    EntityContext = entityContext
-                }, storage);
-            }
-
-            TemporaryStorage.WaitAllTasks();
-        }
-
-        protected virtual void Dispose()
-        {
-            foreach (EntityContext entityContext in _entityContexts.Values)
-            {
-                IPersistentStorage storage = GetPersistentStorage(entityContext.Description);
-                storage.Dispose();
-
-                entityContext.Dispose();
             }
         }
 
@@ -426,19 +322,19 @@ namespace Sanatana.DataGenerator
             throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IPersistentStorage)} configured and {nameof(DefaultPersistentStorage)} also was not provided.");
         }
 
-        internal virtual IFlushTrigger GetFlushTrigger(IEntityDescription entityDescription)
+        internal virtual IFlushStrategy GetFlushTrigger(IEntityDescription entityDescription)
         {
             if (entityDescription.FlushTrigger != null)
             {
                 return entityDescription.FlushTrigger;
             }
 
-            if (DefaultFlushTrigger != null)
+            if (DefaultFlushStrategy != null)
             {
-                return DefaultFlushTrigger;
+                return DefaultFlushStrategy;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IFlushTrigger)} configured and {nameof(DefaultFlushTrigger)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IFlushStrategy)} configured and {nameof(DefaultFlushStrategy)} also was not provided.");
         }
 
         internal virtual ISpreadStrategy GetSpreadStrategy(IEntityDescription entityDescription, RequiredEntity requiredEntity)

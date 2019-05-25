@@ -1,5 +1,4 @@
-﻿using Sanatana.DataGenerator.GenerationOrder;
-using Sanatana.DataGenerator.Internals;
+﻿using Sanatana.DataGenerator.Internals;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -10,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.Storages
 {
+    /// <summary>
+    /// In memory storage for generated entities to accumulate some descent batches before inserting to persistent storage.
+    /// </summary>
     public class TemporaryStorage
     {
         //fields
@@ -18,7 +20,6 @@ namespace Sanatana.DataGenerator.Storages
         protected List<Task> _runningTasks;
         protected ReflectionInvoker _reflectionInvoker;
         protected ListOperations _listOperations;
-        protected ConcurrentQueue<EntityAction> _completedActions;
 
         //properties
         /// <summary>
@@ -45,7 +46,6 @@ namespace Sanatana.DataGenerator.Storages
             _reflectionInvoker = new ReflectionInvoker();
             _listOperations = new ListOperations();
             _runningTasks = new List<Task>();
-            _completedActions = new ConcurrentQueue<EntityAction>();
             _entitiesAwaitingFlush = new Dictionary<Type, IList>();
         }
 
@@ -114,27 +114,17 @@ namespace Sanatana.DataGenerator.Storages
         /// </summary>
         /// <param name="entityContext"></param>
         /// <param name="storage"></param>
-        public virtual void FlushToPersistent(EntityAction action, IPersistentStorage storage)
+        public virtual Task FlushToPersistent(EntityContext entityContext, IPersistentStorage storage)
         {
-            if (action.EntityContext.Description.InsertToPersistentStorageBeforeUse)
-            {
-                ReleaseFromTempStorage(action, storage);
-                _completedActions.Enqueue(action);
-                return;
-            }
-
             WaitRunningTask();
-            Task nextFlushTask = FlushToPermanentTask(action, storage)
-                 .ContinueWith((prev) =>
-                 {
-                     _completedActions.Enqueue(action);
-                 });
+            Task nextFlushTask = FlushToPersistentTask(entityContext, storage);
             _runningTasks.Add(nextFlushTask);
+
+            return nextFlushTask;
         }
 
-        protected virtual Task FlushToPermanentTask(EntityAction action, IPersistentStorage storage)
+        protected virtual Task FlushToPersistentTask(EntityContext entityContext, IPersistentStorage storage)
         {
-            EntityContext entityContext = action.EntityContext;
             EntityProgress progress = entityContext.EntityProgress;
 
             if (_entitiesAwaitingFlush.ContainsKey(entityContext.Type) == false)
@@ -176,10 +166,9 @@ namespace Sanatana.DataGenerator.Storages
         /// <summary>
         /// Insert entities to persistent storage but keep in temporary storage
         /// </summary>
-        public virtual void GenerateStorageIds(EntityAction action, IPersistentStorage storage)
+        public virtual void GenerateStorageIds(EntityContext entityContext, IPersistentStorage storage)
         {
             //Must be a sync operation, so inserted Ids are available immediatly
-            EntityContext entityContext = action.EntityContext;
             EntityProgress progress = entityContext.EntityProgress;
 
             if (_entitiesAwaitingFlush.ContainsKey(entityContext.Type) == false)
@@ -218,9 +207,8 @@ namespace Sanatana.DataGenerator.Storages
                 .Wait();
         }
 
-        public virtual void ReleaseFromTempStorage(EntityAction action, IPersistentStorage storage)
+        public virtual void ReleaseFromTempStorage(EntityContext entityContext)
         {
-            EntityContext entityContext = action.EntityContext;
             EntityProgress progress = entityContext.EntityProgress;
 
             if (_entitiesAwaitingFlush.ContainsKey(entityContext.Type) == false)
@@ -244,21 +232,7 @@ namespace Sanatana.DataGenerator.Storages
             });
         }
 
-        
-        //Get completed action
-        public virtual List<EntityAction> GetCompletedActions()
-        {
-            var completedActions = new List<EntityAction>();
-
-            EntityAction completedAction = null;
-            while (_completedActions.TryDequeue(out completedAction))
-            {
-                completedActions.Add(completedAction);
-            }
-
-            return completedActions;
-        }
-        
+                
 
         //Tasks handling
         protected virtual void WaitRunningTask()

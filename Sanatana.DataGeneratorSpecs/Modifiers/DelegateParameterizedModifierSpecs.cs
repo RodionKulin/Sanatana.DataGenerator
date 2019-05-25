@@ -12,7 +12,7 @@ namespace Sanatana.DataGeneratorSpecs.Modifiers
     public class DelegateParameterizedModifierSpecs
     {
         [TestMethod]
-        public void Process_WhenParametersOutOfOrder_ReturnsEntity()
+        public void Modify_WhenParametersOutOfOrder_ReturnsEntity()
         {
             //Prepare
             var t = DelegateParameterizedModifier<Comment>.Factory.Create(

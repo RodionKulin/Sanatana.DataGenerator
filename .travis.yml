@@ -5,10 +5,6 @@ dist: xenial
 dotnet: 2.2
 solution: Sanatana.DataGenerator.sln
 script:
-  - dotnet test Sanatana.DataGenerator.AutoBogusSpecs/Sanatana.DataGenerator.AutoBogusSpecs.csproj
-  - dotnet test Sanatana.DataGenerator.EntityFrameworkCoreSpecs/Sanatana.DataGenerator.EntityFrameworkCoreSpecs.csproj
-  - dotnet test Sanatana.DataGeneratorSpecs/Sanatana.DataGeneratorSpecs.csproj
-  
   - dotnet pack Sanatana.DataGenerator/Sanatana.DataGenerator.csproj -o ../nuget -c Release
   - dotnet pack Sanatana.DataGenerator.Csv/Sanatana.DataGenerator.Csv.csproj -o ../nuget -c Release
   - dotnet pack Sanatana.DataGenerator.MongoDb/Sanatana.DataGenerator.MongoDb.csproj -o ../nuget -c Release

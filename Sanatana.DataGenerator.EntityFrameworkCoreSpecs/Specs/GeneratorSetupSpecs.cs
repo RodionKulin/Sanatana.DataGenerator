@@ -4,7 +4,7 @@ using Sanatana.DataGenerator.EntityFramework;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Interfaces;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples.Entities;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Strategies;
 using SpecsFor.StructureMap;
 using StructureMap;
 using System;
@@ -28,56 +28,38 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             private List<Category> _insertedCategories;
             public SampleDbContext SampleDatabase { get; set; }
 
-            public override void ConfigureContainer(Container container)
-            {
-                //container.Configure(cfg =>
-                //{
-                //    cfg.For<DbContext>().Use(SampleDatabase);
-                //});
-            }
-
             protected override void Given()
             {
                 _markerString = GetType().FullName;
 
                 _generatorSetup = new GeneratorSetup();
-                _generatorSetup.DefaultFlushTrigger = 
-                    new LimitedCapacityFlushTrigger(10);
-                _generatorSetup.DefaultPersistentStorage = new EntityFrameworkCorePersistentStorage(
-                    () => new SampleDbContext());
+                _generatorSetup.DefaultFlushStrategy = 
+                    new LimitedCapacityFlushStrategy(10);
+                _generatorSetup.DefaultPersistentStorage = 
+                    new EntityFrameworkCorePersistentStorage(() => new SampleDbContext());
 
                 _generatorSetup.RegisterEntity<Category>()
                     .SetTargetCount(25)
-                    .SetGenerator(ctx =>
+                    .SetGenerator(ctx => new Category()
                     {
-                        return new Category()
-                        {
-                            Name = "Cat name",
-                            MarkerText = _markerString
-                        };
+                        Name = $"Category #{ctx.CurrentCount}",
+                        MarkerText = _markerString
                     });
                 _generatorSetup.RegisterEntity<Post>()
                     .SetInsertToPersistentStorageBeforeUse(true)
-                    .SetTargetCount(75)
-                    .SetGenerator(ctx =>
+                    .SetTargetCount(100)
+                    .SetGenerator(ctx => new Post()
                     {
-                        return new Post()
-                        {
-                            MarkerText = _markerString
-                        };
+                        MarkerText = _markerString
                     });
                 _generatorSetup.RegisterEntity<Comment>()
                     .SetTargetCount(50)
-                    .SetGenerator<Category, Post>((ctx, category, post) =>
+                    .SetGenerator<Category, Post>((ctx, category, post) => new Comment()
                     {
-                        return new Comment()
-                        {
-                            PostId = post.Id,
-                            CommentText = category.Name + category.Id.ToString(),
-                            MarkerText = _markerString
-                        };
+                        PostId = post.Id,
+                        CommentText = $"Comment in category: {category.Name}",
+                        MarkerText = _markerString
                     });
-
             }
 
             protected override void When()
@@ -96,15 +78,15 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             }
 
             [Test]
-            public void then_generated_posts_count_matches_target()
-            {
-                _insertedPosts.Count.Should().Be(75);
-            }
-
-            [Test]
             public void then_generated_categories_count_matches_target()
             {
                 _insertedCategories.Count.Should().Be(25);
+            }
+
+            [Test]
+            public void then_generated_posts_count_matches_target()
+            {
+                _insertedPosts.Count.Should().Be(100);
             }
 
             [Test]

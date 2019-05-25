@@ -1,16 +1,16 @@
 ﻿using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator;
+using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.GenerationOrder;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
+using Sanatana.DataGenerator.Supervisors.Complete;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGeneratorSpecs.Samples;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Sanatana.DataGeneratorSpecs.GenerationOrder
+namespace Sanatana.DataGeneratorSpecs.Supervisors
 {
     [TestClass]
     public class CompleteFlushCandidatesRegistrySpecs
@@ -34,26 +34,20 @@ namespace Sanatana.DataGeneratorSpecs.GenerationOrder
 
             //invoke
             EntityContext entityContext = entityContexts[typeof(Comment)];
-            List<EntityAction> flushActions = target.GetNextFlushActions(entityContext);
+            List<ICommand> flushCommands = target.GetNextFlushCommands(entityContext);
 
 
             //assert
-            var actualFlushActions = flushActions.Select(x => new
-            {
-                ActionType = x.ActionType,
-                Type = x.EntityContext.Description.Type
-            });
-            var expectedActions = new Type[]
-            {
-                typeof(Comment),
-                typeof(Post),
-                typeof(Category)
-            }.Select(x => new
-            {
-                ActionType = ActionType.FlushToPersistentStorage,
-                Type = x
-            });
+            flushCommands.Should().AllBeOfType<FlushCommand>();
 
+            var actualFlushActions = flushCommands
+                .Select(x => ((FlushCommand)x).EntityContext.Description.Type);
+            var expectedActions = new Type[]
+                {
+                    typeof(Comment),
+                    typeof(Post),
+                    typeof(Category)
+                };
             actualFlushActions.Should().BeEquivalentTo(expectedActions);
         }
 

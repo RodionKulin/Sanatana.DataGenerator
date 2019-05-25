@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using System.Collections;
 using Sanatana.DataGenerator.SpreadStrategies;
+using Sanatana.DataGenerator.Commands;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Complete
+namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     public class CompleteRequiredQueueBuilder : IRequiredQueueBuilder
     {
@@ -33,7 +34,7 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
 
 
         //Get next action from queue
-        public virtual EntityAction GetNextAction()
+        public virtual ICommand GetNextCommand()
         {
             if (_queue == null ||
                 _queue.Count == 0)
@@ -41,21 +42,15 @@ namespace Sanatana.DataGenerator.GenerationOrder.Complete
                 EntityContext nextNode = _nextNodeFinder.FindNextNode();
                 if (nextNode == null)
                 {
-                    return new EntityAction
-                    {
-                        ActionType = ActionType.Finish
-                    };
+                    return new FinishCommand(_generatorSetup, _entityContexts);
                 }
 
                 _queue = CreateNextQueue(nextNode);
             }
 
             OrderIterationType next = _queue.Peek();
-            return new EntityAction
-            {
-                ActionType = ActionType.Generate,
-                EntityContext = _entityContexts[next.EntityType]
-            };
+            return new GenerateEntitiesCommand(_entityContexts[next.EntityType], _generatorSetup,
+                _entityContexts);
         }
 
         /// <summary>

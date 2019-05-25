@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Contracts
+namespace Sanatana.DataGenerator.Supervisors.Contracts
 {
     /// <summary>
     /// Registry of entities that need to be generated

@@ -1,13 +1,13 @@
 ﻿using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
+using Sanatana.DataGenerator.Supervisors.Complete;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Subset
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     public class SubsetNodeFinder : CompleteNextNodeFinder
     {
@@ -18,8 +18,8 @@ namespace Sanatana.DataGenerator.GenerationOrder.Subset
         //init
         public SubsetNodeFinder(List<Type> entitiesSubset, GeneratorSetup generatorSetup,
             IFlushCandidatesRegistry flushCandidatesRegistry,
-            IProgressState orderProgress)
-            : base(generatorSetup, flushCandidatesRegistry, orderProgress)
+            IProgressState progressState)
+            : base(generatorSetup, flushCandidatesRegistry, progressState)
         {
             if (entitiesSubset == null)
             {

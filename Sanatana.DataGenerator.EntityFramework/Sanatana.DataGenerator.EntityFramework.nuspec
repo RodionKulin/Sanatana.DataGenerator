@@ -15,6 +15,7 @@
 
     <dependencies>
       <dependency id="Sanatana.EntityFramework.Batch" version="1.0.3" />
+      <dependency id="Sanatana.DataGenerator" version="1.0.5" />
     </dependencies>   
   </metadata>
   <files>

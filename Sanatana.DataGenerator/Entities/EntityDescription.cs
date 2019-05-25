@@ -1,4 +1,4 @@
-﻿using Sanatana.DataGenerator.FlushTriggers;
+﻿using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.QuantityProviders;
@@ -39,7 +39,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Checker of temporary storage if it is time to flush entities to database.
         /// </summary>
-        public IFlushTrigger FlushTrigger { get; set; }
+        public IFlushStrategy FlushTrigger { get; set; }
         /// <summary>
         /// Get database generated columns like Id after inserting entities first. 
         /// Than only pass entities as required.

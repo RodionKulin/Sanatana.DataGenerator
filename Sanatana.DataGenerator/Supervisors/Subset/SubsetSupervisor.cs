@@ -1,22 +1,22 @@
 ﻿using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.GenerationOrder.Complete;
+using Sanatana.DataGenerator.Supervisors.Complete;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Subset
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     /// <summary>
-    /// Provides ordered actions to generate a subset list of all entities configured.
+    /// Provides commands to generate a subset list of all entities configured.
     /// </summary>
-    public class SubsetOrderProvider : CompleteOrderProvider
+    public class SubsetSupervisor : CompleteSupervisor
     {
         //fields
         protected List<Type> _entitiesSubset;
 
 
         //init
-        public SubsetOrderProvider(List<Type> entitiesSubset)
+        public SubsetSupervisor(List<Type> entitiesSubset)
         {
             if(entitiesSubset == null)
             {

@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Collections;
-using Sanatana.DataGenerator.GenerationOrder.Contracts;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 
-namespace Sanatana.DataGenerator.GenerationOrder.Complete
+namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     public class CompleteProgressState : IProgressState
     {

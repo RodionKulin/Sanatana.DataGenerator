@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.FlushTriggers
+namespace Sanatana.DataGenerator.Strategies
 {
-    public abstract class FlushTriggerBase : IFlushTrigger
+    public abstract class FlushStrategyBase : IFlushStrategy
     {
         //properties
         protected long _capacity;

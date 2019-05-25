@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using Sanatana.DataGenerator.SpreadStrategies;
-using Sanatana.DataGenerator.FlushTriggers;
+using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.QuantityProviders;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Modifiers;
@@ -51,7 +51,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Checker of temporary storage if it is time to flush entities to database.
         /// </summary>
-        public IFlushTrigger FlushTrigger { get; set; }
+        public IFlushStrategy FlushTrigger { get; set; }
         /// <summary>
         /// Get database generated columns like Id after inserting entities first. 
         /// Than only pass entities as required.
@@ -264,7 +264,7 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         /// <param name="flushTrigger"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetFlushTrigger(IFlushTrigger flushTrigger)
+        public virtual EntityDescription<TEntity> SetFlushTrigger(IFlushStrategy flushTrigger)
         {
             FlushTrigger = flushTrigger;
             return this;
@@ -277,7 +277,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetLimitedCapacityFlushTrigger(long capacity)
         {
-            FlushTrigger = new LimitedCapacityFlushTrigger(capacity);
+            FlushTrigger = new LimitedCapacityFlushStrategy(capacity);
             return this;
         }
 
