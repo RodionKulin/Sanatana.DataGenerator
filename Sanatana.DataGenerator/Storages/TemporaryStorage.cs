@@ -243,30 +243,21 @@ namespace Sanatana.DataGenerator.Storages
         //Tasks handling
         protected virtual void WaitRunningTask()
         {
-            _runningTasks.RemoveAll(p => p.Status == TaskStatus.RanToCompletion
-                || p.Status == TaskStatus.Canceled
-                || p.Status == TaskStatus.Faulted);
+            _runningTasks.RemoveAll(p => p.IsCompleted);
 
             bool isMaxTasksRunning = _runningTasks.Count >= MaxTasksRunning;
             if (isMaxTasksRunning)
             {
                 int finishedIndex = Task.WaitAny(_runningTasks.ToArray());
-                _runningTasks.RemoveAt(finishedIndex);
+                _runningTasks.RemoveAll(p => p.IsCompleted);
             }
         }
 
         public virtual void WaitAllTasks()
         {
-            _runningTasks.RemoveAll(p => p.Status == TaskStatus.RanToCompletion
-                || p.Status == TaskStatus.Canceled
-                || p.Status == TaskStatus.Faulted);
-
-            bool isMaxTasksRunning = _runningTasks.Count >= MaxTasksRunning;
-            if (isMaxTasksRunning)
-            {
-                int finishedIndex = Task.WaitAny(_runningTasks.ToArray());
-                _runningTasks.RemoveAt(finishedIndex);
-            }
+            _runningTasks.RemoveAll(p => p.IsCompleted);
+            Task.WaitAll(_runningTasks.ToArray());
+            _runningTasks.RemoveAll(p => p.IsCompleted);
         }
     }
 }

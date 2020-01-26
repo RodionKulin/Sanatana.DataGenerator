@@ -69,6 +69,8 @@ namespace Sanatana.DataGenerator.Commands
                     .Where(x => x.EntityProgress.CurrentCount < x.EntityProgress.TargetCount)
                     .ToList();
             }
+
+            _setup.TemporaryStorage.WaitAllTasks();
         }
 
         protected virtual void CallDispose()

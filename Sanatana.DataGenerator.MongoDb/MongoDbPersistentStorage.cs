@@ -49,19 +49,18 @@ namespace Sanatana.DataGenerator.MongoDb
 
 
         //methods
-        public virtual async Task Insert<TEntity>(List<TEntity> entities) 
+        public virtual Task Insert<TEntity>(List<TEntity> entities) 
             where TEntity : class
         {
             string collectionName = _collectionName == null
                 ? _collectionNames[typeof(TEntity)]
                 : _collectionName;
 
-            IMongoCollection <TEntity> collection = 
-                _mongoDatabase.GetCollection<TEntity>(collectionName);
-            await collection.InsertManyAsync(entities, new InsertManyOptions
+            IMongoCollection<TEntity> collection = _mongoDatabase.GetCollection<TEntity>(collectionName);
+            return collection.InsertManyAsync(entities, new InsertManyOptions
             {
-                IsOrdered = true
-            }).ConfigureAwait(false);
+                IsOrdered = false
+            });
         }
 
         public virtual void Dispose()
