@@ -35,9 +35,8 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual bool Execute()
         {
-            IPersistentStorage persistentStorage =
-                _setup.GetPersistentStorage(EntityContext.Description);
-            _setup.TemporaryStorage.FlushToPersistent(EntityContext, persistentStorage)
+            List<IPersistentStorage> persistentStorages = _setup.GetPersistentStorages(EntityContext.Description);
+            _setup.TemporaryStorage.FlushToPersistent(EntityContext, persistentStorages)
                 .ContinueWith(prev =>
                 {
                     _setup.Supervisor.EnqueueCommand(

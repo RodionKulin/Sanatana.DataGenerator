@@ -15,7 +15,7 @@ namespace Sanatana.DataGenerator.Entities
         IGenerator Generator { get; }
         List<IModifier> Modifiers { get; set; }
         IQuantityProvider QuantityProvider { get; }
-        IPersistentStorage PersistentStorage { get; }
+        List<IPersistentStorage> PersistentStorages { get; }
         IFlushStrategy FlushTrigger { get; }
         bool InsertToPersistentStorageBeforeUse { get; set; }
     }

@@ -43,7 +43,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Database storage for generated entities.
         /// </summary>
-        public IPersistentStorage PersistentStorage { get; set; }
+        public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
         /// Provider of total number of entities that needs to be generated.
         /// </summary>
@@ -244,7 +244,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetPersistentStorage(IPersistentStorage persistentStorage)
         {
-            PersistentStorage = persistentStorage;
+            if(PersistentStorages == null)
+            {
+                PersistentStorages = new List<IPersistentStorage>();
+            }
+
+            PersistentStorages.Add(persistentStorage);
             return this;
         }
 
@@ -255,7 +260,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetPersistentStorage(Func<List<TEntity>, Task> insertFunc)
         {
-            PersistentStorage = new DelegatePersistentStorage(insertFunc);
+            if (PersistentStorages == null)
+            {
+                PersistentStorages = new List<IPersistentStorage>();
+            }
+
+            PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
             return this;
         }
 

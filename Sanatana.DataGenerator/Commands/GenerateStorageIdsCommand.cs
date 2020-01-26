@@ -27,9 +27,8 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual bool Execute()
         {
-            IPersistentStorage persistentStorage =
-                _setup.GetPersistentStorage(_entityContext.Description);
-            _setup.TemporaryStorage.GenerateStorageIds(_entityContext, persistentStorage);
+            List<IPersistentStorage> persistentStorages = _setup.GetPersistentStorages(_entityContext.Description);
+            _setup.TemporaryStorage.GenerateStorageIds(_entityContext, persistentStorages);
 
             return true;
         }

@@ -31,7 +31,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Database storage for generated entities.
         /// </summary>
-        public IPersistentStorage PersistentStorage { get; set; }
+        public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
         /// Provider of total number of entities that needs to be generated.
         /// </summary>

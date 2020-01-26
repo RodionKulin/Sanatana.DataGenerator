@@ -33,10 +33,9 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 _markerString = GetType().FullName;
 
                 _generatorSetup = new GeneratorSetup();
-                _generatorSetup.DefaultFlushStrategy = 
-                    new LimitedCapacityFlushStrategy(10);
-                _generatorSetup.DefaultPersistentStorage = 
-                    new EntityFrameworkCorePersistentStorage(() => new SampleDbContext());
+                _generatorSetup.DefaultFlushStrategy = new LimitedCapacityFlushStrategy(10);
+                _generatorSetup.DefaultPersistentStorages.Add(
+                    new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()));
 
                 _generatorSetup.RegisterEntity<Category>()
                     .SetTargetCount(25)

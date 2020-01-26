@@ -50,7 +50,7 @@ namespace Sanatana.DataGenerator.Commands
 
                 foreach (EntityContext entityContext in nextFlushEntities)
                 {
-                    IPersistentStorage storage = _setup.GetPersistentStorage(entityContext.Description);
+                    List<IPersistentStorage> storage = _setup.GetPersistentStorages(entityContext.Description);
                     IFlushStrategy flushTrigger = _setup.GetFlushTrigger(entityContext.Description);
 
                     flushTrigger.SetNextFlushCount(entityContext);
@@ -75,8 +75,8 @@ namespace Sanatana.DataGenerator.Commands
         {
             foreach (EntityContext entityContext in _entityContexts.Values)
             {
-                IPersistentStorage storage = _setup.GetPersistentStorage(entityContext.Description);
-                storage.Dispose();
+                List<IPersistentStorage> storages = _setup.GetPersistentStorages(entityContext.Description);
+                storages.ForEach(storage => storage.Dispose());
 
                 entityContext.Dispose();
             }

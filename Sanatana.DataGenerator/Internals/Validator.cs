@@ -66,13 +66,13 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentNullException(defName, msg);
                 }
 
-                IPersistentStorage persistentStorage = description.PersistentStorage
-                    ?? _generatorSetup.DefaultPersistentStorage;
-                if (persistentStorage == null)
+                List<IPersistentStorage> persistentStorages = description.PersistentStorages
+                    ?? _generatorSetup.DefaultPersistentStorages;
+                if (persistentStorages == null || persistentStorages.Count == 0)
                 {
-                    string defName = nameof(_generatorSetup.DefaultPersistentStorage);
+                    string defName = nameof(_generatorSetup.DefaultPersistentStorages);
                     string msg = string.Format(msgFormat
-                        , nameof(description.PersistentStorage), defName);
+                        , nameof(description.PersistentStorages), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 

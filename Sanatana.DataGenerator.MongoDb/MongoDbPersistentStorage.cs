@@ -16,16 +16,33 @@ namespace Sanatana.DataGenerator.MongoDb
 
 
         //init
+        /// <summary>
+        /// MongoDb storage that will pick collection name depending from entity type
+        /// </summary>
+        /// <param name="mongoDatabase"></param>
+        /// <param name="collectionNames"></param>
         public MongoDbPersistentStorage(IMongoDatabase mongoDatabase,
             Dictionary<Type, string> collectionNames)
         {
+            if (collectionNames == null || collectionNames.Count == 0)
+            {
+                throw new NullReferenceException($"{nameof(collectionNames)} can not be null or empty");
+            }
             _mongoDatabase = mongoDatabase;
             _collectionNames = collectionNames;
         }
 
-        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase,
-            string collectionName)
+        /// <summary>
+        /// MongoDb storage that will write all incoming entities so single collection
+        /// </summary>
+        /// <param name="mongoDatabase"></param>
+        /// <param name="collectionName"></param>
+        public MongoDbPersistentStorage(IMongoDatabase mongoDatabase, string collectionName)
         {
+            if (collectionName == null)
+            {
+                throw new NullReferenceException($"{nameof(collectionName)} can not be null");
+            }
             _mongoDatabase = mongoDatabase;
             _collectionName = collectionName;
         }

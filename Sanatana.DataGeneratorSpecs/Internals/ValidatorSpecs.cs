@@ -36,7 +36,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
         {
             //Prepare
             var generatorSetup = new GeneratorSetup();
-            generatorSetup.DefaultPersistentStorage = new InMemoryStorage();
+            generatorSetup.DefaultPersistentStorages.Add(new InMemoryStorage());
 
             var descriptions = new List<IEntityDescription>();
             descriptions.Add(new EntityDescription<Post>()

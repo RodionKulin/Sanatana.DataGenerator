@@ -114,22 +114,22 @@ namespace Sanatana.DataGenerator.Storages
         /// </summary>
         /// <param name="entityContext"></param>
         /// <param name="storage"></param>
-        public virtual Task FlushToPersistent(EntityContext entityContext, IPersistentStorage storage)
+        public virtual Task FlushToPersistent(EntityContext entityContext, List<IPersistentStorage> storages)
         {
             WaitRunningTask();
-            Task nextFlushTask = FlushToPersistentTask(entityContext, storage);
-            _runningTasks.Add(nextFlushTask);
+            Task[] nextFlushTasks = FlushToPersistentTask(entityContext, storages);
+            _runningTasks.AddRange(nextFlushTasks);
 
-            return nextFlushTask;
+            return Task.WhenAll(nextFlushTasks);
         }
 
-        protected virtual Task FlushToPersistentTask(EntityContext entityContext, IPersistentStorage storage)
+        protected virtual Task[] FlushToPersistentTask(EntityContext entityContext, List<IPersistentStorage> storages)
         {
             EntityProgress progress = entityContext.EntityProgress;
 
             if (_entitiesAwaitingFlush.ContainsKey(entityContext.Type) == false)
             {
-                return Task.FromResult(0);
+                return new Task[0];
             }
 
             //lock operations on list for same Type
@@ -155,10 +155,13 @@ namespace Sanatana.DataGenerator.Storages
 
             if (nextItems.Count == 0)
             {
-                return Task.FromResult(0);
+                return new Task[0];
             }
 
-            return _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems);
+            Task[] insertTasks = storages
+                .Select(storage => _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems))
+                .ToArray();
+            return insertTasks;
         }
 
 
@@ -166,7 +169,7 @@ namespace Sanatana.DataGenerator.Storages
         /// <summary>
         /// Insert entities to persistent storage but keep in temporary storage
         /// </summary>
-        public virtual void GenerateStorageIds(EntityContext entityContext, IPersistentStorage storage)
+        public virtual void GenerateStorageIds(EntityContext entityContext, List<IPersistentStorage> storages)
         {
             //Must be a sync operation, so inserted Ids are available immediatly
             EntityProgress progress = entityContext.EntityProgress;
@@ -202,9 +205,12 @@ namespace Sanatana.DataGenerator.Storages
                 return;
             }
 
-            _reflectionInvoker
-                .InvokeInsert(storage, entityContext.Description, nextItems)
-                .Wait();
+            storages.ForEach(storage =>
+            {
+                _reflectionInvoker
+                   .InvokeInsert(storage, entityContext.Description, nextItems)
+                   .Wait();
+            });
         }
 
         public virtual void ReleaseFromTempStorage(EntityContext entityContext)

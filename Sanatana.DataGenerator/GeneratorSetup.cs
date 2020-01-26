@@ -84,7 +84,7 @@ namespace Sanatana.DataGenerator
         /// Will be used for entity types that does not have a PersistentStorage specified.
         /// By default is not set.
         /// </summary>
-        public IPersistentStorage DefaultPersistentStorage { get; set; }
+        public List<IPersistentStorage> DefaultPersistentStorages { get; set; }
         /// <summary>
         /// Producer of generation and flush commands.
         /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
@@ -102,6 +102,7 @@ namespace Sanatana.DataGenerator
 
             DefaultSpreadStrategy = new EvenSpreadStrategy();
             DefaultFlushStrategy = new LimitedCapacityFlushStrategy(100);
+            DefaultPersistentStorages = new List<IPersistentStorage>();
             Supervisor = new CompleteSupervisor();
         }
 
@@ -307,19 +308,19 @@ namespace Sanatana.DataGenerator
             throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IQuantityProvider)} configured and {nameof(DefaultQuantityProvider)} also was not provided.");
         }
 
-        internal virtual IPersistentStorage GetPersistentStorage(IEntityDescription entityDescription)
+        internal virtual List<IPersistentStorage> GetPersistentStorages(IEntityDescription entityDescription)
         {
-            if (entityDescription.PersistentStorage != null)
+            if (entityDescription.PersistentStorages != null && entityDescription.PersistentStorages.Count > 0)
             {
-                return entityDescription.PersistentStorage;
+                return entityDescription.PersistentStorages;
             }
 
-            if (DefaultPersistentStorage != null)
+            if (DefaultPersistentStorages != null && DefaultPersistentStorages.Count > 0)
             {
-                return DefaultPersistentStorage;
+                return DefaultPersistentStorages;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IPersistentStorage)} configured and {nameof(DefaultPersistentStorage)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IPersistentStorage)} configured and {nameof(DefaultPersistentStorages)} also was not provided.");
         }
 
         internal virtual IFlushStrategy GetFlushTrigger(IEntityDescription entityDescription)
