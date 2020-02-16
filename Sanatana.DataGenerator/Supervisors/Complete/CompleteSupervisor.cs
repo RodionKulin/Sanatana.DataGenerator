@@ -81,7 +81,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             //increment total number of generated entities
             entityContext.EntityProgress.CurrentCount += generatedEntities.Count;
 
-            //check if flush to permanent storage required
+            //check if flush to persistent storage required
             //and enqueue flush actions
             bool isFlushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
             if (isFlushRequired)

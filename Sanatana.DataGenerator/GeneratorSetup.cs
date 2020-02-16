@@ -179,8 +179,7 @@ namespace Sanatana.DataGenerator
             return this;
         }
 
-        public virtual GeneratorSetup RegisterEntities(
-            IEnumerable<IEntityDescription> entityDescriptions)
+        public virtual GeneratorSetup RegisterEntities(IEnumerable<IEntityDescription> entityDescriptions)
         {
             foreach (IEntityDescription item in entityDescriptions)
             {

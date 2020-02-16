@@ -23,7 +23,7 @@ namespace Sanatana.DataGenerator.Storages
 
         //properties
         /// <summary>
-        /// Maximum running parallel tasks to insert entities into permanent storage.
+        /// Maximum running parallel tasks to insert entities into persistent storage.
         /// Default value equals to number of processors count.
         /// </summary>
         public int MaxTasksRunning
@@ -108,7 +108,7 @@ namespace Sanatana.DataGenerator.Storages
         }
 
 
-        //Flush to permanent
+        //Flush to persistent
         /// <summary>
         /// Insert entities to persistent storage and remove from temporary storage
         /// </summary>
@@ -189,12 +189,10 @@ namespace Sanatana.DataGenerator.Storages
                 long numberToFlush = progress.NextFlushCount - progress.FlushedCount;
 
                 //skip entities that already were flushed
-                nextItems = _listOperations
-                    .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToSkip);
+                nextItems = _listOperations.Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToSkip);
 
                 //take number of items to flush
-                nextItems = _listOperations
-                    .Take(entityContext.Type, nextItems, (int)numberToFlush);
+                nextItems = _listOperations.Take(entityContext.Type, nextItems, (int)numberToFlush);
 
                 //update progress
                 progress.AddFlushedCount(nextItems.Count);
@@ -207,9 +205,7 @@ namespace Sanatana.DataGenerator.Storages
 
             storages.ForEach(storage =>
             {
-                _reflectionInvoker
-                   .InvokeInsert(storage, entityContext.Description, nextItems)
-                   .Wait();
+                _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems).Wait();
             });
         }
 

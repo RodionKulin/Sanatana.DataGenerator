@@ -38,16 +38,10 @@ namespace Sanatana.DataGenerator.Commands
 
         protected virtual void FlushTempStorage()
         {
-            List<EntityContext> nextFlushEntities = _entityContexts.Values
-                .Where(x => x.EntityProgress.CurrentCount < x.EntityProgress.TargetCount)
-                .ToList();
+            List<EntityContext> nextFlushEntities = new List<EntityContext>();
 
-            while (nextFlushEntities.Count > 0)
+            do
             {
-                nextFlushEntities = nextFlushEntities
-                    .Where(x => x.EntityProgress.IsFlushInProgress() == false)
-                    .ToList();
-
                 foreach (EntityContext entityContext in nextFlushEntities)
                 {
                     List<IPersistentStorage> storage = _setup.GetPersistentStorages(entityContext.Description);
@@ -65,10 +59,11 @@ namespace Sanatana.DataGenerator.Commands
                 }
 
                 _setup.TemporaryStorage.WaitAllTasks();
+
                 nextFlushEntities = _entityContexts.Values
-                    .Where(x => x.EntityProgress.CurrentCount < x.EntityProgress.TargetCount)
+                    .Where(x => x.EntityProgress.ReleasedCount < x.EntityProgress.CurrentCount)
                     .ToList();
-            }
+            } while (nextFlushEntities.Count > 0);
 
             _setup.TemporaryStorage.WaitAllTasks();
         }

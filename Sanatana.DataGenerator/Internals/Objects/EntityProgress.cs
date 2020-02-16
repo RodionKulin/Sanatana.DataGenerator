@@ -21,7 +21,7 @@ namespace Sanatana.DataGenerator.Internals
         public long TargetCount { get; set; }
         /// <summary>
         /// Number of entities already created by generator during this program run. 
-        /// This includes all inserted into permanent storage and all kept in temporary storage.
+        /// This includes all inserted into persistent storage and all kept in temporary storage.
         /// </summary>
         public long CurrentCount { get; set; }       
         /// <summary>
@@ -30,7 +30,7 @@ namespace Sanatana.DataGenerator.Internals
         /// </summary>
         public long NextIterationCount { get; set; }
         /// <summary>
-        /// Number of entities created that were already inserted into permanent storage.
+        /// Number of entities created that were already inserted into persistent storage.
         /// </summary>
         public long FlushedCount
         {
@@ -38,7 +38,7 @@ namespace Sanatana.DataGenerator.Internals
             protected set { Interlocked.Exchange(ref _flushedCount, value); }
         }
         /// <summary>
-        /// Number or entities that will be flushed during next flush to permanent storage. 
+        /// Number or entities that will be flushed during next flush to persistent storage. 
         /// This includes previously FlushedCount & next entities batch count that will be flushed.
         /// </summary>
         public long NextFlushCount
@@ -58,7 +58,7 @@ namespace Sanatana.DataGenerator.Internals
             protected set { Interlocked.Exchange(ref _releasedCount, value); }
         }
         /// <summary>
-        /// Number or entities that will be removed from temp storage during next flush to permanent storage. 
+        /// Number or entities that will be removed from temp storage during next flush to persistent storage. 
         /// This includes previously RemovedFromTempStorageCount & next entities batch count that will be removed.
         /// </summary>
         public long NextReleaseCount

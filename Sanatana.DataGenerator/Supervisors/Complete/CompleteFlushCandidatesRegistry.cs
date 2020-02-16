@@ -148,9 +148,9 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         /// <summary>  
         /// FlushCandidates are Entities in temporary storage, that still have child entities requiring em.
         /// Will generate all children that require FlushCandidates as a parent before flushing em.
-        /// After all direct (1 level) children are generated they also might become candidates to flush into permanent storage.
+        /// After all direct (1 level) children are generated they also might become candidates to flush into persistent storage.
         /// </summary>
-        /// <param name="parentContext">Parent entity that is a candidate to flush generated entities to permanent storage</param>
+        /// <param name="parentContext">Parent entity that is a candidate to flush generated entities to persistent storage</param>
         /// <param name="onlyCheckCanGenerate">When onlyCheckCanGenerate=true, is used to deside if parent entity if flush ready. If false then parent entity won't be ready to flush, but skip generating children that should generage their children first. Leaf nodes go first, then their parents.</param>
         /// <returns></returns>
         protected virtual EntityContext FindChildThatCanGenerate(
