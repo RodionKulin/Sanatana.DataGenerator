@@ -44,6 +44,7 @@ namespace Sanatana.DataGenerator.Commands
             var context = new GeneratorContext
             {
                 Description = entityDescription,
+                EntityContexts = _entityContexts,
                 TargetCount = EntityContext.EntityProgress.TargetCount,
                 CurrentCount = EntityContext.EntityProgress.CurrentCount,
                 RequiredEntities = GetRequiredEntities(),

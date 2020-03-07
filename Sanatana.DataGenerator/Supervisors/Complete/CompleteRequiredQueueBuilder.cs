@@ -49,8 +49,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             }
 
             OrderIterationType next = _queue.Peek();
-            return new GenerateEntitiesCommand(_entityContexts[next.EntityType], _generatorSetup,
-                _entityContexts);
+            return new GenerateEntitiesCommand(_entityContexts[next.EntityType], _generatorSetup, _entityContexts);
         }
 
         /// <summary>

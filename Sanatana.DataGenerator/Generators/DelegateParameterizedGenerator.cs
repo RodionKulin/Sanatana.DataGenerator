@@ -18,6 +18,11 @@ namespace Sanatana.DataGenerator.Generators
         //init
         protected DelegateParameterizedGenerator(object generateFunc)
         {
+            if (generateFunc == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(generateFunc)}] can not be null.");
+            }
+
             _delegateMapping = new Dictionary<Type, int[]>();
 
             _generateFunc = generateFunc;

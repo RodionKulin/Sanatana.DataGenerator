@@ -138,8 +138,12 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetSpreadStrategy(
             Type requiredType, ISpreadStrategy spreadStrategy)
         {
-            RequiredEntity requiredEntity = Required.FirstOrDefault(x => x.Type == requiredType);
+            if (spreadStrategy == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(spreadStrategy)}] of {nameof(SetSpreadStrategy)} can not be null.");
+            }
 
+            RequiredEntity requiredEntity = Required.FirstOrDefault(x => x.Type == requiredType);
             if (requiredEntity == null)
             {
                 string message = $"Type {requiredType.FullName} not found among required entities for {typeof(TEntity).FullName}." + 
@@ -147,10 +151,8 @@ namespace Sanatana.DataGenerator.Entities
                     $" Generator should be registered before {nameof(SetSpreadStrategy)} method call in later case.";
                 throw new ArgumentException(message, nameof(requiredType));
             }
-            else
-            {
-                requiredEntity.SpreadStrategy = spreadStrategy;
-            }
+
+            requiredEntity.SpreadStrategy = spreadStrategy;
 
             return this;
         }
@@ -164,7 +166,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetSpreadStrategy(ISpreadStrategy spreadStrategy)
         {
-            if(Required.Count == 0)
+            if (spreadStrategy == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(spreadStrategy)}] of {nameof(SetSpreadStrategy)} can not be null.");
+            }
+
+            if (Required.Count == 0)
             {
                 throw new NotSupportedException($"Was not able to set {nameof(ISpreadStrategy)}. No {nameof(Required)} entities were configured on type {Type.FullName}.");
             }
@@ -222,6 +229,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetTargetCount(IQuantityProvider quantityProvider)
         {
+            if (quantityProvider == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(quantityProvider)}] of {nameof(SetTargetCount)} can not be null.");
+            }
+
             QuantityProvider = quantityProvider;
             return this;
         }
@@ -244,11 +256,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetPersistentStorage(IPersistentStorage persistentStorage)
         {
-            if(PersistentStorages == null)
+            if (persistentStorage == null)
             {
-                PersistentStorages = new List<IPersistentStorage>();
+                throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(SetPersistentStorage)} can not be null.");
             }
-
+            
+            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(persistentStorage);
             return this;
         }
@@ -260,11 +273,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetPersistentStorage(Func<List<TEntity>, Task> insertFunc)
         {
-            if (PersistentStorages == null)
+            if (insertFunc == null)
             {
-                PersistentStorages = new List<IPersistentStorage>();
+                throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(SetPersistentStorage)} can not be null.");
             }
 
+            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
             return this;
         }
@@ -276,6 +290,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetFlushTrigger(IFlushStrategy flushTrigger)
         {
+            if (flushTrigger == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(flushTrigger)}] of {nameof(SetFlushTrigger)} can not be null.");
+            }
+
             FlushTrigger = flushTrigger;
             return this;
         }
@@ -315,6 +334,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetGenerator(IGenerator generator)
         {
+            if (generator == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(generator)}] of {nameof(SetGenerator)} can not be null.");
+            }
+
             Generator = generator;
             return this;
         }
@@ -327,6 +351,11 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator(
             Func<GeneratorContext, TEntity> generateFunc)
         {
+            if (generateFunc == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(generateFunc)}] of {nameof(SetGenerator)} can not be null.");
+            }
+
             Generator = DelegateGenerator<TEntity>.Factory.Create(generateFunc);
             return this;
         }

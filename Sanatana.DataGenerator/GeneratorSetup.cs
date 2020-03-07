@@ -189,6 +189,28 @@ namespace Sanatana.DataGenerator
         }
         
 
+        //Get registered entity
+        public virtual EntityDescription<TEntity> GetEntityDescription<TEntity>()
+            where TEntity : class
+        {
+            Type entityType = typeof(TEntity);
+            bool isEntityRegistered = EntityDescriptions.ContainsKey(entityType);
+            if (!isEntityRegistered || EntityDescriptions[entityType] == null)
+            {
+                throw new KeyNotFoundException($"Entity type [{entityType.FullName}] is not registered. Use {nameof(RegisterEntity)} method first.");
+            }
+
+            IEntityDescription entityDescription = EntityDescriptions[entityType];
+            Type descriptionActualType = entityDescription.GetType();
+            Type descriptionBaseType = typeof(EntityDescription<>);
+            if (!(entityDescription is EntityDescription<TEntity>))
+            {
+                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with description of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use {nameof(EntityDescriptions)} property instead.");
+            }
+
+            return (EntityDescription<TEntity>)entityDescription;
+        }
+
 
         //Generation main steps
         public virtual void Generate()
@@ -199,7 +221,7 @@ namespace Sanatana.DataGenerator
 
             ExecuteGenerationLoop();
 
-            UpdateProgress();
+            UpdateProgress(forceUpdate: true);
         }
 
         protected virtual void Validate()
@@ -226,7 +248,7 @@ namespace Sanatana.DataGenerator
         {
             while (true)
             {
-                UpdateProgress();
+                UpdateProgress(forceUpdate: false);
 
                 ICommand command = Supervisor.GetNextCommand();
                 bool continueCommands = command.Execute();
@@ -237,14 +259,14 @@ namespace Sanatana.DataGenerator
             }
         }
         
-        protected virtual void UpdateProgress()
+        protected virtual void UpdateProgress(bool forceUpdate)
         {
             long actionCalls = IdIterator.GetNextId<IProgressState>();
 
             //trigger handler only every N generated entities
             long onEveryNCall = 100;
             bool invoke = actionCalls % onEveryNCall == 0;
-            if (!invoke)
+            if (!invoke && forceUpdate == false)
             {
                 return;
             }
