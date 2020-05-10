@@ -26,6 +26,7 @@ namespace Sanatana.DataGenerator
     public class GeneratorSetup
     {
         //fields
+        protected decimal _lastPercents;
         protected Dictionary<Type, EntityContext> _entityContexts;
         protected ReflectionInvoker _reflectionInvoker;
 
@@ -194,6 +195,20 @@ namespace Sanatana.DataGenerator
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
+
+            IEntityDescription entityDescription = GetEntityDescription(entityType);
+            if (!(entityDescription is EntityDescription<TEntity>))
+            {
+                Type descriptionActualType = entityDescription.GetType();
+                Type descriptionBaseType = typeof(EntityDescription<>);
+                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with description of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use {nameof(EntityDescriptions)} property instead.");
+            }
+
+            return (EntityDescription<TEntity>)entityDescription;
+        }
+
+        public virtual IEntityDescription GetEntityDescription(Type entityType)
+        {
             bool isEntityRegistered = EntityDescriptions.ContainsKey(entityType);
             if (!isEntityRegistered || EntityDescriptions[entityType] == null)
             {
@@ -201,14 +216,7 @@ namespace Sanatana.DataGenerator
             }
 
             IEntityDescription entityDescription = EntityDescriptions[entityType];
-            Type descriptionActualType = entityDescription.GetType();
-            Type descriptionBaseType = typeof(EntityDescription<>);
-            if (!(entityDescription is EntityDescription<TEntity>))
-            {
-                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with description of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use {nameof(EntityDescriptions)} property instead.");
-            }
-
-            return (EntityDescription<TEntity>)entityDescription;
+            return entityDescription;
         }
 
 
@@ -246,6 +254,8 @@ namespace Sanatana.DataGenerator
         //Execution loop
         protected virtual void ExecuteGenerationLoop()
         {
+            _lastPercents = -1;
+
             while (true)
             {
                 UpdateProgress(forceUpdate: false);
@@ -264,8 +274,8 @@ namespace Sanatana.DataGenerator
             long actionCalls = IdIterator.GetNextId<IProgressState>();
 
             //trigger handler only every N generated entities
-            long onEveryNCall = 100;
-            bool invoke = actionCalls % onEveryNCall == 0;
+            long invokeOnEveryNCall = 1000;
+            bool invoke = actionCalls % invokeOnEveryNCall == 0;
             if (!invoke && forceUpdate == false)
             {
                 return;
@@ -273,6 +283,12 @@ namespace Sanatana.DataGenerator
 
             //invoke handler
             decimal percents = Supervisor.ProgressState.GetCompletionPercents();
+            if(_lastPercents == percents)
+            {
+                return;
+            }
+            _lastPercents = percents;
+
             var progressChanged = ProgressChanged;
             if (progressChanged != null)
             {

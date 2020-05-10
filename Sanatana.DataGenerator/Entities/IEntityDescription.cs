@@ -12,11 +12,11 @@ namespace Sanatana.DataGenerator.Entities
     {
         Type Type { get; }
         List<RequiredEntity> Required { get; set; }
-        IGenerator Generator { get; }
+        IGenerator Generator { get; set; }
         List<IModifier> Modifiers { get; set; }
-        IQuantityProvider QuantityProvider { get; }
-        List<IPersistentStorage> PersistentStorages { get; }
-        IFlushStrategy FlushTrigger { get; }
+        IQuantityProvider QuantityProvider { get; set; }
+        List<IPersistentStorage> PersistentStorages { get; set; }
+        IFlushStrategy FlushTrigger { get; set; }
         bool InsertToPersistentStorageBeforeUse { get; set; }
     }
 }
