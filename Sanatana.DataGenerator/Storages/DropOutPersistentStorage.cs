@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Sanatana.DataGenerator.Storages
 {
     /// <summary>
-    /// Randomly removes some percent of entities and inserts only remaining
+    /// Randomly removes some percent of entity instances and inserts only remaining.
     /// </summary>
     public class DropOutPersistentStorage : IPersistentStorage
     {

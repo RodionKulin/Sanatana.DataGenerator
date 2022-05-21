@@ -13,7 +13,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
     public class AutoBogusGeneratorSpecs
     {
         [TestMethod]
-        public void Generate_GeneratesEntityWithRandomValuesByDefault()
+        public void Generate_ByDefaultGeneratesEntityWithRandomValues()
         {
             //setup
             var target = new AutoBogusGenerator();

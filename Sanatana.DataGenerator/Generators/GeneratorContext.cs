@@ -6,10 +6,13 @@ using System.Text;
 
 namespace Sanatana.DataGenerator.Generators
 {
+    /// <summary>
+    /// Context object holding required data and configuration to generate new entity instance.
+    /// </summary>
     public class GeneratorContext
     {
         /// <summary>
-        /// Description with verious settings how this entity should be generated.
+        /// Description with various settings how this entity should be generated.
         /// </summary>
         public IEntityDescription Description { get; set; }
         /// <summary>
@@ -17,15 +20,15 @@ namespace Sanatana.DataGenerator.Generators
         /// </summary>
         public Dictionary<Type, EntityContext> EntityContexts { get; set; }
         /// <summary>
-        /// Number of items that will be generated in the end.
+        /// Number of instances that will be generated in the end.
         /// </summary>
         public long TargetCount { get; set; }
         /// <summary>
-        /// Number of items already generated.
+        /// Number of instances already generated.
         /// </summary>
         public long CurrentCount { get; set; }
         /// <summary>
-        /// Entities that will be generated before and passed as arguments.
+        /// Entities instance that will be generated before and passed as arguments.
         /// </summary>
         public Dictionary<Type, object> RequiredEntities { get; set; }
     }
