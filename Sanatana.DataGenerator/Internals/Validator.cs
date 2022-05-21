@@ -29,7 +29,9 @@ namespace Sanatana.DataGenerator.Internals
         }
 
 
-        //Generation prestart checks
+
+
+        //Prestart checks for GeneratorSetup
         /// <summary>
         /// Validate that all required parameters were set for each entity or among default parameters.
         /// </summary>
@@ -56,8 +58,7 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentNullException(defName, msg);
                 }
                 
-                IGenerator generator = description.Generator
-                    ?? _generatorSetup.DefaultGenerator;
+                IGenerator generator = description.Generator ?? _generatorSetup.DefaultGenerator;
                 if (generator == null)
                 {
                     string defName = nameof(_generatorSetup.DefaultFlushStrategy);
@@ -76,9 +77,9 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentNullException(defName, msg);
                 }
 
-                IFlushStrategy insertTrigger = description.FlushTrigger
+                IFlushStrategy flushTrigger = description.FlushTrigger
                     ?? _generatorSetup.DefaultFlushStrategy;
-                if (insertTrigger == null)
+                if (flushTrigger == null)
                 {
                     string defName = nameof(_generatorSetup.DefaultFlushStrategy);
                     string msg = string.Format(msgFormat
@@ -203,33 +204,32 @@ namespace Sanatana.DataGenerator.Internals
 
 
 
-        //Generation prestart checks for Generators and Modifiers
+        //Prestart checks for Generators and Modifiers
         /// <summary>
         /// Validate that Parameterized Modifiers have the same parameters as list of Required types.
         /// </summary>
         /// <param name="entityDescriptions"></param>
-        public virtual void CheckGeneratorsParams(
-           Dictionary<Type, IEntityDescription> entityDescriptions)
+        public virtual void CheckGeneratorsParams(Dictionary<Type, IEntityDescription> entityDescriptions)
         {
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
-                List<Type> requiredEntitiesTypes = entity.Required
+                //check that no duplicates in Required types
+                Type[] requiredEntitiesTypes = entity.Required
                     .Select(x => x.Type)
-                    .ToList();
+                    .ToArray();
                 IGenerator generator = _generatorSetup.GetGenerator(entity);
+                Type generatorInstanceType = generator.GetType();
+                CheckDuplicates(requiredEntitiesTypes, entity, generatorInstanceType);
 
-                Type generatorInstaceType = generator.GetType();
+                //Compare Required types from IEntityDescription.Required vs IDelegateParameterizedGenerator to make sure it was not changed manually before start.
                 if (!(generator is IDelegateParameterizedGenerator))
                 {
                     continue;
                 }
-
                 Type[] generatorParams = (generator as IDelegateParameterizedGenerator)
                     .GetRequiredEntitiesFuncParameters()
                     .ToArray();
-
-                CheckDuplicates(generatorParams, entity, generatorInstaceType);
-                CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorInstaceType);
+                CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorInstanceType);
             }
         }
 
@@ -242,10 +242,9 @@ namespace Sanatana.DataGenerator.Internals
         {
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
-                List<Type> requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToList();
+                Type[] requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToArray();
                 List<IModifier> modifiers = _generatorSetup.GetModifiers(entity);
-                modifiers.Where(x => x is IDelegateParameterizedModifier)
-                    .ToList();
+                modifiers.Where(x => x is IDelegateParameterizedModifier).ToList();
 
                 for (int i = 0; i < modifiers.Count; i++)
                 {
@@ -261,7 +260,15 @@ namespace Sanatana.DataGenerator.Internals
             }
         }
 
-        protected virtual void CompareToRequiredParams(List<Type> requiredParams, Type[] actualParams,
+        /// <summary>
+        /// Compare Required types from IEntityDescription.Required vs IDelegateParameterizedGenerator to make sure it was not changed manually before start.
+        /// </summary>
+        /// <param name="requiredParams"></param>
+        /// <param name="actualParams"></param>
+        /// <param name="entity"></param>
+        /// <param name="whereFound"></param>
+        /// <exception cref="NotSupportedException"></exception>
+        protected virtual void CompareToRequiredParams(Type[] requiredParams, Type[] actualParams,
             IEntityDescription entity, Type whereFound)
         {
             string[] extraParams = requiredParams.Except(actualParams)
@@ -285,6 +292,13 @@ namespace Sanatana.DataGenerator.Internals
             }
         }
 
+        /// <summary>
+        /// Check that Required types don't have duplicates
+        /// </summary>
+        /// <param name="paramsTypes"></param>
+        /// <param name="entity"></param>
+        /// <param name="whereFound"></param>
+        /// <exception cref="NotSupportedException"></exception>
         protected virtual void CheckDuplicates(Type[] paramsTypes, IEntityDescription entity, Type whereFound)
         {
             List<string> actualParamsDuplicates = paramsTypes
@@ -300,6 +314,21 @@ namespace Sanatana.DataGenerator.Internals
                 throw new NotSupportedException(message);
             }
         }
+
+        /// <summary>
+        /// Validate IEntityDescription are supported Generators.
+        /// </summary>
+        /// <param name="entityDescriptions"></param>
+        public virtual void CheckEntitySettingsForGenerators(
+           Dictionary<Type, IEntityDescription> entityDescriptions)
+        {
+            var entitiesWithGenerators = entityDescriptions.Values.Where(x => x.Generator != null);
+            foreach (IEntityDescription entity in entitiesWithGenerators)
+            {
+                entity.Generator.ValidateEntitySettings(entity);                
+            }
+        }
+
 
 
         //Generation runtime checks

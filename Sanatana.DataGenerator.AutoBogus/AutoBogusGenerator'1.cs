@@ -1,5 +1,6 @@
 ﻿using AutoBogus;
 using Bogus;
+using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Generators;
 using System;
 using System.Collections;
@@ -48,6 +49,12 @@ namespace Sanatana.DataGenerator.AutoBogus
         {
             long seed = context.CurrentCount % int.MaxValue;
             return (int)seed;
+        }
+
+
+        //validation
+        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        {
         }
     }
 }

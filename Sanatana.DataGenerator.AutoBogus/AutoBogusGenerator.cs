@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Reflection;
 using System.Linq;
+using Sanatana.DataGenerator.Entities;
 
 namespace Sanatana.DataGenerator.AutoBogus
 {
@@ -33,7 +34,7 @@ namespace Sanatana.DataGenerator.AutoBogus
         }
 
 
-        //methods
+        //generation
         public virtual IList Generate(GeneratorContext context)
         {
             Type autoFakerType = typeof(IAutoFaker);
@@ -53,13 +54,20 @@ namespace Sanatana.DataGenerator.AutoBogus
                     && x.GetGenericArguments().Length == 1
                     && x.GetParameters().First().ParameterType == typeof(int))
                     .First();
-                    
+
                 generateMethod = generateMethod.MakeGenericMethod(entityType);
                 _generateMethods.Add(entityType, generateMethod);
             }
 
             return _generateMethods[entityType];
         }
+
+
+        //validation
+        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        {
+        }
+
         
     }
 }

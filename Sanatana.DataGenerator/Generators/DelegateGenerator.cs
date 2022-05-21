@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Entities;
+using System.Linq;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -41,7 +43,7 @@ namespace Sanatana.DataGenerator.Generators
         }
 
 
-        //methods
+        //generation
         public virtual IList Generate(GeneratorContext context)
         {
             if(_generateFunc is Func<GeneratorContext, List<TEntity>>)
@@ -83,6 +85,12 @@ namespace Sanatana.DataGenerator.Generators
             }
 
             return new List<TEntity>() { entity };
+        }
+
+
+        //validation
+        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        {
         }
     }
 }

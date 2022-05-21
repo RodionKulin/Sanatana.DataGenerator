@@ -81,7 +81,7 @@ namespace Sanatana.DataGenerator
         /// </summary>
         public ISpreadStrategy DefaultSpreadStrategy { get; set; }
         /// <summary>
-        /// Default persistent storage for generated entities.
+        /// Default persistent storage(s) to store generated entities.
         /// Will be used for entity types that does not have a PersistentStorage specified.
         /// By default is not set.
         /// </summary>
@@ -240,6 +240,7 @@ namespace Sanatana.DataGenerator
             Validator.CheckCircularDependencies(EntityDescriptions);
             Validator.CheckGeneratorsParams(EntityDescriptions);
             Validator.CheckModifiersParams(EntityDescriptions);
+            Validator.CheckEntitySettingsForGenerators(EntityDescriptions);
         }
 
         protected virtual void Setup()

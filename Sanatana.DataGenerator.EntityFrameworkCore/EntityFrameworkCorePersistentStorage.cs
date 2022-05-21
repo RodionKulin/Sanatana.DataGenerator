@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Sanatana.DataGenerator.EntityFramework
 {
     public class EntityFrameworkCorePersistentStorage : 
-        EntityFrameworkCoreFlushTrigger, IPersistentStorage
+        EntityFrameworkCoreFlushTrigger, IPersistentStorage, IPersistentStorageSelector
     {
         //init
         public EntityFrameworkCorePersistentStorage(Func<DbContext> dbContextFactory)
@@ -40,6 +40,34 @@ namespace Sanatana.DataGenerator.EntityFramework
 
         public virtual void Dispose()
         {
+        }
+
+
+        //selectors
+        public virtual List<TEntity> Select<TEntity>(Func<TEntity, bool> filter, int skip, int take)
+            where TEntity : class
+        {
+            using (DbContext dbContext = _dbContextFactory())
+            {
+                List<TEntity> entities = dbContext.Set<TEntity>()
+                    .Where(filter)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToList();
+                return entities;
+            }
+        }
+
+        public virtual long Count<TEntity>(Func<TEntity, bool> filter)
+            where TEntity : class
+        {
+            using (DbContext dbContext = _dbContextFactory())
+            {
+                long count = dbContext.Set<TEntity>()
+                    .Where(filter)
+                    .LongCount();
+                return count;
+            }
         }
     }
 }

@@ -45,7 +45,7 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
-        /// Provider of total number of entities that needs to be generated.
+        /// Provider of total number of entity instances that needs to be generated.
         /// </summary>
         public IQuantityProvider QuantityProvider { get; set; }
         /// <summary>
@@ -68,7 +68,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
 
-        //methods
+        //configure methods
         /// <summary>
         /// Add required entity type that will be generated first and then pasted as parameter to generator.
         /// </summary>
@@ -326,7 +326,64 @@ namespace Sanatana.DataGenerator.Entities
         }
 
 
-        //Generator
+        //Generator that reuses existing entity instances from persistent storage
+        /// <summary>
+        /// Generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
+        /// </summary>
+        /// <param name="generatorSetup"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetReuseExistingGenerator(
+            Func<ReuseExistingGenerator<TEntity>, ReuseExistingGenerator<TEntity>> generatorSetup)
+        {
+            var generator = new ReuseExistingGenerator<TEntity>();
+            generator = generatorSetup(generator);
+            if(generator == null)
+            {
+                throw new NullReferenceException($"Method {nameof(generatorSetup)} should return instance of {nameof(ReuseExistingGenerator<TEntity>)} but returned null.");
+            }
+            generator.ValidateSetup();
+            Generator = generator;
+
+            PersistentStorages.Add(new VoidStorage());
+
+            return this;
+        }
+
+
+        /// <summary>
+        /// Generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
+        /// Will set CountExistingQuantityProvider as QuantityProvider to select all instances.
+        /// </summary>
+        /// <param name="storageSelector">Persistent storage that will provide existing entity instances.</param>
+        /// <param name="filter">Optional filter expression to select existing entity instances from persistent storage. By default will include all instances.</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
+        public virtual EntityDescription<TEntity> SetReuseExistingGeneratorForAll(IPersistentStorageSelector storageSelector,
+            Func<TEntity, bool> filter = null)
+        {
+            if(filter == null)
+            {
+                filter = (entity) => true;
+            }
+
+            var generator = new ReuseExistingGenerator<TEntity>()
+                .SetBatchSizeMax()
+                .SetPersistentStorage(storageSelector)
+                .SetFilter(filter);
+            generator.ValidateSetup();
+            Generator = generator;
+
+            PersistentStorages.Add(new VoidStorage());
+            QuantityProvider = new CountExistingQuantityProvider<TEntity>(storageSelector, filter);
+
+            return this;
+        }
+
+
+
+        //Generator that creates new entity instances
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>

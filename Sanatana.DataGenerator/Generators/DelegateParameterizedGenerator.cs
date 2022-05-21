@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using Sanatana.DataGenerator.Entities;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -212,7 +213,7 @@ namespace Sanatana.DataGenerator.Generators
         }
 
 
-        //Invoke generate method
+        //generation
         public virtual IList Generate(GeneratorContext context)
         {
             //order required types according to delegate parameters order
@@ -281,5 +282,10 @@ namespace Sanatana.DataGenerator.Generators
             return requiredParametersTypes;
         }
 
+
+        //validation
+        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        {
+        }
     }
 }

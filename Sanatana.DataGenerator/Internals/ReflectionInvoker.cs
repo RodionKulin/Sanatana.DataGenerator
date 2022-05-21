@@ -15,37 +15,44 @@ namespace Sanatana.DataGenerator.Internals
     public class ReflectionInvoker
     {
         //fields
-        protected static Dictionary<Type, MethodInfo> _generateMethods;
         protected static Dictionary<Type, MethodInfo> _modifyMethods;
         protected static Dictionary<Type, MethodInfo> _insertMethods;
+        protected static Dictionary<Type, MethodInfo> _selectMethods;
 
 
         //init
         public ReflectionInvoker()
         {
-            _generateMethods = new Dictionary<Type, MethodInfo>();
             _modifyMethods = new Dictionary<Type, MethodInfo>();
             _insertMethods = new Dictionary<Type, MethodInfo>();
+            _selectMethods = new Dictionary<Type, MethodInfo>();
         }
 
 
         //methods
+        protected virtual MethodInfo GetCachedMethodInfo(Type targetType, string methodName,
+            Type entityType, Dictionary<Type, MethodInfo> methods)
+        {
+            MethodInfo targetMethod;
+
+            if (!methods.ContainsKey(entityType))
+            {
+                targetMethod = targetType.GetMethods().First(x => x.Name == methodName);
+                targetMethod = targetMethod.MakeGenericMethod(entityType);
+                methods.Add(entityType, targetMethod);
+            }
+
+            return methods[entityType];
+        }
+
         public virtual IList InvokeModify(IModifier modifier, 
             GeneratorContext context, object generatedEntities)
         {
-            Type targetType = context.Description.Type;
-            MethodInfo modifyMethod;
+            Type entityType = context.Description.Type;
+            Type targetType = typeof(IModifier);
+            string methodName = nameof(IModifier.Modify);
+            MethodInfo modifyMethod = GetCachedMethodInfo(targetType, methodName, entityType, _modifyMethods);
 
-            if (!_modifyMethods.ContainsKey(targetType))
-            {
-                Type generatorType = typeof(IModifier);
-                modifyMethod = generatorType.GetMethods()
-                    .First(x => x.Name == nameof(IModifier.Modify));
-                modifyMethod = modifyMethod.MakeGenericMethod(targetType);
-                _modifyMethods.Add(targetType, modifyMethod);
-            }
-
-            modifyMethod = _modifyMethods[targetType];
             object result = modifyMethod.Invoke(modifier, new object[] { context, generatedEntities });
             return (IList)result;
         }
@@ -53,19 +60,10 @@ namespace Sanatana.DataGenerator.Internals
         public virtual Task InvokeInsert(IPersistentStorage storage, 
             IEntityDescription description, IList itemsList)
         {
-            Type targetType = description.Type;
-            MethodInfo insertMethod;
+            Type targetType = typeof(IPersistentStorage);
+            string methodName = nameof(IPersistentStorage.Insert);
+            MethodInfo insertMethod = GetCachedMethodInfo(targetType, methodName, description.Type, _insertMethods);
 
-            if (!_insertMethods.ContainsKey(targetType))
-            {
-                Type generatorType = typeof(IPersistentStorage);
-                insertMethod = generatorType.GetMethods()
-                    .First(x => x.Name == nameof(IPersistentStorage.Insert));
-                insertMethod = insertMethod.MakeGenericMethod(targetType);
-                _insertMethods.Add(targetType, insertMethod);
-            }
-
-            insertMethod = _insertMethods[targetType];
             object result = insertMethod.Invoke(storage, new object[] { itemsList });
             return (Task)result;
         }

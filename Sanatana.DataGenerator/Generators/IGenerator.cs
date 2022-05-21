@@ -13,6 +13,16 @@ namespace Sanatana.DataGenerator.Generators
     /// </summary>
     public interface IGenerator
     {
+        /// <summary>
+        /// Generate next entity instance.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         IList Generate(GeneratorContext context);
+        /// <summary>
+        /// Validate IGenerator Setup before start.
+        /// </summary>
+        /// <param name="entity"></param>
+        void ValidateEntitySettings(IEntityDescription entity);
     }
 }
