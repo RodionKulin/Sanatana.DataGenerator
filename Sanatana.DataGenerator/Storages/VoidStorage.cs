@@ -8,7 +8,7 @@ namespace Sanatana.DataGenerator.Storages
 {
     /// <summary>
     /// VoidStorage does not store provided entity instances anywhere.
-    /// Intended to be used with ReuseExistingGenerator that provides entity instances already stored into database.
+    /// Intended to be used with ReuseExistingGenerator that provides entity instances already stored into database, that we dont want to insert again.
     /// </summary>
     public class VoidStorage : IPersistentStorage
     {

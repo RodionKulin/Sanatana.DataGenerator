@@ -27,11 +27,16 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual bool Execute()
         {
-            List<IPersistentStorage> persistentStorages = _setup.GetPersistentStorages(_entityContext.Description);
+            List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(_entityContext.Description);
             _setup.TemporaryStorage.GenerateStorageIds(_entityContext, persistentStorages);
 
             return true;
         }
 
+        public virtual string GetDescription()
+        {
+            EntityProgress progress = _entityContext.EntityProgress;
+            return $"Get storage Ids for {_entityContext.Type.Name} FlushedCount={progress.FlushedCount} NextFlushCount={progress.NextFlushCount}";
+        }
     }
 }

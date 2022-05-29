@@ -32,13 +32,17 @@ namespace Sanatana.DataGenerator.Commands
             bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
             if (flushRequired)
             {
-                List<ICommand> flushCommands = _flushCandidatesRegistry
-                    .GetNextFlushCommands(entityContext);
-                flushCommands.ForEach(command =>
-                    _setup.Supervisor.EnqueueCommand(command));
+                List<ICommand> flushCommands = _flushCandidatesRegistry.GetNextFlushCommands(entityContext);
+                flushCommands.ForEach(command => _setup.Supervisor.EnqueueCommand(command));
             }
 
             return true;
+        }
+
+        public virtual string GetDescription()
+        {
+            EntityProgress progress = _entityContext.EntityProgress;
+            return $"Check flush required for {_entityContext.Type.Name} CurrentCount={progress.CurrentCount} FlushedCount={progress.FlushedCount} NextFlushCount={progress.NextFlushCount}";
         }
     }
 }

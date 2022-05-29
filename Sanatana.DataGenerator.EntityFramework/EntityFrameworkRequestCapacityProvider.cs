@@ -1,18 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Sanatana.DataGenerator.Strategies;
+﻿using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.EntityFrameworkCore.Batch;
-using Sanatana.EntityFrameworkCore.Batch.Commands.Merge;
+using Sanatana.EntityFramework.Batch;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
-    public class EntityFrameworkCoreFlushTrigger : FlushStrategyBase
+    public class EntityFrameworkRequestCapacityProvider : IRequestCapacityProvider
     {
         //fields
         protected Func<DbContext> _dbContextFactory;
@@ -20,7 +20,7 @@ namespace Sanatana.DataGenerator.EntityFramework
 
 
         //init
-        public EntityFrameworkCoreFlushTrigger(Func<DbContext> dbContextFactory)
+        public EntityFrameworkRequestCapacityProvider(Func<DbContext> dbContextFactory)
         {
             _dbContextFactory = dbContextFactory;
             _entityMaxCount = new Dictionary<Type, long>();
@@ -28,10 +28,12 @@ namespace Sanatana.DataGenerator.EntityFramework
 
 
         //methods
-        protected override long GetCapacity(EntityContext entityContext)
+        public virtual void TrackEntityGeneration(EntityContext entityContext, IList instances)
         {
-            int maxEntitiesInBatch = 0;
+        }
 
+        public virtual long GetCapacity(EntityContext entityContext)
+        {
             if (!_entityMaxCount.ContainsKey(entityContext.Type))
             {
                 using (DbContext db = _dbContextFactory())
@@ -39,12 +41,13 @@ namespace Sanatana.DataGenerator.EntityFramework
                     List<string> mappedProps = db.GetAllMappedProperties(entityContext.Type);
                     List<string> generatedProps = db.GetDatabaseGeneratedProperties(entityContext.Type);
                     int paramsPerEntity = mappedProps.Count - generatedProps.Count;
-                    maxEntitiesInBatch = EntityFrameworkConstants.MAX_NUMBER_OF_SQL_COMMAND_PARAMETERS / paramsPerEntity;
+                    int maxEntitiesInBatch = EntityFrameworkConstants.MAX_NUMBER_OF_SQL_COMMAND_PARAMETERS / paramsPerEntity;
                     _entityMaxCount.Add(entityContext.Type, maxEntitiesInBatch);
                 }
             }
 
-            return maxEntitiesInBatch;
+            return _entityMaxCount[entityContext.Type];
         }
+
     }
 }

@@ -1,13 +1,18 @@
 ﻿using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Modifiers;
-using Sanatana.DataGenerator.QuantityProviders;
+using Sanatana.DataGenerator.TotalCountProviders;
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
+using Sanatana.DataGenerator.StorageInsertGuards;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.Entities
 {
+    /// <summary>
+    /// Entity configuration for generation process
+    /// </summary>
     public class EntityDescription : IEntityDescription
     {
         //properties
@@ -20,33 +25,47 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         public List<RequiredEntity> Required { get; set; }
         /// <summary>
-        /// Entities generator. Can return entities one by one or in small batches. 
-        /// Usually better to return single entity not to store extra entities in memory.
+        /// Entity instances generator. Can return instances one by one or in small batches. 
+        /// Usually better to return single instance not to store extra instances in memory.
+        /// Be default will use DefaultGenerator from GeneratorSetup.
         /// </summary>
         public IGenerator Generator { get; set; }
         /// <summary>
-        /// A method to make adjustments to entity after generated.
+        /// List of methods to make adjustments to entity instance after generation.
+        /// Be default will use DefaultModifiers from GeneratorSetup.
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
-        /// Database storage for generated entities.
+        /// Database storages for generated entities.
+        /// Be default will use DefaultPersistentStorages from GeneratorSetup.
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
-        /// Provider of total number of entities that needs to be generated.
+        /// Provider of total number of entity instances that need to be generated.
+        /// Be default will use DefaultTotalCountProvider from GeneratorSetup.
         /// </summary>
-        public IQuantityProvider QuantityProvider { get; set; }
+        public ITotalCountProvider TotalCountProvider { get; set; }
         /// <summary>
         /// Checker of temporary storage if it is time to flush entities to database.
+        /// Be default will use DefaultFlushStrategy from GeneratorSetup.
         /// </summary>
-        public IFlushStrategy FlushTrigger { get; set; }
+        public IFlushStrategy FlushStrategy { get; set; }
         /// <summary>
-        /// Get database generated columns like Id after inserting entities first. 
-        /// Than only pass entities as required.
+        /// Provider of number of entity instances that can be inserted with next request to persistent storage.
+        /// Be default will use DefaultRequestCapacityProvider from GeneratorSetup.
+        /// </summary>
+        public IRequestCapacityProvider RequestCapacityProvider { get; set; }
+        /// <summary>
+        /// Checker of entity instances to be inserted into database. 
+        /// Excludes unwanted instances, like the ones that already exist in database for EnsureExistGenerator.
+        /// By default is not used.
+        /// </summary>
+        public IStorageInsertGuard StorageInsertGuard { get; set; }
+        /// <summary>
+        /// Get database generated columns after inserting entities first (for example Id).
+        /// Only after receiving such columns pass entity instances as required for generation.
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }
-
-
     }
 }

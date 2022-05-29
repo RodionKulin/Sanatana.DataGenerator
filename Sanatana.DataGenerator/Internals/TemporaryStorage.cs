@@ -1,4 +1,8 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.Objects;
+using Sanatana.DataGenerator.Internals.Reflection;
+using Sanatana.DataGenerator.StorageInsertGuards;
+using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -7,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Sanatana.DataGenerator.Storages
+namespace Sanatana.DataGenerator.Internals
 {
     /// <summary>
     /// In memory storage for generated entities to accumulate some descent batches before inserting to persistent storage.
@@ -20,6 +24,10 @@ namespace Sanatana.DataGenerator.Storages
         protected List<Task> _runningTasks;
         protected ReflectionInvoker _reflectionInvoker;
         protected ListOperations _listOperations;
+
+        //props
+        internal GeneratorSetup GeneratorSetup { get; set; }
+
 
         //properties
         /// <summary>
@@ -96,7 +104,7 @@ namespace Sanatana.DataGenerator.Storages
             IList entitiesAwaitingFlush;
             if (_entitiesAwaitingFlush.ContainsKey(entityContext.Type) == false)
             {
-                entitiesAwaitingFlush = _reflectionInvoker.CreateEntityList(entityContext.Type);
+                entitiesAwaitingFlush = _listOperations.CreateEntityList(entityContext.Type);
                 _entitiesAwaitingFlush.Add(entityContext.Type, entitiesAwaitingFlush);
             }
 
@@ -113,7 +121,7 @@ namespace Sanatana.DataGenerator.Storages
         /// Insert entities to persistent storage and remove from temporary storage
         /// </summary>
         /// <param name="entityContext"></param>
-        /// <param name="storage"></param>
+        /// <param name="storages"></param>
         public virtual Task FlushToPersistent(EntityContext entityContext, List<IPersistentStorage> storages)
         {
             WaitRunningTask();
@@ -138,30 +146,34 @@ namespace Sanatana.DataGenerator.Storages
             {
                 IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
 
-                long numberToFlush = progress.NextFlushCount - progress.FlushedCount;
+                FlushRange nextRange = progress.GetNextFlushRange();
+                long numberToFlush = nextRange.FlushRequestCapacity;
 
                 //take number of items to flush
                 nextItems = _listOperations
                     .Take(entityContext.Type, entitiesAwaitingFlush, (int)numberToFlush);
-
+                
                 //remove items from temporary storage
                 _entitiesAwaitingFlush[entityContext.Type] = _listOperations
                     .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToFlush);
 
                 //update progess
-                progress.AddFlushedCount(nextItems.Count);
-                progress.AddReleasedCount(nextItems.Count);
+                nextRange.SetFlushedAndReleased();
             });
 
+            IStorageInsertGuard guard = entityContext.Description.StorageInsertGuard;
+            if (guard != null)
+            {
+                guard.PreventInsertion(entityContext, nextItems);
+            }
             if (nextItems.Count == 0)
             {
                 return new Task[0];
             }
 
-            Task[] insertTasks = storages
+            return storages
                 .Select(storage => _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems))
                 .ToArray();
-            return insertTasks;
         }
 
 
@@ -185,8 +197,10 @@ namespace Sanatana.DataGenerator.Storages
             {
                 IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
 
+                FlushRange nextRange = progress.GetNextFlushRange();
+
                 long numberToSkip = progress.FlushedCount - progress.ReleasedCount;
-                long numberToFlush = progress.NextFlushCount - progress.FlushedCount;
+                long numberToFlush = nextRange.FlushRequestCapacity;
 
                 //skip entities that already were flushed
                 nextItems = _listOperations.Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToSkip);
@@ -195,7 +209,9 @@ namespace Sanatana.DataGenerator.Storages
                 nextItems = _listOperations.Take(entityContext.Type, nextItems, (int)numberToFlush);
 
                 //update progress
+                nextRange.SetFlushedAndReleased();
                 progress.AddFlushedCount(nextItems.Count);
+                
             });
 
             if (nextItems.Count == 0)
@@ -209,7 +225,7 @@ namespace Sanatana.DataGenerator.Storages
             });
         }
 
-        public virtual void ReleaseFromTempStorage(EntityContext entityContext)
+        public virtual void ReleaseFromTemporary(EntityContext entityContext)
         {
             EntityProgress progress = entityContext.EntityProgress;
 
@@ -223,14 +239,15 @@ namespace Sanatana.DataGenerator.Storages
             {
                 IList entitiesAwaitingFlush = _entitiesAwaitingFlush[entityContext.Type];
 
-                long numberToRemove = progress.NextReleaseCount - progress.ReleasedCount;
+                FlushRange nextRange = progress.GetNextReleaseRange();
+                long numberToRemove = nextRange.FlushRequestCapacity;
 
                 //remove items from temporary storage
                 _entitiesAwaitingFlush[entityContext.Type] = _listOperations
                     .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToRemove);
 
                 //update progress
-                progress.AddReleasedCount(numberToRemove);
+                nextRange.SetReleased();
             });
         }
 

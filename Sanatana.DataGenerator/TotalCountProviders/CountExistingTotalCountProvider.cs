@@ -1,23 +1,26 @@
 ﻿using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
 
-namespace Sanatana.DataGenerator.QuantityProviders
+namespace Sanatana.DataGenerator.TotalCountProviders
 {
-    public class CountExistingQuantityProvider<TEntity> : IQuantityProvider
+    public class CountExistingTotalCountProvider<TEntity> : ITotalCountProvider
         where TEntity : class
     {
         protected IPersistentStorageSelector _persistentStorageSelector;
-        protected Func<TEntity, bool> _filter;
+        protected Expression<Func<TEntity, bool>> _filter;
 
 
         //properties
-        public long TotalQuantity { get; protected set; }
+        public long TargetCount { get; protected set; }
 
 
         //init
-        public CountExistingQuantityProvider(IPersistentStorageSelector persistentStorageSelector, Func<TEntity, bool> filter = null)
+        public CountExistingTotalCountProvider(
+            IPersistentStorageSelector persistentStorageSelector,
+            Expression<Func<TEntity, bool>> filter = null)
         {
             if (persistentStorageSelector == null)
             {
@@ -35,11 +38,11 @@ namespace Sanatana.DataGenerator.QuantityProviders
 
 
         //methods
-        public virtual long GetTargetQuantity()
+        public virtual long GetTargetCount()
         {
-            TotalQuantity  = _persistentStorageSelector.Count<TEntity>(_filter);
+            TargetCount  = _persistentStorageSelector.Count(_filter);
 
-            return TotalQuantity;
+            return TargetCount;
         }
     }
 }

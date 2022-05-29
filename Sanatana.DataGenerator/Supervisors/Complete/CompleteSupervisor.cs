@@ -83,6 +83,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
             //check if flush to persistent storage required
             //and enqueue flush actions
+            _flushCandidatesRegistry.UpdateNextFlushReleaseCount(entityContext);
             bool isFlushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
             if (isFlushRequired)
             {

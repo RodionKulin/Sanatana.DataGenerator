@@ -5,6 +5,7 @@ using System.Collections;
 using System.Linq;
 using System.Text;
 using FluentAssertions;
+using Sanatana.DataGenerator.Internals.Reflection;
 
 namespace Sanatana.DataGeneratorSpecs.Internals
 {

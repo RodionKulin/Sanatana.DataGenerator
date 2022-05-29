@@ -5,6 +5,7 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Strategies;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.Commands
 {
@@ -44,17 +45,14 @@ namespace Sanatana.DataGenerator.Commands
             {
                 foreach (EntityContext entityContext in nextFlushEntities)
                 {
-                    List<IPersistentStorage> storage = _setup.GetPersistentStorages(entityContext.Description);
-                    IFlushStrategy flushTrigger = _setup.GetFlushTrigger(entityContext.Description);
+                    IRequestCapacityProvider requestCapacityProvider = _setup.Defaults.GetRequestCapacityProvider(entityContext.Description);
+                    List<IPersistentStorage> storage = _setup.Defaults.GetPersistentStorages(entityContext.Description);
+                    IFlushStrategy flushTrigger = _setup.Defaults.GetFlushStrategy(entityContext.Description);
 
-                    flushTrigger.SetNextFlushCount(entityContext);
-                    flushTrigger.SetNextReleaseCount(entityContext);
+                    long capacity = requestCapacityProvider.GetCapacity(entityContext);
+                    flushTrigger.SetNextFlushCount(entityContext, capacity);
 
-                    if (entityContext.Description.InsertToPersistentStorageBeforeUse)
-                    {
-                        _setup.TemporaryStorage.GenerateStorageIds(entityContext, storage);
-                    }
-
+                    //this is an async method, but waiting is done with TemporaryStorage.WaitAllTasks
                     _setup.TemporaryStorage.FlushToPersistent(entityContext, storage);
                 }
 
@@ -72,11 +70,20 @@ namespace Sanatana.DataGenerator.Commands
         {
             foreach (EntityContext entityContext in _entityContexts.Values)
             {
-                List<IPersistentStorage> storages = _setup.GetPersistentStorages(entityContext.Description);
+                List<IPersistentStorage> storages = _setup.Defaults.GetPersistentStorages(entityContext.Description);
                 storages.ForEach(storage => storage.Dispose());
 
                 entityContext.Dispose();
             }
+        }
+
+        public virtual string GetDescription()
+        {
+            string[] entityFlushStates = _entityContexts
+                .Select(x => $"{x.Key.Name}={x.Value.EntityProgress.CurrentCount}")
+                .ToArray();
+            string entityFlushState = string.Join("; ", entityFlushStates);
+            return $"Finish and flush remaining instances. CurrentCount {entityFlushState}";
         }
     }
 }

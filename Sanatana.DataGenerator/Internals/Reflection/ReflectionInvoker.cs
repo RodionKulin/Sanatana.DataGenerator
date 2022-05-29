@@ -10,7 +10,7 @@ using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Modifiers;
 
-namespace Sanatana.DataGenerator.Internals
+namespace Sanatana.DataGenerator.Internals.Reflection
 {
     public class ReflectionInvoker
     {
@@ -67,13 +67,5 @@ namespace Sanatana.DataGenerator.Internals
             object result = insertMethod.Invoke(storage, new object[] { itemsList });
             return (Task)result;
         }
-
-        public virtual IList CreateEntityList(Type entityType)
-        {
-            Type listType = typeof(List<>);
-            Type constructedListType = listType.MakeGenericType(entityType);
-            return (IList)Activator.CreateInstance(constructedListType);
-        }
-
     }
 }

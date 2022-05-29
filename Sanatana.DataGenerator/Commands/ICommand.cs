@@ -3,5 +3,6 @@
     public interface ICommand
     {
         bool Execute();
+        string GetDescription();
     }
 }

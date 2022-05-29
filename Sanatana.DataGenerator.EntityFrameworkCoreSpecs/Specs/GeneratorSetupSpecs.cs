@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using FluentAssertions;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 {
@@ -33,8 +34,8 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 _markerString = GetType().FullName;
 
                 _generatorSetup = new GeneratorSetup();
-                _generatorSetup.DefaultFlushStrategy = new LimitedCapacityFlushStrategy(10);
-                _generatorSetup.DefaultPersistentStorages.Add(
+                _generatorSetup.Defaults.RequestCapacityProvider = new StrictRequestCapacityProvider(10);
+                _generatorSetup.Defaults.PersistentStorages.Add(
                     new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()));
 
                 _generatorSetup.RegisterEntity<Category>()
@@ -98,6 +99,13 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             public void then_generated_comments_have_post_id_not_zero()
             {
                 _insertedComments.Should().OnlyContain(x => x.PostId != 0);
+            }
+
+            [Test]
+            public void then_commands_history_should_be_populated()
+            {
+                string fullHistory = _generatorSetup.CommandsHistory.Combine();
+                _generatorSetup.CommandsHistory.History.Should().NotBeEmpty();
             }
         }
 

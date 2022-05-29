@@ -33,12 +33,10 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 {
                     new Comment()
                     {
-                        Id = 1,
                         CommentText = _markerString
                     },
                     new Comment()
                     {
-                        Id = 2,
                         CommentText = _markerString
                     }
                 };
@@ -46,13 +44,19 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             }
 
             [Test]
-            public void then_inserted_entities_are_found_in_database()
+            public void then_inserted_instances_are_found_in_database()
             {
                 List<Comment> actualComments = SampleDatabase.Comments
                     .Where(x => x.CommentText == _markerString)
                     .ToList();
 
                 actualComments.Should().BeEquivalentTo(_insertedComments);
+            }
+
+            [Test]
+            public void then_id_returned_from_database_and_set_on_instances()
+            {
+                _insertedComments.Should().OnlyContain(x => x.Id != 0);
             }
         }
 

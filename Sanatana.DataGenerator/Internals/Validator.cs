@@ -3,7 +3,7 @@ using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Modifiers;
-using Sanatana.DataGenerator.QuantityProviders;
+using Sanatana.DataGenerator.TotalCountProviders;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Storages;
 using System;
@@ -48,42 +48,42 @@ namespace Sanatana.DataGenerator.Internals
             {
                 string msgFormat = $"Entity description [{description.Type}] did not have {{0}} configured and {nameof(GeneratorSetup)} {{1}} was not provided";
 
-                IQuantityProvider quantityProvider = description.QuantityProvider
-                    ?? _generatorSetup.DefaultQuantityProvider;
-                if (quantityProvider == null)
+                ITotalCountProvider totalCountProvider = description.TotalCountProvider
+                    ?? _generatorSetup.Defaults.TotalCountProvider;
+                if (totalCountProvider == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
+                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
-                        , nameof(description.QuantityProvider), defName);
+                        , nameof(description.TotalCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
                 
-                IGenerator generator = description.Generator ?? _generatorSetup.DefaultGenerator;
+                IGenerator generator = description.Generator ?? _generatorSetup.Defaults.Generator;
                 if (generator == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
+                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
-                        , nameof(description.QuantityProvider), defName);
+                        , nameof(description.TotalCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
                 List<IPersistentStorage> persistentStorages = description.PersistentStorages
-                    ?? _generatorSetup.DefaultPersistentStorages;
+                    ?? _generatorSetup.Defaults.PersistentStorages;
                 if (persistentStorages == null || persistentStorages.Count == 0)
                 {
-                    string defName = nameof(_generatorSetup.DefaultPersistentStorages);
+                    string defName = nameof(_generatorSetup.Defaults.PersistentStorages);
                     string msg = string.Format(msgFormat
                         , nameof(description.PersistentStorages), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
-                IFlushStrategy flushTrigger = description.FlushTrigger
-                    ?? _generatorSetup.DefaultFlushStrategy;
+                IFlushStrategy flushTrigger = description.FlushStrategy
+                    ?? _generatorSetup.Defaults.FlushStrategy;
                 if (flushTrigger == null)
                 {
-                    string defName = nameof(_generatorSetup.DefaultFlushStrategy);
+                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
-                        , nameof(description.FlushTrigger), defName);
+                        , nameof(description.FlushStrategy), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
@@ -92,10 +92,10 @@ namespace Sanatana.DataGenerator.Internals
                     foreach (RequiredEntity required in description.Required)
                     {
                         ISpreadStrategy spreadStrategy = required.SpreadStrategy
-                            ?? _generatorSetup.DefaultSpreadStrategy;
+                            ?? _generatorSetup.Defaults.SpreadStrategy;
                         if (spreadStrategy == null)
                         {
-                            string defName = nameof(_generatorSetup.DefaultSpreadStrategy);
+                            string defName = nameof(_generatorSetup.Defaults.SpreadStrategy);
                             string msg = $"Entity description [{description.Type}] with required type [{required.Type}] did not have {nameof(RequiredEntity.SpreadStrategy)} configured and {nameof(GeneratorSetup)} {defName} was not provided";
                             throw new ArgumentNullException(defName, msg);
                         }
@@ -217,7 +217,7 @@ namespace Sanatana.DataGenerator.Internals
                 Type[] requiredEntitiesTypes = entity.Required
                     .Select(x => x.Type)
                     .ToArray();
-                IGenerator generator = _generatorSetup.GetGenerator(entity);
+                IGenerator generator = _generatorSetup.Defaults.GetGenerator(entity);
                 Type generatorInstanceType = generator.GetType();
                 CheckDuplicates(requiredEntitiesTypes, entity, generatorInstanceType);
 
@@ -243,7 +243,7 @@ namespace Sanatana.DataGenerator.Internals
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
                 Type[] requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToArray();
-                List<IModifier> modifiers = _generatorSetup.GetModifiers(entity);
+                List<IModifier> modifiers = _generatorSetup.Defaults.GetModifiers(entity);
                 modifiers.Where(x => x is IDelegateParameterizedModifier).ToList();
 
                 for (int i = 0; i < modifiers.Count; i++)

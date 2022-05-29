@@ -52,6 +52,27 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
 
+        [TestMethod]
+        public void FlushCandidatesHashSet_KeepsUniqueEntities()
+        {
+            //arrange
+            HashSet<EntityContext> flushCandidates = new HashSet<EntityContext>();
+            Dictionary<Type, EntityContext> entityContexts = GetEntityContexts(new Dictionary<Type, long>
+            {
+                { typeof(Category), 50 }
+            }, 100);
+            EntityContext categoryContext = entityContexts[typeof(Category)];
+            flushCandidates.Add(categoryContext);
+            categoryContext.EntityProgress.CurrentCount++;
+
+            //act
+            flushCandidates.Add(categoryContext);
+
+            //assert
+            flushCandidates.Count.Should().Be(1);
+        }
+
+
 
         //Setup helpers
         private Dictionary<Type, EntityContext> GetEntityContexts(
@@ -75,8 +96,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 comment
             }.ToDictionary(x => x.Type, x => x);
 
-            Dictionary<Type, EntityContext> contexts =
-                generatorSetup.SetupEntityContexts(dictDescriptions);
+            Dictionary<Type, EntityContext> contexts = generatorSetup.SetupEntityContexts(dictDescriptions);
             contexts.Values.ToList().ForEach(x =>
             {
                 x.EntityProgress.AddFlushedCount(0);

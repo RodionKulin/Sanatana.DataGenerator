@@ -35,15 +35,24 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual bool Execute()
         {
-            List<IPersistentStorage> persistentStorages = _setup.GetPersistentStorages(EntityContext.Description);
+            //set IsFlushingInProgress=true because it is async operation and do not want to start it again while previous flush not ended
+            EntityContext.EntityProgress.IsFlushInProgress = true;
+
+            List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(EntityContext.Description);
             _setup.TemporaryStorage.FlushToPersistent(EntityContext, persistentStorages)
                 .ContinueWith(prev =>
                 {
-                    _setup.Supervisor.EnqueueCommand(
-                        new CheckFlushRequiredCommand(EntityContext, _setup, _flushCandidatesRegistry));
+                    EntityContext.EntityProgress.IsFlushInProgress = false;
+                    _setup.Supervisor.EnqueueCommand(new CheckFlushRequiredCommand(EntityContext, _setup, _flushCandidatesRegistry));
                 });
 
             return true;
+        }
+
+        public virtual string GetDescription()
+        {
+            EntityProgress progress = EntityContext.EntityProgress;
+            return $"Flush to persistent storage {EntityContext.Type.Name} FlushedCount={progress.FlushedCount} NextFlushCount={progress.NextFlushCount}";
         }
     }
 }

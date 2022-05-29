@@ -1,25 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 
-namespace Sanatana.DataGenerator.Internals
+namespace Sanatana.DataGenerator.Internals.Reflection
 {
     public class ListOperations
     {
-        //fields
-        protected ReflectionInvoker _reflectionInvoker;
-
-
-        //init
-        public ListOperations()
-        {
-            _reflectionInvoker = new ReflectionInvoker();
-        }
-
 
         //methods
-        public IList Take(Type newListType, IList list, int number)
+        public virtual IList Take(Type newListType, IList list, int number)
         {
-            IList newList = _reflectionInvoker.CreateEntityList(newListType);
+            IList newList = CreateEntityList(newListType);
 
             //take larger than list length with take all
             int takeCount = Math.Min(number, list.Count);
@@ -33,9 +24,9 @@ namespace Sanatana.DataGenerator.Internals
             return newList;
         }
 
-        public IList Skip(Type newListType, IList list, int number)
+        public virtual IList Skip(Type newListType, IList list, int number)
         {
-            IList newList = _reflectionInvoker.CreateEntityList(newListType);
+            IList newList = CreateEntityList(newListType);
 
             //skip negative number will behave as skip 0 and return full list
             int skipIndex = number;
@@ -50,7 +41,7 @@ namespace Sanatana.DataGenerator.Internals
             return newList;
         }
 
-        public void AddRange(IList list, IList anotherList)
+        public virtual void AddRange(IList list, IList anotherList)
         {
             if (anotherList == null)
             {
@@ -61,6 +52,13 @@ namespace Sanatana.DataGenerator.Internals
             {
                 list.Add(entity);
             }
+        }
+
+        public virtual IList CreateEntityList(Type entityType)
+        {
+            Type listType = typeof(List<>);
+            Type constructedListType = listType.MakeGenericType(entityType);
+            return (IList)Activator.CreateInstance(constructedListType);
         }
     }
 }

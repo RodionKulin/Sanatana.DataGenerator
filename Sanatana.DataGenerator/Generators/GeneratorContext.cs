@@ -28,7 +28,7 @@ namespace Sanatana.DataGenerator.Generators
         /// </summary>
         public long CurrentCount { get; set; }
         /// <summary>
-        /// Entities instance that will be generated before and passed as arguments.
+        /// Entity instances that will be passed as arguments to generator.
         /// </summary>
         public Dictionary<Type, object> RequiredEntities { get; set; }
     }

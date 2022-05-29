@@ -49,7 +49,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             }
 
             OrderIterationType next = _queue.Peek();
-            return new GenerateEntitiesCommand(_entityContexts[next.EntityType], _generatorSetup, _entityContexts);
+            return new GenerateEntityCommand(_entityContexts[next.EntityType], _generatorSetup, _entityContexts);
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             foreach (RequiredEntity requiredEntity in child.Description.Required)
             {
                 EntityContext parent = _entityContexts[requiredEntity.Type];
-                ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(child.Description, requiredEntity);
+                ISpreadStrategy spreadStrategy = _generatorSetup.Defaults.GetSpreadStrategy(child.Description, requiredEntity);
 
                 long parentRequiredCount = spreadStrategy.GetNextIterationParentCount(parent, child);
                 long parentNewItemsCount = parentRequiredCount - parent.EntityProgress.CurrentCount;
@@ -124,8 +124,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //Update counters
-        public virtual void UpdateCounters(
-            EntityContext entityContext, IList generatedEntities, bool isFlushRequired)
+        public virtual void UpdateCounters(EntityContext entityContext, IList generatedEntities, bool isFlushRequired)
         {
             OrderIterationType next = _queue.Peek();
             if (entityContext.Type != next.EntityType)

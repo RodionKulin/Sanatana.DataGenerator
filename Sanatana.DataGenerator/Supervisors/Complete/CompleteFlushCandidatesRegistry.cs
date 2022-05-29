@@ -9,6 +9,7 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {
@@ -23,7 +24,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         /// </summary>
         protected Dictionary<Type, EntityContext> _entityContexts;
         /// <summary>
-        ///  Entities that are stored at temporary storage and reached some threshold number to store in temporary storage. 
+        ///  Entities that are stored at temporary storage and reached a point when have enough count to flush to persistent storage. 
         ///  They are kept until required to generate other entities and will be flushed when no longer required.
         /// </summary>
         protected HashSet<EntityContext> _flushCandidates;
@@ -45,48 +46,54 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         
 
         //Flush required checks
+        public virtual void UpdateNextFlushReleaseCount(EntityContext entityContext)
+        {
+            //should update it after each instance generated to measure capacity for next db request
+
+            //NextReleaseCount will be used by child entities to check if they still can generate from this parent
+            IRequestCapacityProvider requestCapacityProvider = _generatorSetup.Defaults.GetRequestCapacityProvider(entityContext.Description);
+            IFlushStrategy flushTrigger = _generatorSetup.Defaults.GetFlushStrategy(entityContext.Description);
+            long capacity = requestCapacityProvider.GetCapacity(entityContext);
+
+            flushTrigger.SetNextFlushCount(entityContext, capacity);
+        }
+
         public virtual bool CheckIsFlushRequired(EntityContext entityContext)
         {
+            //prevent starting next FlushCommand before previous has ended.
+            //prevent checking if IsFlushRequired, when already returned true previous time.
             EntityProgress progress = entityContext.EntityProgress;
-            bool isFlushInProgress = progress.IsFlushInProgress();
-            if (isFlushInProgress)
+            if (progress.IsFlushInProgress || progress.IsFlushRequired)
             {
                 return false;
             }
 
-            //NextReleaseCount will be used by child entities to check if they still can generate from this parent
-            IFlushStrategy flushTrigger = _generatorSetup.GetFlushTrigger(entityContext.Description);
-            flushTrigger.SetNextReleaseCount(entityContext);
-
-            //when all entities are generated also should flush
-            bool isFlushRequired = flushTrigger.IsFlushRequired(entityContext);
-            bool isCompleted = progress.CurrentCount >= progress.TargetCount;
-            if (isCompleted)
-            {
-                isFlushRequired = true;
-            }
+            IFlushStrategy flushTrigger = _generatorSetup.Defaults.GetFlushStrategy(entityContext.Description);
+          
+            //when all instances are generated also should flush
+            bool isFlushRequired = flushTrigger.IsFlushRequired(entityContext, capacity);
+            bool isFinalFlushRequired = progress.CurrentCount >= progress.TargetCount
+                && entityContext.EntityProgress.FlushedCount < progress.TargetCount;
+            isFlushRequired = isFlushRequired || isFinalFlushRequired;
             if (!isFlushRequired)
             {
-                //if flush is not required NextFlushCount should not be updated
-                //isFlushInProgress is using NextFlushCount 
-                return isFlushRequired;
+                return false;
             }
-
-            //update next flush count
-            flushTrigger.SetNextFlushCount(entityContext);
 
             //add to flush candidates if will be used by dependent children
             bool hasDependentChild = FindChildThatCanGenerate(entityContext, true) != null;
             if (hasDependentChild)
             {
                 _flushCandidates.Add(entityContext);
+                //call GetNextFlushCommands even if hasDependentChild, because might need to call GenerateStorageIdsCommand
             }
 
-            return isFlushRequired;
+            progress.IsFlushRequired = true;
+            return true;
         }
 
 
-        //Flush actions
+        //Flush commands
         public virtual List<ICommand> GetNextFlushCommands(EntityContext entityContext)
         {
             var flushCommands = new List<ICommand>();
@@ -99,25 +106,23 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             }
 
             //also check parent entities, if they are no longer required and can be flushed too
-            AppendParentsFlushActions(entityContext.ParentEntities, flushCommands);
+            AppendParentsFlushActions(entityContext.ParentEntities, flushCommands, entityContext.Type.Name);
 
+            //dont flush and release instances if child entities can still use it to generate
             bool hasDependentChild = FindChildThatCanGenerate(entityContext, true) != null;
-            if (hasDependentChild)
+            if (!hasDependentChild)
             {
-                return flushCommands;
+                ICommand command = entityContext.Description.InsertToPersistentStorageBeforeUse
+                    ? new ReleaseFromTempStorageCommand(entityContext, _generatorSetup, this, entityContext.Type.Name)
+                    : (ICommand)new FlushCommand(entityContext, _generatorSetup, this);
+                flushCommands.Add(command);
             }
-
-            //has no dependent children, so can flush to persistent storage
-            ICommand command = entityContext.Description.InsertToPersistentStorageBeforeUse
-                ? new ReleaseFromTempStorageCommand(entityContext, _generatorSetup, this)
-                : (ICommand)new FlushCommand(entityContext, _generatorSetup, this);
-            flushCommands.Add(command);
 
             return flushCommands;
         }
 
-        protected virtual void AppendParentsFlushActions(
-            List<IEntityDescription> parents, List<ICommand> flushCommands)
+        protected virtual void AppendParentsFlushActions(List<IEntityDescription> parents,
+            List<ICommand> flushCommands, string invokedBy)
         {
             foreach (IEntityDescription parent in parents)
             {
@@ -137,11 +142,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 _flushCandidates.Remove(parentContext);
 
                 ICommand command = parentContext.Description.InsertToPersistentStorageBeforeUse
-                    ? new ReleaseFromTempStorageCommand(parentContext, _generatorSetup, this)
+                    ? new ReleaseFromTempStorageCommand(parentContext, _generatorSetup, this, invokedBy)
                     : (ICommand)new FlushCommand(parentContext, _generatorSetup, this);
                 flushCommands.Add(command);
 
-                AppendParentsFlushActions(parentContext.ParentEntities, flushCommands);
+                AppendParentsFlushActions(parentContext.ParentEntities, flushCommands, invokedBy);
             }
         }
 
@@ -170,12 +175,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             return childContext;
         }
 
-        protected virtual bool CheckChildCanGenerate(EntityContext child,
-            EntityContext parent, bool onlyCheckCanGenerate)
+        protected virtual bool CheckChildCanGenerate(EntityContext child, EntityContext parent, bool onlyCheckCanGenerate)
         {
             Type typeToFlush = parent.Type;
             RequiredEntity requiredParent = child.Description.Required.First(x => x.Type == typeToFlush);
-            ISpreadStrategy spreadStrategy = _generatorSetup.GetSpreadStrategy(child.Description, requiredParent);
+            ISpreadStrategy spreadStrategy = _generatorSetup.Defaults.GetSpreadStrategy(child.Description, requiredParent);
 
             //check if child can still use parent entities from temporary storage to generate
             bool canGenerateMore = spreadStrategy.CanGenerateFromParentNextReleaseCount(parent, child);
@@ -193,7 +197,6 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         //Find next node to generate among flush candidates children
         public virtual EntityContext FindChildOfFlushCandidates()
         {
-            //find child nodes of flush candidates
             EntityContext childCanGenerate = null;
 
             foreach (EntityContext entity in _flushCandidates)

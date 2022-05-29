@@ -1,87 +1,88 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Sanatana.DataGenerator.Internals.Objects;
+using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Threading;
 
 namespace Sanatana.DataGenerator.Internals
 {
     public class EntityProgress
     {
-        //fields
-        protected long _flushedCount;
-        protected long _nextFlushCount;
-        protected long _releasedCount;
-        protected long _nextReleaseCount;
-
-
         //properties
         /// <summary>
         /// Total number of entities that will be created in the end by generator.
         /// </summary>
         public long TargetCount { get; set; }
         /// <summary>
-        /// Number of entities already created by generator during this program run. 
-        /// This includes all inserted into persistent storage and all kept in temporary storage.
+        /// Total number of entity instances generated during this program run. 
+        /// This includes all inserted to persistent storage and all accumulated in temporary storage before inserting to persistent.
+        /// Incremented after instances were generated.
         /// </summary>
-        public long CurrentCount { get; set; }       
+        public long CurrentCount { get; set; }
         /// <summary>
         /// Number of entities required to generate during planing of next iteration. 
         /// Usually CurrentCount + 1, but depends on SpreadStrategy of child entities and Required relations..
         /// </summary>
         public long NextIterationCount { get; set; }
         /// <summary>
-        /// Number of entities created that were already inserted into persistent storage.
+        /// Ranges of entity instances prepared to flush into persistent storage in single batch.
         /// </summary>
-        public long FlushedCount
-        {
-            get { return Interlocked.Read(ref _flushedCount); }
-            protected set { Interlocked.Exchange(ref _flushedCount, value); }
-        }
-        /// <summary>
-        /// Number or entities that will be flushed during next flush to persistent storage. 
-        /// This includes previously FlushedCount & next entities batch count that will be flushed.
-        /// </summary>
-        public long NextFlushCount
-        {
-            get { return Interlocked.Read(ref _nextFlushCount); }
-            set { Interlocked.Exchange(ref _nextFlushCount, value); }
-        }
-        /// <summary>
-        /// Number of items that no longer stored in temporary storage.
-        /// Should be same as FlushedCount except for InsertToPersistentStorageBeforeUse entities.
-        /// In that case FlushedCount is updated after inserting and ReleasedCount
-        /// is updated when entities no longer used by dependent children.
-        /// </summary>
-        public long ReleasedCount
-        {
-            get { return Interlocked.Read(ref _releasedCount); }
-            protected set { Interlocked.Exchange(ref _releasedCount, value); }
-        }
-        /// <summary>
-        /// Number or entities that will be removed from temp storage during next flush to persistent storage. 
-        /// This includes previously RemovedFromTempStorageCount & next entities batch count that will be removed.
-        /// </summary>
-        public long NextReleaseCount
-        {
-            get { return Interlocked.Read(ref _nextReleaseCount); }
-            set { Interlocked.Exchange(ref _nextReleaseCount, value); }
-        }
+        public List<FlushRange> FlushRanges { get; protected set; }
 
 
+        //init
+        public EntityProgress()
+        {
+            FlushRanges = new List<FlushRange>();
+        }
+
+        
         //methods
-        public virtual void AddFlushedCount(long numberOfFlushed)
+        public virtual FlushRange GetNextFlushRange()
         {
-            Interlocked.Add(ref _flushedCount, numberOfFlushed);
+            //not checking x.IsFlushRequired, that can be false for last range
+            FlushRange flushRange = FlushRanges.FirstOrDefault(x => !x.IsFlushed && !x.IsFlushInProgress);
+            if(flushRange == null)
+            {
+                string data = JsonConvert.SerializeObject(FlushRanges);
+                string message = $"No {nameof(FlushRange)} found to start flush. {data}";
+                throw new DataMisalignedException(message);
+            }
+
+            return flushRange;
         }
 
-        public virtual void AddReleasedCount(long numberOfRemoved)
+        public virtual FlushRange GetNextReleaseRange()
         {
-            Interlocked.Add(ref _releasedCount, numberOfRemoved);
+            FlushRange flushRange = FlushRanges.FirstOrDefault(x => x.IsFlushed && !x.IsReleased);
+            if (flushRange == null)
+            {
+                string data = JsonConvert.SerializeObject(FlushRanges);
+                string message = $"No {nameof(FlushRange)} found to start release. {data}";
+                throw new DataMisalignedException(message);
+            }
+
+            return flushRange;
         }
 
-        public virtual bool IsFlushInProgress()
+        public virtual FlushRange GetLatestRange()
         {
-            return NextFlushCount > FlushedCount;
+            FlushRange flushRange = FlushRanges.LastOrDefault();
+            if (flushRange == null)
+            {
+                string data = JsonConvert.SerializeObject(FlushRanges);
+                string message = $"No last {nameof(FlushRange)} found. {data}";
+                throw new DataMisalignedException(message);
+            }
+
+            return flushRange;
+        }
+
+        public virtual bool HasNotReleased()
+        {
+            FlushRange flushRange = FlushRanges.FirstOrDefault(x => x.IsFlushed && !x.IsReleased);
+            x.EntityProgress.ReleasedCount < x.EntityProgress.CurrentCount
         }
     }
 }

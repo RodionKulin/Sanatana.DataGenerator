@@ -7,16 +7,22 @@ using System.Threading.Tasks;
 using System.Linq;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.QuantityProviders;
+using Sanatana.DataGenerator.TotalCountProviders;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Modifiers;
+using System.Linq.Expressions;
+using Sanatana.DataGenerator.StorageInsertGuards;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.Entities
 {
+    /// <summary>
+    /// Entity configuration for generation process
+    /// </summary>
     public class EntityDescription<TEntity> : IEntityDescription
             where TEntity : class
     {
-        //properties
+        #region Properties
         /// <summary>
         /// Type of entity to generate
         /// </summary>
@@ -32,32 +38,49 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         public List<RequiredEntity> Required { get; set; }
         /// <summary>
-        /// Entities generator. Can return entities one by one or in small batches. 
-        /// Usually better to return single entity not to store extra entities in memory.
+        /// Entity instances generator. Can return instances one by one or in small batches. 
+        /// Usually better to return single instance not to store extra instances in memory.
+        /// Be default will use DefaultGenerator from GeneratorSetup.
         /// </summary>
         public IGenerator Generator { get; set; }
         /// <summary>
-        /// A method to make adjustments to entity after generated.
+        /// List of methods to make adjustments to entity instance after generation.
+        /// Be default will use DefaultModifiers from GeneratorSetup.
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
-        /// Database storage for generated entities.
+        /// Database storages for generated entities.
+        /// Be default will use DefaultPersistentStorages from GeneratorSetup.
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
-        /// Provider of total number of entity instances that needs to be generated.
+        /// Provider of total number of entity instances that need to be generated.
+        /// Be default will use DefaultTotalCountProvider from GeneratorSetup.
         /// </summary>
-        public IQuantityProvider QuantityProvider { get; set; }
+        public ITotalCountProvider TotalCountProvider { get; set; }
         /// <summary>
         /// Checker of temporary storage if it is time to flush entities to database.
+        /// Be default will use DefaultFlushStrategy from GeneratorSetup.
         /// </summary>
-        public IFlushStrategy FlushTrigger { get; set; }
+        public IFlushStrategy FlushStrategy { get; set; }
         /// <summary>
-        /// Get database generated columns like Id after inserting entities first. 
-        /// Than only pass entities as required.
+        /// Provider of number of entity instances that can be inserted with next request to persistent storage.
+        /// Be default will use DefaultRequestCapacityProvider from GeneratorSetup.
+        /// </summary>
+        public IRequestCapacityProvider RequestCapacityProvider { get; set; }
+        /// <summary>
+        /// Checker of entity instances to be inserted into database. 
+        /// Excludes unwanted instances, like the ones that already exist in database for EnsureExistGenerator.
+        /// By default is not used.
+        /// </summary>
+        public IStorageInsertGuard StorageInsertGuard { get; set; }
+        /// <summary>
+        /// Get database generated columns after inserting entities first (for example Id).
+        /// Only after receiving such columns pass entity instances as required for generation.
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }
+        #endregion
 
 
         //init
@@ -68,7 +91,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
 
-        //configure methods
+        #region Configure methods
         /// <summary>
         /// Add required entity type that will be generated first and then pasted as parameter to generator.
         /// </summary>
@@ -225,16 +248,16 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Set total number of entities that need to be generated.
         /// </summary>
-        /// <param name="quantityProvider"></param>
+        /// <param name="totalCountProvider"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetTargetCount(IQuantityProvider quantityProvider)
+        public virtual EntityDescription<TEntity> SetTargetCount(ITotalCountProvider totalCountProvider)
         {
-            if (quantityProvider == null)
+            if (totalCountProvider == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(quantityProvider)}] of {nameof(SetTargetCount)} can not be null.");
+                throw new ArgumentNullException($"Argument [{nameof(totalCountProvider)}] of {nameof(SetTargetCount)} can not be null.");
             }
 
-            QuantityProvider = quantityProvider;
+            TotalCountProvider = totalCountProvider;
             return this;
         }
 
@@ -245,20 +268,21 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetTargetCount(long count)
         {
-            QuantityProvider = new StrictQuantityProvider(count);
+            TotalCountProvider = new StrictTotalCountProvider(count);
             return this;
         }
 
         /// <summary>
-        /// Set database inserting storage.
+        /// Add database storage provider that will receive generated entity instances.
+        /// Multiple storages can be used. Will insert instances to each of them.
         /// </summary>
         /// <param name="persistentStorage"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetPersistentStorage(IPersistentStorage persistentStorage)
+        public virtual EntityDescription<TEntity> AddPersistentStorage(IPersistentStorage persistentStorage)
         {
             if (persistentStorage == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(SetPersistentStorage)} can not be null.");
+                throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
             
             PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
@@ -267,15 +291,16 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set database inserting storage.
+        /// Add database storage provider that will receive generated entity instances.
+        /// Multiple storages can be used. Will insert instances to each of them.
         /// </summary>
         /// <param name="insertFunc"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetPersistentStorage(Func<List<TEntity>, Task> insertFunc)
+        public virtual EntityDescription<TEntity> AddPersistentStorage(Func<List<TEntity>, Task> insertFunc)
         {
             if (insertFunc == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(SetPersistentStorage)} can not be null.");
+                throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
 
             PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
@@ -286,27 +311,54 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Set entity persistent storage write trigger, that signals a required flush.
         /// </summary>
-        /// <param name="flushTrigger"></param>
+        /// <param name="flushStrategy"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetFlushTrigger(IFlushStrategy flushTrigger)
+        public virtual EntityDescription<TEntity> SetFlushStrategy(IFlushStrategy flushStrategy)
         {
-            if (flushTrigger == null)
+            if (flushStrategy == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(flushTrigger)}] of {nameof(SetFlushTrigger)} can not be null.");
+                throw new ArgumentNullException($"Argument [{nameof(flushStrategy)}] of {nameof(SetFlushStrategy)} can not be null.");
             }
 
-            FlushTrigger = flushTrigger;
+            FlushStrategy = flushStrategy;
             return this;
         }
 
         /// <summary>
-        /// Set entity persistent storage write trigger, that signals a required flush, when capacity of generated items is filled.
+        /// Set RequestCapacityProvider that returns number of entity instances that can be inserted with next request to persistent storage.
+        /// </summary>
+        /// <param name="requestCapacityProvider"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(IRequestCapacityProvider requestCapacityProvider)
+        {
+            if (requestCapacityProvider == null)
+            {
+                throw new ArgumentNullException($"Argument [{nameof(requestCapacityProvider)}] of {nameof(SetRequestCapacityProvider)} can not be null.");
+            }
+
+            RequestCapacityProvider = requestCapacityProvider;
+            return this;
+        }
+
+        /// <summary>
+        /// Set StrictRequestCapacityProvider that returns static capacity number of entity instances that can be inserted with next request to persistent storage.
         /// </summary>
         /// <param name="capacity"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetLimitedCapacityFlushTrigger(long capacity)
+        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(long capacity)
         {
-            FlushTrigger = new LimitedCapacityFlushStrategy(capacity);
+            RequestCapacityProvider = new StrictRequestCapacityProvider(capacity);
+            return this;
+        }
+
+        /// <summary>
+        /// Set checker of entity instances to be inserted into database. Excludes unwanted instances, like the ones that already exist in database.
+        /// </summary>
+        /// <param name="storageInsertGuard"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetStorageInsertGuard(IStorageInsertGuard storageInsertGuard)
+        {
+            StorageInsertGuard = storageInsertGuard;
             return this;
         }
 
@@ -324,24 +376,20 @@ namespace Sanatana.DataGenerator.Entities
             InsertToPersistentStorageBeforeUse = insertToPersistentStorageBeforeUse;
             return this;
         }
+        #endregion
 
 
-        //Generator that reuses existing entity instances from persistent storage
+        #region Generator that reuses instances from persistent storage
         /// <summary>
         /// Generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Such existing entities can be used to populate foreign key of other entities.
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
         /// </summary>
-        /// <param name="generatorSetup"></param>
+        /// <param name="generator"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetReuseExistingGenerator(
-            Func<ReuseExistingGenerator<TEntity>, ReuseExistingGenerator<TEntity>> generatorSetup)
+        public virtual EntityDescription<TEntity> SetReuseExistingGenerator<TOrderByKey>(ReuseExistingGenerator<TEntity, TOrderByKey> generator)
         {
-            var generator = new ReuseExistingGenerator<TEntity>();
-            generator = generatorSetup(generator);
-            if(generator == null)
-            {
-                throw new NullReferenceException($"Method {nameof(generatorSetup)} should return instance of {nameof(ReuseExistingGenerator<TEntity>)} but returned null.");
-            }
+            generator = generator ?? throw new ArgumentNullException(nameof(generator));
             generator.ValidateSetup();
             Generator = generator;
 
@@ -350,40 +398,59 @@ namespace Sanatana.DataGenerator.Entities
             return this;
         }
 
-
         /// <summary>
         /// Generator that provides existing entity instances from persistent storage instead of creating new.
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
-        /// Will set CountExistingQuantityProvider as QuantityProvider to select all instances.
+        /// Will set CountExistingTotalCountProvider as TotalCountProvider to select all instances.
         /// </summary>
         /// <param name="storageSelector">Persistent storage that will provide existing entity instances.</param>
         /// <param name="filter">Optional filter expression to select existing entity instances from persistent storage. By default will include all instances.</param>
+        /// <param name="orderBy">Optional OrderBy expression to select existing entity instances with expected order. By default will select unordered instances.</param>
         /// <returns></returns>
         /// <exception cref="NullReferenceException"></exception>
-        public virtual EntityDescription<TEntity> SetReuseExistingGeneratorForAll(IPersistentStorageSelector storageSelector,
-            Func<TEntity, bool> filter = null)
+        public virtual EntityDescription<TEntity> SetReuseExistingGeneratorForAll<TOrderByKey>(
+            IPersistentStorageSelector storageSelector,
+            Expression<Func<TEntity, bool>> filter = null,
+            Expression<Func<TEntity, TOrderByKey>> orderBy = null)
         {
-            if(filter == null)
+            if (filter == null)
             {
                 filter = (entity) => true;
             }
 
-            var generator = new ReuseExistingGenerator<TEntity>()
+            var generator = new ReuseExistingGenerator<TEntity, TOrderByKey>(storageSelector)
                 .SetBatchSizeMax()
-                .SetPersistentStorage(storageSelector)
                 .SetFilter(filter);
+            if(orderBy != null)
+            {
+                generator.SetOrderBy(orderBy);
+            }
+
             generator.ValidateSetup();
             Generator = generator;
 
             PersistentStorages.Add(new VoidStorage());
-            QuantityProvider = new CountExistingQuantityProvider<TEntity>(storageSelector, filter);
+            TotalCountProvider = new CountExistingTotalCountProvider<TEntity>(storageSelector, filter);
 
             return this;
         }
 
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey>(
+            EnsureExistGenerator<TEntity, TOrderByKey> generator)
+        {
+            generator = generator ?? throw new ArgumentNullException(nameof(generator));
+
+            Generator = generator;
+            FlushStrategy = generator;
+            StorageInsertGuard = generator;
+
+            return this;
+        }
+
+        #endregion
 
 
-        //Generator that creates new entity instances
+        #region Generator that creates new entity instances
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>
@@ -405,8 +472,7 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         /// <param name="generateFunc"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetGenerator(
-            Func<GeneratorContext, TEntity> generateFunc)
+        public virtual EntityDescription<TEntity> SetGenerator(Func<GeneratorContext, TEntity> generateFunc)
         {
             if (generateFunc == null)
             {
@@ -1152,9 +1218,10 @@ namespace Sanatana.DataGenerator.Entities
             return this;
         }
 
+        #endregion
 
 
-        //Modifier
+        #region Modifier
         /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
@@ -1765,5 +1832,6 @@ namespace Sanatana.DataGenerator.Entities
             return this;
         }
 
+        #endregion
     }
 }

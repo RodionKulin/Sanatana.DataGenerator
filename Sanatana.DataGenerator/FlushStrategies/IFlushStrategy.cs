@@ -7,12 +7,11 @@ using System.Text;
 namespace Sanatana.DataGenerator.Strategies
 {
     /// <summary>
-    /// Entity persistent storage write trigger, that signals a required flush.
+    /// Entity persistent storage write trigger.
     /// </summary>
     public interface IFlushStrategy
     {
-        bool IsFlushRequired(EntityContext entityContext);
-        void SetNextFlushCount(EntityContext entityContext);
-        void SetNextReleaseCount(EntityContext entityContext);
+        bool IsFlushRequired(EntityContext entityContext, long requestCapacity);
+        void SetNextFlushCount(EntityContext entityContext, long requestCapacity);
     }
 }

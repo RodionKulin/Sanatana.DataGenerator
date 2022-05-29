@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -7,9 +8,11 @@ namespace Sanatana.DataGenerator.Storages
 {
     public interface IPersistentStorageSelector : IDisposable
     {
-        List<TEntity> Select<TEntity>(Func<TEntity, bool> filter, int skip, int take)
+        List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter, 
+            Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
             where TEntity : class;
-        long Count<TEntity>(Func<TEntity, bool> filter)
+
+        long Count<TEntity>(Expression<Func<TEntity, bool>> filter)
             where TEntity : class;
     }
 }

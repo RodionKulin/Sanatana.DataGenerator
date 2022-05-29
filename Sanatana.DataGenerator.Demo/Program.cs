@@ -15,19 +15,18 @@ namespace Sanatana.DataGenerator.Demo
         {
             //Setup
             var setup = new GeneratorSetup();
-            
             setup.RegisterEntity<Buyer>()
                 .SetGenerator(GenerateBuyer)
-                .SetPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
+                .AddPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
                 .SetTargetCount(100);
             setup.RegisterEntity<Supplier>()
                 .SetGenerator(GenerateSupplier)
-                .SetPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
+                .AddPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
                 .SetTargetCount(100);
             setup.RegisterEntity<PurchaseOrder>()
                 .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
                 .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
-                .SetPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
+                .AddPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
                 .SetSpreadStrategy(new CartesianProductSpreadStrategy())
                 .SetTargetCount(100000);
 

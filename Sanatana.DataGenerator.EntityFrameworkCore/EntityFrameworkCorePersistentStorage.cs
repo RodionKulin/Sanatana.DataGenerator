@@ -8,13 +8,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
     public class EntityFrameworkCorePersistentStorage : 
-        EntityFrameworkCoreFlushTrigger, IPersistentStorage, IPersistentStorageSelector
+        EntityFrameworkCoreRequestCapacityProvider, IPersistentStorage, IPersistentStorageSelector
     {
         //init
         public EntityFrameworkCorePersistentStorage(Func<DbContext> dbContextFactory)
@@ -44,13 +45,21 @@ namespace Sanatana.DataGenerator.EntityFramework
 
 
         //selectors
-        public virtual List<TEntity> Select<TEntity>(Func<TEntity, bool> filter, int skip, int take)
+        public virtual List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter,
+            Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
             where TEntity : class
         {
             using (DbContext dbContext = _dbContextFactory())
             {
-                List<TEntity> entities = dbContext.Set<TEntity>()
-                    .Where(filter)
+                IQueryable<TEntity> query = dbContext.Set<TEntity>()
+                    .Where(filter);
+
+                if (orderBy != null)
+                {
+                    query = query.OrderBy(orderBy);
+                }
+
+                List<TEntity> entities = query
                     .Skip(skip)
                     .Take(take)
                     .ToList();
@@ -58,7 +67,7 @@ namespace Sanatana.DataGenerator.EntityFramework
             }
         }
 
-        public virtual long Count<TEntity>(Func<TEntity, bool> filter)
+        public virtual long Count<TEntity>(Expression<Func<TEntity, bool>> filter)
             where TEntity : class
         {
             using (DbContext dbContext = _dbContextFactory())
