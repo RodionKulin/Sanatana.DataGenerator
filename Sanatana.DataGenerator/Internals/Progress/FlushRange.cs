@@ -55,7 +55,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
 
 
         //init
-        public FlushRange(long previousRangeFlushedCount, long capacity)
+        public FlushRange(long previousRangeFlushedCount, int capacity)
         {
             PreviousRangeFlushedCount = previousRangeFlushedCount;
             FlushRequestCapacity = capacity;
@@ -63,25 +63,10 @@ namespace Sanatana.DataGenerator.Internals.Progress
 
 
         //methods
-        public virtual void UpdateCapacity(long capacity)
+        public virtual void UpdateCapacity(int capacity)
         {
             FlushRequestCapacity = capacity;
             ThisRangeFlushCount = PreviousRangeFlushedCount + capacity;
-        }
-
-        public virtual void SetFlushedAndReleased()
-        {
-            FlushStatus = FlushStatus.FlushedAndReleased;
-        }
-
-        public virtual void SetFlushed()
-        {
-            FlushStatus = FlushStatus.Flushed;
-        }
-
-        public virtual void SetReleased()
-        {
-            FlushStatus = FlushStatus.FlushedAndReleased;
         }
 
         public virtual void SetFlushStatus(FlushStatus flushStatus)

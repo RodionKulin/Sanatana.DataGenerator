@@ -8,11 +8,11 @@ using System.Text;
 namespace Sanatana.DataGenerator.Strategies
 {
     /// <summary>
-    /// Entity persistent storage write trigger. It measures after what number instances should start db insert.
+    /// Entity persistent storage write trigger. It measures after what number instances should start persistent storage insert.
     /// </summary>
     public interface IFlushStrategy
     {
         bool CheckIsFlushRequired(EntityContext entityContext, FlushRange flushRange);
-        void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, long requestCapacity);
+        void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, int requestCapacity);
     }
 }

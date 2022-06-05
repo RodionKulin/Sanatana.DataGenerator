@@ -36,7 +36,7 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //methods
-        public virtual bool Execute()
+        public virtual void Execute()
         {
             IEntityDescription description = EntityContext.Description;
             IGenerator generator = _setup.Defaults.GetGenerator(description);
@@ -64,8 +64,6 @@ namespace Sanatana.DataGenerator.Commands
             requestCapacityProvider.TrackEntityGeneration(EntityContext, entities);
             _setup.TemporaryStorage.InsertToTemporary(EntityContext, entities);
             _setup.Supervisor.HandleGenerateCompleted(EntityContext, entities);
-
-            return true;
         }
 
         protected virtual Dictionary<Type, object> GetRequiredEntities()

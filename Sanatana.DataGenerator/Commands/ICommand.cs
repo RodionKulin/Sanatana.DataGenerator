@@ -2,7 +2,7 @@
 {
     public interface ICommand
     {
-        bool Execute();
+        void Execute();
         string GetDescription();
     }
 }

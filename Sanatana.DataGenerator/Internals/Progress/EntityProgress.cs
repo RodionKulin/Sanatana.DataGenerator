@@ -8,7 +8,15 @@ namespace Sanatana.DataGenerator.Internals.Progress
 {
     public class EntityProgress
     {
+        protected long _releasedCount = 0;
+
+
         //properties
+        protected long ReleasedCount
+        {
+            get { return _releasedCount; }
+            set { _releasedCount = value; }
+        }
         /// <summary>
         /// Total number of entities that will be created in the end by generator.
         /// </summary>
@@ -28,7 +36,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
         /// Ranges of entity instances prepared to flush into persistent storage in single batch.
         /// </summary>
         public List<FlushRange> FlushRanges { get; protected set; }
-
+    
 
         //init
         public EntityProgress()
@@ -43,7 +51,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
             FlushRange latestRange = FlushRanges.LastOrDefault();
             if (latestRange == null)
             {
-                var newRange = new FlushRange(0, int.MaxValue);
+                var newRange = new FlushRange(ReleasedCount, int.MaxValue);
                 FlushRanges.Add(newRange);
                 return newRange;
             }
@@ -59,47 +67,14 @@ namespace Sanatana.DataGenerator.Internals.Progress
             return null;
         }
 
-        public virtual void UpdateCapacity(long requestCapacity)
+        public virtual void RemoveRange(FlushRange flushRange)
         {
-            FlushRange flushRange = FlushRanges.LastOrDefault();
-            if (flushRange == null)
-            {
-                FlushRanges.Add(new FlushRange(0, requestCapacity));
-            }
-
-            flushRange.UpdateCapacity(requestCapacity);
-            if (CurrentCount > flushRange.ThisRangeFlushCount)
-            {
-                FlushRanges.Add(new FlushRange(flushRange.ThisRangeFlushCount, requestCapacity));
-            }
-        }
-
-        public virtual FlushRange GetLatestRange()
-        {
-            FlushRange flushRange = FlushRanges.LastOrDefault();
-            if (flushRange == null)
-            {
-                string data = GetRangesDump();
-                string message = $"No last {nameof(FlushRange)} found. {data}";
-                throw new DataMisalignedException(message);
-            }
-
-            return flushRange;
-        }
-
-        public virtual FlushRange GetLatestRangeNoThrow()
-        {
-            return FlushRanges.LastOrDefault();
+            FlushRanges.Remove(flushRange);
+            ReleasedCount = Math.Max(ReleasedCount, flushRange.ThisRangeFlushCount);
         }
 
         public virtual bool CheckIsNewFlushRequired(FlushRange flushRange)
         {
-            if(flushRange.FlushStatus != FlushStatus.FlushNotRequired)
-            {
-                //other statuses already started flushing
-                return false;
-            }
-
             if(CurrentCount >= flushRange.ThisRangeFlushCount)
             {
                 //reached number of instances for full capacity db insert request 
@@ -109,7 +84,8 @@ namespace Sanatana.DataGenerator.Internals.Progress
             if (CurrentCount >= TargetCount)
             {
                 //final flush may be required
-                //if still have some instances in Temp storage and
+                //if all target number of instances generated
+                //if still have some instances in temp storage and
                 //if not have enough instances to reach full capacity db insert request 
                 return true;
             }
@@ -117,50 +93,15 @@ namespace Sanatana.DataGenerator.Internals.Progress
             return false;
         }
 
-        public virtual bool HasNotReleasedRange()
-        {
-            return FlushRanges.Any(x => x.FlushStatus != FlushStatus.FlushedAndReleased);
-        }
-
         public virtual long GetReleasedCount()
         {
-            FlushRange flushRange = FlushRanges.LastOrDefault(x => x.FlushStatus == FlushStatus.FlushedAndReleased);
-            if(flushRange == null)
-            {
-                return 0;
-            }
-
-            return flushRange.ThisRangeFlushCount;
-        }
-
-        public virtual long GetNextReleaseCount()
-        {
-            FlushRange flushRange = FlushRanges.FirstOrDefault(x => x.FlushStatus != FlushStatus.FlushedAndReleased);
-            if (flushRange == null)
-            {
-                string data = GetRangesDump();
-                string message = $"No {nameof(FlushRange)} found with IsReleased=false to find NextReleaseCount. {data}";
-                throw new DataMisalignedException(message);
-            }
-
-            return flushRange.ThisRangeFlushCount;
-        }
-
-        public virtual long GetFlushedCount()
-        {
-            FlushRange flushRange = FlushRanges.LastOrDefault(x => x.FlushStatus == FlushStatus.Flushed ||
-                x.FlushStatus == FlushStatus.FlushedAndReleased);
-            if (flushRange == null)
-            {
-                return 0;
-            }
-
-            return flushRange.ThisRangeFlushCount;
+            return ReleasedCount;
         }
 
         public virtual string GetRangesDump()
         {
             return JsonConvert.SerializeObject(FlushRanges);
         }
+
     }
 }

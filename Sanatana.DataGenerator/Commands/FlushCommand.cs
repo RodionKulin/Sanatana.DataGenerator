@@ -9,7 +9,7 @@ using Sanatana.DataGenerator.Internals.Progress;
 namespace Sanatana.DataGenerator.Commands
 {
     /// <summary>
-    /// Insert entity instances to Persistent storage and remove from Temporary storage
+    /// Insert entity instances to persistent storage and remove from temporary storage.
     /// </summary>
     public class FlushCommand : ICommand
     { 
@@ -35,19 +35,13 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //methods
-        public virtual bool Execute()
+        public virtual void Execute()
         {
-            //set FlushStatus.FlushInProgress because it is an async operation and do not want to start it again while previous flush not ended
-            _flushRange.SetFlushStatus(FlushStatus.FlushInProgress);
-
             List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(EntityContext.Description);
-            _setup.TemporaryStorage.FlushToPersistent(EntityContext, _flushRange, persistentStorages)
-                .ContinueWith(prev =>
-                {
-                    _setup.Supervisor.EnqueueCommand(new CheckFlushRequiredCommand(EntityContext, _setup, _flushCandidatesRegistry));
-                });
+            _setup.TemporaryStorage.FlushToPersistent(EntityContext, _flushRange, persistentStorages);
 
-            return true;
+            _flushRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
+            EntityContext.EntityProgress.RemoveRange(_flushRange);
         }
 
         public virtual string GetDescription()

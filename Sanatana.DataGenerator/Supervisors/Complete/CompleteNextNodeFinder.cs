@@ -42,7 +42,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 return null;
             }
 
-            EntityContext childCanGenerate = _flushCandidatesRegistry.FindChildOfFlushCandidates();
+            EntityContext childCanGenerate = _flushCandidatesRegistry.FindChildOfFlushCandidate();
             if(childCanGenerate != null)
             {
                 return childCanGenerate;

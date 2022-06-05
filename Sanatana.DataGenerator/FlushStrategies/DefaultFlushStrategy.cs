@@ -11,7 +11,7 @@ namespace Sanatana.DataGenerator.Strategies
             return progress.CheckIsNewFlushRequired(flushRange);
         }
 
-        public void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, long requestCapacity)
+        public void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, int requestCapacity)
         {
             flushRange.UpdateCapacity(requestCapacity);
         }

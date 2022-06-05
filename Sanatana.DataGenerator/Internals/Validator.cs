@@ -364,7 +364,7 @@ namespace Sanatana.DataGenerator.Internals
         }
 
         /// <summary>
-        /// Validate that number of modified entities is greater than 0 and returned type is List<>
+        /// Validate that number of modified entities is greater than 0 and returned type is List&lt;&gt;
         /// </summary>
         /// <param name="entities"></param>
         /// <param name="entityType"></param>

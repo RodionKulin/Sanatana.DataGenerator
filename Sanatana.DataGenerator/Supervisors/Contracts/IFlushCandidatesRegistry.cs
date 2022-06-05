@@ -11,6 +11,6 @@ namespace Sanatana.DataGenerator.Supervisors.Contracts
         void UpdateRequestCapacity(EntityContext entityContext);
         bool UpdateFlushRequired(EntityContext entityContext);
         List<ICommand> GetNextFlushCommands(EntityContext entityContext);
-        EntityContext FindChildOfFlushCandidates();
+        EntityContext FindChildOfFlushCandidate();
     }
 }

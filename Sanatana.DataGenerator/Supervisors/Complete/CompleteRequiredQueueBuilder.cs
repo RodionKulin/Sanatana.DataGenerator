@@ -37,13 +37,12 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         //Get next action from queue
         public virtual ICommand GetNextCommand()
         {
-            if (_queue == null ||
-                _queue.Count == 0)
+            if (_queue == null || _queue.Count == 0)
             {
                 EntityContext nextNode = _nextNodeFinder.FindNextNode();
                 if (nextNode == null)
                 {
-                    return new FinishCommand(_generatorSetup, _entityContexts);
+                    return null;
                 }
 
                 _queue = CreateNextQueue(nextNode);

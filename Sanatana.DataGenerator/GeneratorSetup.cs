@@ -27,7 +27,7 @@ namespace Sanatana.DataGenerator
     /// <summary>
     /// Setup class to register all the entities with their generators and start to generate
     /// </summary>
-    public class GeneratorSetup
+    public class GeneratorSetup : IDisposable
     {
         //fields
         protected decimal _lastPercents;
@@ -163,6 +163,7 @@ namespace Sanatana.DataGenerator
 
         protected virtual void Setup()
         {
+            _lastPercents = -1;
             CommandsHistory.Clear();
             TemporaryStorage.GeneratorSetup = this;
             _entityContexts = SetupEntityContexts(EntityDescriptions);
@@ -230,20 +231,14 @@ namespace Sanatana.DataGenerator
         //Execution loop
         protected virtual void ExecuteGenerationLoop()
         {
-            _lastPercents = -1;
-
-            while (true)
+            foreach (ICommand command in Supervisor.GetNextCommand())
             {
-                UpdateProgress(forceUpdate: false);
-
-                ICommand command = Supervisor.GetNextCommand();
                 CommandsHistory.TrackCommand(command);
-                bool continueCommands = command.Execute();
-                if (!continueCommands)
-                {
-                    break;
-                }
+                command.Execute();
+                UpdateProgress(forceUpdate: false);
             }
+
+            TemporaryStorage.WaitAllTasks();
         }
         
         protected virtual void UpdateProgress(bool forceUpdate)
@@ -273,5 +268,21 @@ namespace Sanatana.DataGenerator
             }
         }
 
+
+        //IDisposalbe
+        /// <summary>
+        /// Will call Dispose() on ReaderWriterLockSlim for entities and IPersistentStorage storages
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        public void Dispose()
+        {
+            foreach (EntityContext entityContext in _entityContexts.Values)
+            {
+                List<IPersistentStorage> storages = Defaults.GetPersistentStorages(entityContext.Description);
+                storages.ForEach(storage => storage.Dispose());
+
+                entityContext.Dispose();
+            }
+        }
     }
 }

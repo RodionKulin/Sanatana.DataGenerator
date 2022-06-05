@@ -44,6 +44,11 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentOutOfRangeException($"{nameof(MaxTasksRunning)} can not be lower than 1.");
                 }
                 _maxTasksRunning = value;
+
+                if(_entitiesAwaitingFlush.Count == 0)
+                {
+                    _entitiesAwaitingFlush = new ConcurrentDictionary<Type, IList>(_maxTasksRunning, 100);
+                }
             }
         }
 
@@ -117,41 +122,32 @@ namespace Sanatana.DataGenerator.Internals
         /// Insert entities to persistent storage and remove from temporary storage
         /// </summary>
         /// <param name="entityContext"></param>
+        /// <param name="flushRange"></param>
         /// <param name="storages"></param>
-        public virtual Task FlushToPersistent(EntityContext entityContext, FlushRange flushRange, List<IPersistentStorage> storages)
-        {
-            WaitRunningTask();
-            Task[] nextFlushTasks = FlushToPersistentTask(entityContext, flushRange, storages);
-            _runningTasks.AddRange(nextFlushTasks);
-
-            return Task.WhenAll(nextFlushTasks);
-        }
-
-        protected virtual Task[] FlushToPersistentTask(EntityContext entityContext, FlushRange flushRange, List<IPersistentStorage> storages)
+        public virtual void FlushToPersistent(EntityContext entityContext, FlushRange flushRange, List<IPersistentStorage> storages)
         {
             EntityProgress progress = entityContext.EntityProgress;
             bool entityExist = _entitiesAwaitingFlush.TryGetValue(entityContext.Type, out IList entitiesAwaitingFlush);
             if (!entityExist)
             {
-                return new Task[0];
+                throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(FlushToPersistentTask)} method was called.");
             }
 
             //lock operations on list for same Type
             IList nextItems = null;
             entityContext.RunWithWriteLock(() =>
             {
+                //FlushCommand for same entity ranges should come in ASC order, so removing instances from start of entitiesAwaitingFlush list
                 int numberToFlush = flushRange.FlushRequestCapacity;
 
                 //take number of items to flush
                 nextItems = _listOperations
                     .Take(entityContext.Type, entitiesAwaitingFlush, numberToFlush);
-                
+
                 //remove items from temporary storage
                 _entitiesAwaitingFlush[entityContext.Type] = _listOperations
                     .Skip(entityContext.Type, entitiesAwaitingFlush, numberToFlush);
             });
-
-            flushRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
 
             IStorageInsertGuard guard = entityContext.Description.StorageInsertGuard;
             if (guard != null)
@@ -160,12 +156,17 @@ namespace Sanatana.DataGenerator.Internals
             }
             if (nextItems.Count == 0)
             {
-                return new Task[0];
+                return;
             }
 
-            return storages
+            WaitRunningTask();
+
+            Task[] nextFlushTasks = storages
                 .Select(storage => _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems))
                 .ToArray();
+            _runningTasks.AddRange(nextFlushTasks);
+
+            Task.WhenAll(nextFlushTasks);
         }
 
 
@@ -180,26 +181,22 @@ namespace Sanatana.DataGenerator.Internals
             bool entityExist = _entitiesAwaitingFlush.TryGetValue(entityContext.Type, out IList entitiesAwaitingFlush);
             if (!entityExist)
             {
-                return;
+                throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(GenerateStorageIds)} method was called.");
             }
 
             //lock operations on list for same Type
             IList nextItems = null;
             entityContext.RunWithReadLock(() =>
             {
-                long entityFlushCount = entityContext.EntityProgress.GetFlushedCount();
                 long entityReleasedCount = entityContext.EntityProgress.GetReleasedCount();
-                long numberToSkip = entityFlushCount - entityReleasedCount;
-                long numberToFlush = generateIdsRange.FlushRequestCapacity;
+                long numberToSkip = generateIdsRange.PreviousRangeFlushedCount - entityReleasedCount;
 
                 //skip entities that already were flushed
                 nextItems = _listOperations.Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToSkip);
 
                 //take number of items to flush
-                nextItems = _listOperations.Take(entityContext.Type, nextItems, (int)numberToFlush);
+                nextItems = _listOperations.Take(entityContext.Type, nextItems, generateIdsRange.FlushRequestCapacity);
             });
-
-            generateIdsRange.SetFlushStatus(FlushStatus.Flushed);
 
             IStorageInsertGuard guard = entityContext.Description.StorageInsertGuard;
             if (guard != null)
@@ -223,23 +220,21 @@ namespace Sanatana.DataGenerator.Internals
             bool entityExist = _entitiesAwaitingFlush.TryGetValue(entityContext.Type, out IList entitiesAwaitingFlush);
             if (!entityExist)
             {
-                return;
+                throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(ReleaseFromTemporary)} method was called.");
             }
 
             //lock operations on list for same Type
             entityContext.RunWithWriteLock(() =>
             {
+                //ReleaseCommand for same entity ranges should come in ASC order, so removing instances from start of entitiesAwaitingFlush list
                 long numberToRemove = releaseRange.FlushRequestCapacity;
 
                 //remove items from temporary storage
                 _entitiesAwaitingFlush[entityContext.Type] = _listOperations
                     .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToRemove);
             });
-
-            releaseRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
         }
-
-                
+ 
 
         //Tasks handling
         protected virtual void WaitRunningTask()

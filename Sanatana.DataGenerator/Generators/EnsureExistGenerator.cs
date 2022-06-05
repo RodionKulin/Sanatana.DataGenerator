@@ -23,7 +23,7 @@ namespace Sanatana.DataGenerator.Generators
         protected Expression<Func<TEntity, TOrderByKey>> _storageSelectorOrderBy = null;
         protected Dictionary<TEntity, TEntity> _existingInstancesCache;
         protected NewInstanceCounter _newInstanceCounter;
-        protected long _maxInstancesInTempStorage = 10000;
+        protected int _maxInstancesInTempStorage = 10000;
 
 
         //init
@@ -138,42 +138,32 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //IFlushStrategy methods
-        public virtual bool CheckIsFlushRequired(EntityContext entityContext)
+        public virtual bool CheckIsFlushRequired(EntityContext entityContext, FlushRange flushRange)
         {
-            //Total instances count, including new and existing instances.
-            //Even if it is not enough new instances to make full capacity insert, then still perform insert to get rid of existing instances in TempStorage.
             EntityProgress progress = entityContext.EntityProgress;
-            FlushRange flushRange = progress.GetLatestRange();
-            long requestCapacity = flushRange.FlushRequestCapacity;
-            long flushedCount = progress.GetFlushedCount();
-            long tempStorageCount = progress.CurrentCount - flushedCount;
-            bool isAnyInstanceCountExceeded = tempStorageCount >= _maxInstancesInTempStorage;
+            bool isFlushRequired = progress.CheckIsNewFlushRequired(flushRange);
 
-            //check if generated enough new instances to make full capacity insert to persistent storage
-            long newInstanceCount = _newInstanceCounter.GetNewInstanceCount(flushedCount);
-            bool isNewInstanceCountExceeded = newInstanceCount >= requestCapacity;
-
-            //clear cache after it is used in flush?
-            bool isFlushRequired = isAnyInstanceCountExceeded || isNewInstanceCountExceeded;
+            //clear cache after it is used in flush
             if (isFlushRequired)
             {
                 //Improving memory usage here by removing previous history records.
-                //But should not call this IsFlushRequired method again untill actually will flush instances for this entity.
-                _newInstanceCounter.RemoveHistoryRecords(flushedCount);
+                //But should not call this CheckIsFlushRequired method again untill actually will flush instances for this entity.
+                _newInstanceCounter.RemoveHistoryRecords(flushRange.PreviousRangeFlushedCount);
             }
 
             return isFlushRequired;
         }
 
-        public virtual void UpdateFlushRangeCapacity(EntityContext entityContext, long requestCapacity)
+        public virtual void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, int requestCapacity)
         {
-            EntityProgress progress = entityContext.EntityProgress;
-            FlushRange flushRange = progress.GetLatestRange();
-
-            //check if generated enough new instances to make full capacity insert to persistent storage
             long newInstanceCount = _newInstanceCounter.GetNewInstanceCount(flushRange.PreviousRangeFlushedCount);
             bool isNewInstanceCountExceeded = newInstanceCount >= requestCapacity;
 
+            //1. Compare to _maxInstancesInTempStorage capacity
+            //Total instances count, including new and existing instances.
+            //Even if it is not enough new instances to make full capacity insert, then still perform insert to get rid of existing instances in TempStorage.
+            //2. Compare to requestCapacity
+            //Check if new instances generated count is enough for full capacity insert request.
             flushRange.UpdateCapacity(isNewInstanceCountExceeded ? requestCapacity : _maxInstancesInTempStorage);
         }
 

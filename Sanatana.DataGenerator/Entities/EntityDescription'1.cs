@@ -77,6 +77,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Get database generated columns after inserting entities first (for example Id).
         /// Only after receiving such columns pass entity instances as required for generation.
+        /// Also makes insert requests to persistent storage sync for this entity.
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }

@@ -5,7 +5,11 @@ using System;
 
 namespace Sanatana.DataGenerator.Commands
 {
-    public class ReleaseFromTempStorageCommand : ICommand
+    /// <summary>
+    /// Remove entity instances already flushed to persistent storage from temporary storage as well.
+    /// Should be fired after GenerateStorageIdsCommand.
+    /// </summary>
+    public class ReleaseCommand : ICommand
     {
         //field
         protected EntityContext _entityContext;
@@ -16,7 +20,7 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //init
-        public ReleaseFromTempStorageCommand(EntityContext entityContext, FlushRange releaseRange, GeneratorSetup setup,
+        public ReleaseCommand(EntityContext entityContext, FlushRange releaseRange, GeneratorSetup setup,
             IFlushCandidatesRegistry flushCandidatesRegistry, string invokedBy)
         {
             _entityContext = entityContext;
@@ -28,14 +32,12 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //methods
-        public virtual bool Execute()
+        public virtual void Execute()
         {
             _setup.TemporaryStorage.ReleaseFromTemporary(_entityContext, _releaseRange);
 
-            _setup.Supervisor.EnqueueCommand(
-                new CheckFlushRequiredCommand(_entityContext, _setup, _flushCandidatesRegistry));
-
-            return true;
+            _releaseRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
+            _entityContext.EntityProgress.RemoveRange(_releaseRange);
         }
 
         public virtual string GetDescription()

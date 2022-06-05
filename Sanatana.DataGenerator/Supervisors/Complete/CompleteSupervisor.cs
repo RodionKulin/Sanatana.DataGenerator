@@ -56,17 +56,24 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //methods
-        public virtual ICommand GetNextCommand()
+        public virtual IEnumerable<ICommand> GetNextCommand()
         {
-            ICommand nextCommand = null;
-            _commandsQueue.TryDequeue(out nextCommand);
-            if (nextCommand != null)
+            while (true)
             {
-                return nextCommand;
-            }
+                _commandsQueue.TryDequeue(out ICommand nextCommand);
+                if (nextCommand != null)
+                {
+                    yield return nextCommand;
+                }
 
-            nextCommand = _requiredQueueBuilder.GetNextCommand();
-            return nextCommand;
+                nextCommand = _requiredQueueBuilder.GetNextCommand();
+                if (nextCommand != null)
+                {
+                    yield return nextCommand;
+                }
+
+                yield break;
+            }
         }
 
         public virtual void EnqueueCommand(ICommand command)
