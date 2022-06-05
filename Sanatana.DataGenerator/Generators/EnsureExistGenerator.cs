@@ -8,7 +8,8 @@ using System.Linq.Expressions;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.Internals.Objects;
+using Sanatana.DataGenerator.Internals.Progress;
+
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -137,16 +138,19 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //IFlushStrategy methods
-        public virtual bool IsFlushRequired(EntityContext entityContext, long requestCapacity)
+        public virtual bool CheckIsFlushRequired(EntityContext entityContext)
         {
             //Total instances count, including new and existing instances.
             //Even if it is not enough new instances to make full capacity insert, then still perform insert to get rid of existing instances in TempStorage.
             EntityProgress progress = entityContext.EntityProgress;
-            long tempStorageCount = progress.CurrentCount - progress.FlushedCount;
+            FlushRange flushRange = progress.GetLatestRange();
+            long requestCapacity = flushRange.FlushRequestCapacity;
+            long flushedCount = progress.GetFlushedCount();
+            long tempStorageCount = progress.CurrentCount - flushedCount;
             bool isAnyInstanceCountExceeded = tempStorageCount >= _maxInstancesInTempStorage;
 
             //check if generated enough new instances to make full capacity insert to persistent storage
-            long newInstanceCount = _newInstanceCounter.GetNewInstanceCount(progress.FlushedCount);
+            long newInstanceCount = _newInstanceCounter.GetNewInstanceCount(flushedCount);
             bool isNewInstanceCountExceeded = newInstanceCount >= requestCapacity;
 
             //clear cache after it is used in flush?
@@ -155,13 +159,13 @@ namespace Sanatana.DataGenerator.Generators
             {
                 //Improving memory usage here by removing previous history records.
                 //But should not call this IsFlushRequired method again untill actually will flush instances for this entity.
-                _newInstanceCounter.RemoveHistoryRecords(progress.FlushedCount);
+                _newInstanceCounter.RemoveHistoryRecords(flushedCount);
             }
 
             return isFlushRequired;
         }
 
-        public virtual void SetNextFlushCount(EntityContext entityContext, long requestCapacity)
+        public virtual void UpdateFlushRangeCapacity(EntityContext entityContext, long requestCapacity)
         {
             EntityProgress progress = entityContext.EntityProgress;
             FlushRange flushRange = progress.GetLatestRange();

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
@@ -17,14 +18,14 @@ namespace Sanatana.DataGenerator.EntityFramework
     {
         //fields
         protected Func<DbContext> _dbContextFactory;
-        protected Dictionary<Type, long> _entityMaxCount;
+        protected Dictionary<Type, int> _entityMaxCount;
 
 
         //init
         public EntityFrameworkCoreRequestCapacityProvider(Func<DbContext> dbContextFactory)
         {
             _dbContextFactory = dbContextFactory;
-            _entityMaxCount = new Dictionary<Type, long>();
+            _entityMaxCount = new Dictionary<Type, int>();
         }
 
 
@@ -33,7 +34,7 @@ namespace Sanatana.DataGenerator.EntityFramework
         {
         }
 
-        public virtual long GetCapacity(EntityContext entityContext)
+        public virtual int GetCapacity(EntityContext entityContext, FlushRange flushRange)
         {
             if (!_entityMaxCount.ContainsKey(entityContext.Type))
             {

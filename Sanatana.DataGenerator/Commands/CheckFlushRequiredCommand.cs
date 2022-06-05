@@ -3,6 +3,7 @@ using Sanatana.DataGenerator.Internals;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.Commands
 {
@@ -29,7 +30,7 @@ namespace Sanatana.DataGenerator.Commands
         {
             EntityContext entityContext = _entityContext;
 
-            bool flushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
+            bool flushRequired = _flushCandidatesRegistry.UpdateFlushRequired(entityContext);
             if (flushRequired)
             {
                 List<ICommand> flushCommands = _flushCandidatesRegistry.GetNextFlushCommands(entityContext);
@@ -42,7 +43,8 @@ namespace Sanatana.DataGenerator.Commands
         public virtual string GetDescription()
         {
             EntityProgress progress = _entityContext.EntityProgress;
-            return $"Check flush required for {_entityContext.Type.Name} CurrentCount={progress.CurrentCount} FlushedCount={progress.FlushedCount} NextFlushCount={progress.NextFlushCount}";
+            long flushedCount = _entityContext.EntityProgress.GetFlushedCount();
+            return $"Check flush required for {_entityContext.Type.Name} CurrentCount={progress.CurrentCount} FlushedCount={flushedCount}";
         }
     }
 }

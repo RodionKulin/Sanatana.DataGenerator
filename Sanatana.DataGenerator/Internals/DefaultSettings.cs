@@ -47,9 +47,9 @@ namespace Sanatana.DataGenerator.Internals
         /// </summary>
         public ITotalCountProvider TotalCountProvider { get; set; }
         /// <summary>
-        /// Default strategy to reuse same parent entities among multiple child entities.
+        /// Default strategy to reuse same parent entity instances among multiple child entity instances.
         /// Will be used for Required entity types that does not have a SpreadStrategy specified.
-        /// EvenSpreadStrategy is set by default
+        /// EvenSpreadStrategy is set by default.
         /// </summary>
         public ISpreadStrategy SpreadStrategy { get; set; }
         /// <summary>

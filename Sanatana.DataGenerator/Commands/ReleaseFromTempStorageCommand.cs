@@ -1,10 +1,7 @@
-﻿using Sanatana.DataGenerator.Commands;
-using Sanatana.DataGenerator.Supervisors.Contracts;
+﻿using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.Storages;
+using Sanatana.DataGenerator.Internals.Progress;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Sanatana.DataGenerator.Commands
 {
@@ -12,16 +9,18 @@ namespace Sanatana.DataGenerator.Commands
     {
         //field
         protected EntityContext _entityContext;
+        protected FlushRange _releaseRange;
         protected GeneratorSetup _setup;
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;
         protected string _invokedBy;
 
 
         //init
-        public ReleaseFromTempStorageCommand(EntityContext entityContext, GeneratorSetup setup,
+        public ReleaseFromTempStorageCommand(EntityContext entityContext, FlushRange releaseRange, GeneratorSetup setup,
             IFlushCandidatesRegistry flushCandidatesRegistry, string invokedBy)
         {
             _entityContext = entityContext;
+            _releaseRange = releaseRange ?? throw new ArgumentNullException(nameof(releaseRange));
             _setup = setup;
             _flushCandidatesRegistry = flushCandidatesRegistry;
             _invokedBy = invokedBy;
@@ -31,7 +30,7 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual bool Execute()
         {
-            _setup.TemporaryStorage.ReleaseFromTemporary(_entityContext);
+            _setup.TemporaryStorage.ReleaseFromTemporary(_entityContext, _releaseRange);
 
             _setup.Supervisor.EnqueueCommand(
                 new CheckFlushRequiredCommand(_entityContext, _setup, _flushCandidatesRegistry));
@@ -41,8 +40,7 @@ namespace Sanatana.DataGenerator.Commands
 
         public virtual string GetDescription()
         {
-            EntityProgress progress = _entityContext.EntityProgress;
-            return $"Release from temp storage {_entityContext.Type.Name} ReleasedCount={progress.ReleasedCount} NextReleaseCount={progress.NextReleaseCount} invokedBy={_invokedBy}";
+            return $"Release from temp storage {_entityContext.Type.Name} ReleasedCount={_releaseRange.PreviousRangeFlushedCount} NextReleaseCount={_releaseRange.ThisRangeFlushCount} invokedBy={_invokedBy}";
         }
     }
 }

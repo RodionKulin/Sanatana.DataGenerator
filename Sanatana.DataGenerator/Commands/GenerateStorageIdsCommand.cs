@@ -1,4 +1,6 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.Objects;
+using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
@@ -14,12 +16,14 @@ namespace Sanatana.DataGenerator.Commands
         //field
         protected EntityContext _entityContext;
         protected GeneratorSetup _setup;
+        protected FlushRange _generateIdsRange;
 
 
         //init
-        public GenerateStorageIdsCommand(EntityContext entityContext, GeneratorSetup setup)
+        public GenerateStorageIdsCommand(EntityContext entityContext, FlushRange generateIdsRange, GeneratorSetup setup)
         {
             _entityContext = entityContext;
+            _generateIdsRange = generateIdsRange ?? throw new ArgumentNullException(nameof(generateIdsRange));
             _setup = setup;
         }
 
@@ -28,15 +32,14 @@ namespace Sanatana.DataGenerator.Commands
         public virtual bool Execute()
         {
             List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(_entityContext.Description);
-            _setup.TemporaryStorage.GenerateStorageIds(_entityContext, persistentStorages);
+            _setup.TemporaryStorage.GenerateStorageIds(_entityContext, _generateIdsRange, persistentStorages);
 
             return true;
         }
 
         public virtual string GetDescription()
         {
-            EntityProgress progress = _entityContext.EntityProgress;
-            return $"Get storage Ids for {_entityContext.Type.Name} FlushedCount={progress.FlushedCount} NextFlushCount={progress.NextFlushCount}";
+            return $"Get storage Ids for {_entityContext.Type.Name} PreviousRangeFlushedCount={_generateIdsRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_generateIdsRange.ThisRangeFlushCount}";
         }
     }
 }

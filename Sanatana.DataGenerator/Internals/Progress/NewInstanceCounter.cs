@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Sanatana.DataGenerator.Internals.Objects
+namespace Sanatana.DataGenerator.Internals.Progress
 {
     public class NewInstanceCounter
     {

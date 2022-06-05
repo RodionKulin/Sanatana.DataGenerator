@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
@@ -12,8 +13,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         {
         }
 
-        public virtual long GetParentIndex(
-            EntityContext parentEntity, EntityContext childEntity)
+        public virtual long GetParentIndex(EntityContext parentEntity, EntityContext childEntity)
         {
             if (parentEntity.EntityProgress.TargetCount == 0
                 || childEntity.EntityProgress.TargetCount == 0)
@@ -31,8 +31,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return matchingParentCount - 1;
         }
         
-        public virtual long GetNextIterationParentCount(
-            EntityContext parentEntity, EntityContext childEntity)
+        public virtual long GetNextIterationParentCount(EntityContext parentEntity, EntityContext childEntity)
         {
             if (parentEntity.EntityProgress.TargetCount == 0
                 || childEntity.EntityProgress.TargetCount == 0)
@@ -46,21 +45,24 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return matchingParentCount;
         }
 
-        public virtual bool CanGenerateFromParentNextReleaseCount(
-            EntityContext parentEntity, EntityContext childEntity)
+        public virtual bool CanGenerateFromParentRange(
+            EntityContext parentEntity, FlushRange parentRange, EntityContext childEntity)
         {
             if(parentEntity.EntityProgress.TargetCount == 0)
             {
                 return false;
             }
 
+            //evently spread instances
             decimal childrenPerParent = (decimal)childEntity.EntityProgress.TargetCount / parentEntity.EntityProgress.TargetCount;
+            long nextReleaseCount = parentRange.ThisRangeFlushCount;
+            decimal childrenPossibleToGenerate = nextReleaseCount * childrenPerParent;
 
             //don't generate more than child TargetCount
-            decimal childrenPossibleToGenerate = parentEntity.EntityProgress.NextReleaseCount * childrenPerParent;
             long childrenPossibleToGenerateRounded = (long)Math.Ceiling(childrenPossibleToGenerate);
             childrenPossibleToGenerateRounded = Math.Min(childrenPossibleToGenerateRounded, childEntity.EntityProgress.TargetCount);
 
+            //check if can generate more
             long missingNumberOfChildren = childrenPossibleToGenerateRounded - childEntity.EntityProgress.CurrentCount;
             bool canGenerateMore = missingNumberOfChildren > 0;
             return canGenerateMore;
@@ -85,7 +87,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             parentsCountRequiredRounded = Math.Min(parentsCountRequiredRounded, parentEntity.EntityProgress.TargetCount);
             return parentsCountRequiredRounded;
         }
-
 
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.Progress;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -22,7 +23,8 @@ namespace Sanatana.DataGenerator.RequestCapacityProviders
         /// Return number of entity instances that can be inserted with next request to persistent storage.
         /// </summary>
         /// <param name="entityContext"></param>
+        /// <param name="flushRange">range on instances that should measure insert request max rows to insert for</param>
         /// <returns></returns>
-        long GetCapacity(EntityContext entityContext);
+        int GetCapacity(EntityContext entityContext, FlushRange flushRange);
     }
 }

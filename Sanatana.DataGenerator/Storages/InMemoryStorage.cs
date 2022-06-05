@@ -30,7 +30,7 @@ namespace Sanatana.DataGenerator.Storages
             return Task.FromResult(0);
         }
 
-        public virtual TEntity[] GetInstances<TEntity>()
+        public virtual TEntity[] Select<TEntity>()
         {
             Type entityType = typeof(TEntity);
             ArrayList storage = _storages[entityType];

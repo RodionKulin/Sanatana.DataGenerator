@@ -120,9 +120,9 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 contexts, progressState);
 
             //Add flush candidates
-            target.CheckIsFlushRequired(contexts[typeof(Post)]);
-            target.CheckIsFlushRequired(contexts[typeof(Category)]);
-            target.CheckIsFlushRequired(contexts[typeof(Comment)]);
+            target.UpdateFlushRequired(contexts[typeof(Post)]);
+            target.UpdateFlushRequired(contexts[typeof(Category)]);
+            target.UpdateFlushRequired(contexts[typeof(Comment)]);
 
             return target;
         }

@@ -1,29 +1,19 @@
 ﻿using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.Internals.Objects;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.Strategies
 {
     public class DefaultFlushStrategy : IFlushStrategy
     {
-        //methods
-        public virtual bool IsFlushRequired(EntityContext entityContext, long requestCapacity)
+        public virtual bool CheckIsFlushRequired(EntityContext entityContext, FlushRange flushRange)
         {
             EntityProgress progress = entityContext.EntityProgress;
-            FlushRange flushRange = progress.GetLatestRange();
-            
-            long tempStorageCount = progress.CurrentCount - flushRange.PreviousRangeFlushedCount;
-            return tempStorageCount >= requestCapacity;
+            return progress.CheckIsNewFlushRequired(flushRange);
         }
 
-        public virtual void SetNextFlushCount(EntityContext entityContext, long requestCapacity)
+        public void UpdateFlushRangeCapacity(EntityContext entityContext, FlushRange flushRange, long requestCapacity)
         {
-            EntityProgress progress = entityContext.EntityProgress;
-            FlushRange flushRange = progress.GetLatestRange();
             flushRange.UpdateCapacity(requestCapacity);
         }
-
     }
 }

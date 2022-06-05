@@ -39,7 +39,7 @@ namespace Sanatana.DataGenerator.Commands
 
         protected virtual void FlushTempStorage()
         {
-            List<EntityContext> nextFlushEntities = new List<EntityContext>();
+            var nextFlushEntities = new List<EntityContext>();
 
             do
             {
@@ -50,16 +50,17 @@ namespace Sanatana.DataGenerator.Commands
                     IFlushStrategy flushTrigger = _setup.Defaults.GetFlushStrategy(entityContext.Description);
 
                     long capacity = requestCapacityProvider.GetCapacity(entityContext);
-                    flushTrigger.SetNextFlushCount(entityContext, capacity);
+                    flushTrigger.UpdateFlushRangeCapacity(entityContext, capacity);
 
                     //this is an async method, but waiting is done with TemporaryStorage.WaitAllTasks
                     _setup.TemporaryStorage.FlushToPersistent(entityContext, storage);
+                    //or GenerateNewIds if it is entity with GenerateIds
                 }
 
                 _setup.TemporaryStorage.WaitAllTasks();
 
                 nextFlushEntities = _entityContexts.Values
-                    .Where(x => x.EntityProgress.ReleasedCount < x.EntityProgress.CurrentCount)
+                    .Where(x => x.EntityProgress.HasNotReleasedRange())
                     .ToList();
             } while (nextFlushEntities.Count > 0);
 

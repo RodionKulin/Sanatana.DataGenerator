@@ -8,8 +8,8 @@ namespace Sanatana.DataGenerator.Supervisors.Contracts
 {
     public interface IFlushCandidatesRegistry
     {
-        void UpdateNextFlushReleaseCount(EntityContext entityContext);
-        bool CheckIsFlushRequired(EntityContext entityContext);
+        void UpdateRequestCapacity(EntityContext entityContext);
+        bool UpdateFlushRequired(EntityContext entityContext);
         List<ICommand> GetNextFlushCommands(EntityContext entityContext);
         EntityContext FindChildOfFlushCandidates();
     }

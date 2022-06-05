@@ -1,7 +1,9 @@
 ﻿using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.Progress;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+
 
 namespace Sanatana.DataGenerator.Internals
 {
