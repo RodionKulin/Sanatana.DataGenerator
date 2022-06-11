@@ -58,7 +58,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
         public FlushRange(long previousRangeFlushedCount, int capacity)
         {
             PreviousRangeFlushedCount = previousRangeFlushedCount;
-            FlushRequestCapacity = capacity;
+            UpdateCapacity(capacity);
         }
 
 

@@ -17,9 +17,9 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
     public class CompleteSupervisorSpecs
     {
         [TestMethod]
-        public void GetNext_WhenPyramidHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenPyramidHierarcy_ReturnsExpectedCount()
         {
-            //Arrange
+            //Prepare
             var category = new EntityDescription<Category>()
                 .SetTargetCount(1);
             var post = new EntityDescription<Post>()
@@ -36,7 +36,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             };
             CompleteSupervisor target = SetupCompleteSupervisor(descriptions);
 
-            //Act
+            //Invoke
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -45,7 +45,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenMiddleBulgeHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenMiddleBulgeHierarcy_ReturnsExpectedCount()
         {
             //Prepare
             var category = new EntityDescription<Category>()
@@ -73,7 +73,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenBranchingHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenBranchingHierarcy_ReturnsExpectedCount()
         {
             //Prepare
             var category = new EntityDescription<Category>()
@@ -128,20 +128,14 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             }
 
             var list = new List<ICommand>();
-            while (true)
+            foreach (ICommand next in plan.IterateCommands())
             {
-                ICommand next = plan.GetNextCommand();
-                if (next.GetType() == typeof(FinishCommand))
-                {
-                    break;
-                }
-
-                if(next.GetType() == typeof(GenerateEntityCommand))
+                if(next.GetType() == typeof(GenerateCommand))
                 {
                     list.Add(next);
 
                     IList generatedList = generator();
-                    plan.HandleGenerateCompleted(((GenerateEntityCommand)next).EntityContext, generatedList);
+                    plan.HandleGenerateCompleted(((GenerateCommand)next).EntityContext, generatedList);
                 }
 
                 int limit = 1000;
@@ -169,8 +163,8 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 .ToDictionary(x => x.Type, x => x.Total);
 
             Dictionary<Type, long> actualCalls = actualCommands
-                .Where(x => x.GetType() == typeof(GenerateEntityCommand))
-                .Select(x => ((GenerateEntityCommand)x).EntityContext.Type)
+                .Where(x => x.GetType() == typeof(GenerateCommand))
+                .Select(x => ((GenerateCommand)x).EntityContext.Type)
                 .GroupBy(x => x)
                 .Select(x => new
                 {
@@ -191,8 +185,8 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             List<ICommand> actualCommands)
         {
             List<IEntityDescription> actualEntities = actualCommands
-                .Where(x => x.GetType() == typeof(GenerateEntityCommand))
-                .Select(x => ((GenerateEntityCommand)x).EntityContext.Description)
+                .Where(x => x.GetType() == typeof(GenerateCommand))
+                .Select(x => ((GenerateCommand)x).EntityContext.Description)
                 .ToList();
 
             bool actualListEqualsExpected = expectedList.SequenceEqual(actualEntities);

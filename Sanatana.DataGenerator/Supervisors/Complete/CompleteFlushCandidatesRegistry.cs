@@ -97,7 +97,6 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             
             foreach (FlushRange flushRange in flushRequiredRanges)
             {
-
                 //Need to create ids by database before using as required by children.
                 //Will write to persitent storage, but won't remove from temporary storage.
                 if (entityContext.Description.InsertToPersistentStorageBeforeUse)

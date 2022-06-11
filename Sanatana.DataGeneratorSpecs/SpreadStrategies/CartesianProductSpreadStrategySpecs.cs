@@ -8,6 +8,7 @@ using Sanatana.DataGeneratorSpecs.Samples;
 using System.Diagnostics;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {

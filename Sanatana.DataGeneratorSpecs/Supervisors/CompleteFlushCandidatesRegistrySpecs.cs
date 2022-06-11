@@ -9,6 +9,7 @@ using Sanatana.DataGeneratorSpecs.Samples;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGeneratorSpecs.Supervisors
 {
@@ -25,30 +26,35 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 { typeof(Post), 100 },
                 { typeof(Comment), 98 },
             }, 100);
-            CompleteFlushCandidatesRegistry target =
-                SetupCompleteFlushCandidatesRegistry(entityContexts);
+            CompleteFlushCandidatesRegistry target = SetupCompleteFlushCandidatesRegistry(entityContexts);
 
-            //simulate that Comment generation is finished
+            //simulate that parent instances were generated up to TargetCount 100 out of 100
+            List<ICommand> catCommands = target.GetNextFlushCommands(entityContexts[typeof(Category)]);
+            List<ICommand> postCommands = target.GetNextFlushCommands(entityContexts[typeof(Post)]);
+            
+            //simulate that remaining 2 child instances were generated, also reaching 100 out of 100
             entityContexts[typeof(Comment)].EntityProgress.CurrentCount = 100;
-
+            target.UpdateRequestCapacity(entityContexts[typeof(Comment)]);
+            target.UpdateFlushRequired(entityContexts[typeof(Comment)]);
 
             //invoke
-            EntityContext entityContext = entityContexts[typeof(Comment)];
-            List<ICommand> flushCommands = target.GetNextFlushCommands(entityContext);
-
+            List<ICommand> flushCommands = target.GetNextFlushCommands(entityContexts[typeof(Comment)]);
 
             //assert
-            flushCommands.Should().AllBeOfType<FlushCommand>();
+            //parent can not be flushed before all child entities generated
+            catCommands.Should().BeEmpty();
+            postCommands.Should().BeEmpty();
 
-            var actualFlushActions = flushCommands
+            //parents can now be flushed when all child entities generated
+            flushCommands.Should().AllBeOfType<FlushCommand>();
+            IEnumerable<Type> actualFlushTypes = flushCommands
                 .Select(x => ((FlushCommand)x).EntityContext.Description.Type);
-            var expectedActions = new Type[]
-                {
-                    typeof(Comment),
-                    typeof(Post),
-                    typeof(Category)
-                };
-            actualFlushActions.Should().BeEquivalentTo(expectedActions);
+            actualFlushTypes.Should().BeEquivalentTo(new Type[]
+            {
+                typeof(Comment),
+                typeof(Post),
+                typeof(Category)
+            });
         }
 
 
@@ -56,7 +62,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         public void FlushCandidatesHashSet_KeepsUniqueEntities()
         {
             //arrange
-            HashSet<EntityContext> flushCandidates = new HashSet<EntityContext>();
+            var flushCandidates = new HashSet<EntityContext>();
             Dictionary<Type, EntityContext> entityContexts = GetEntityContexts(new Dictionary<Type, long>
             {
                 { typeof(Category), 50 }
@@ -78,8 +84,8 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         private Dictionary<Type, EntityContext> GetEntityContexts(
             Dictionary<Type, long> entityCurrentCount, long targetCount)
         {
-            var generatorSetup = new GeneratorSetup();
 
+            //set TargetCount
             var category = new EntityDescription<Category>()
                 .SetTargetCount(targetCount);
             var post = new EntityDescription<Post>()
@@ -90,19 +96,19 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 .SetRequired(typeof(Post))
                 .SetRequired(typeof(Category));
             Dictionary<Type, IEntityDescription> dictDescriptions = new List<IEntityDescription>
-            {
-                category,
-                post,
-                comment
-            }.ToDictionary(x => x.Type, x => x);
+                { category, post, comment }
+                .ToDictionary(x => x.Type, x => x);
 
+            //set RequestCapacity
+            var generatorSetup = new GeneratorSetup();
             Dictionary<Type, EntityContext> contexts = generatorSetup.SetupEntityContexts(dictDescriptions);
-            contexts.Values.ToList().ForEach(x =>
+            foreach (EntityContext entityContext in contexts.Values)
             {
-                x.EntityProgress.AddFlushedCount(0);
-                x.EntityProgress.NextFlushCount = 0;
-            });
+                FlushRange firstFlushRange = entityContext.EntityProgress.CreateNewRangeIfRequired();
+                firstFlushRange.UpdateCapacity(100);
+            }
 
+            //set CurrentCount
             foreach (KeyValuePair<Type, long> entity in entityCurrentCount)
             {
                 contexts[entity.Key].EntityProgress.CurrentCount = entity.Value;
@@ -116,13 +122,14 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         {
             var generatorSetup = new GeneratorSetup();
             var progressState = new CompleteProgressState(contexts);
-            var target = new CompleteFlushCandidatesRegistry(generatorSetup,
-                contexts, progressState);
+            var target = new CompleteFlushCandidatesRegistry(generatorSetup, contexts, progressState);
 
             //Add flush candidates
-            target.UpdateFlushRequired(contexts[typeof(Post)]);
-            target.UpdateFlushRequired(contexts[typeof(Category)]);
-            target.UpdateFlushRequired(contexts[typeof(Comment)]);
+            foreach (Type entityType in contexts.Keys)
+            {
+                target.UpdateRequestCapacity(contexts[entityType]);
+                target.UpdateFlushRequired(contexts[entityType]);
+            }
 
             return target;
         }

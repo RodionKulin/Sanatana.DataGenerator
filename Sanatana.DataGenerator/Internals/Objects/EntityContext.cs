@@ -3,7 +3,8 @@ using Sanatana.DataGenerator.Internals.Progress;
 using System;
 using System.Collections.Generic;
 using System.Threading;
-
+using System.Linq;
+using Sanatana.DataGenerator.TotalCountProviders;
 
 namespace Sanatana.DataGenerator.Internals
 {
@@ -22,6 +23,45 @@ namespace Sanatana.DataGenerator.Internals
         public EntityProgress EntityProgress { get; set; }
         public List<IEntityDescription> ChildEntities { get; set; }
         public List<IEntityDescription> ParentEntities { get; set; }
+
+
+        //Factory
+        public static class Factory
+        {
+            public static EntityContext Create(Dictionary<Type, IEntityDescription> allDescriptions,
+                IEntityDescription description, DefaultSettings defaultSettings)
+            {
+                List<IEntityDescription> children = allDescriptions.Values
+                    .Where(x => x.Required != null
+                        && x.Required.Select(req => req.Type).Contains(description.Type))
+                    .ToList();
+
+                var parents = new List<IEntityDescription>();
+                if (description.Required != null)
+                {
+                    IEnumerable<Type> parentTypes = description.Required.Select(x => x.Type);
+                    parents = allDescriptions.Values
+                       .Where(x => parentTypes.Contains(x.Type))
+                       .ToList();
+                }
+
+                ITotalCountProvider totalCountProvider = defaultSettings.GetTotalCountProvider(description);
+                long targetTotalCount = totalCountProvider.GetTargetCount();
+
+                return new EntityContext
+                {
+                    Type = description.Type,
+                    Description = description,
+                    ChildEntities = children,
+                    ParentEntities = parents,
+                    EntityProgress = new EntityProgress
+                    {
+                        TargetCount = targetTotalCount
+                    }
+                };
+            }
+
+        }
 
 
 

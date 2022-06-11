@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Sanatana.DataGenerator.Internals
 {
     /// <summary>
-    /// In memory storage for generated entities to accumulate some descent batches before inserting to persistent storage.
+    /// Inmemory storage for generated entity instances to accumulate batches before inserting to persistent storage.
     /// </summary>
     public class TemporaryStorage
     {
@@ -47,6 +47,8 @@ namespace Sanatana.DataGenerator.Internals
 
                 if(_entitiesAwaitingFlush.Count == 0)
                 {
+                    //Dont recreated dictionary during generation if it already contains values.
+                    //Should usually change this MaxTasksRunning property before generation started .
                     _entitiesAwaitingFlush = new ConcurrentDictionary<Type, IList>(_maxTasksRunning, 100);
                 }
             }
@@ -130,7 +132,7 @@ namespace Sanatana.DataGenerator.Internals
             bool entityExist = _entitiesAwaitingFlush.TryGetValue(entityContext.Type, out IList entitiesAwaitingFlush);
             if (!entityExist)
             {
-                throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(FlushToPersistentTask)} method was called.");
+                throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(FlushToPersistent)} method was called.");
             }
 
             //lock operations on list for same Type
@@ -190,12 +192,13 @@ namespace Sanatana.DataGenerator.Internals
             {
                 long entityReleasedCount = entityContext.EntityProgress.GetReleasedCount();
                 long numberToSkip = generateIdsRange.PreviousRangeFlushedCount - entityReleasedCount;
+                int numberToRemove = generateIdsRange.FlushRequestCapacity;
 
-                //skip entities that already were flushed
+                //skip instances that already received new db Id
                 nextItems = _listOperations.Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToSkip);
 
-                //take number of items to flush
-                nextItems = _listOperations.Take(entityContext.Type, nextItems, generateIdsRange.FlushRequestCapacity);
+                //take number of items to receive new db Id
+                nextItems = _listOperations.Take(entityContext.Type, nextItems, numberToRemove);
             });
 
             IStorageInsertGuard guard = entityContext.Description.StorageInsertGuard;
@@ -226,12 +229,12 @@ namespace Sanatana.DataGenerator.Internals
             //lock operations on list for same Type
             entityContext.RunWithWriteLock(() =>
             {
-                //ReleaseCommand for same entity ranges should come in ASC order, so removing instances from start of entitiesAwaitingFlush list
-                long numberToRemove = releaseRange.FlushRequestCapacity;
+                //ReleaseCommand for same entity ranges should come in ASC order, so safely can remove instances from start of entitiesAwaitingFlush list
+                int numberToRemove = releaseRange.FlushRequestCapacity;
 
                 //remove items from temporary storage
                 _entitiesAwaitingFlush[entityContext.Type] = _listOperations
-                    .Skip(entityContext.Type, entitiesAwaitingFlush, (int)numberToRemove);
+                    .Skip(entityContext.Type, entitiesAwaitingFlush, numberToRemove);
             });
         }
  

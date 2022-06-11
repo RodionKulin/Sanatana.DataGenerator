@@ -19,7 +19,7 @@ namespace Sanatana.DataGenerator.Internals.Debugging
 
         public virtual void TrackCommand(ICommand command)
         {
-            History.Push(command.GetDescription());
+            History.Push(command.GetLogEntry());
 
             if (History.Count > 1100)
             {

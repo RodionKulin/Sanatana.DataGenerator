@@ -1,23 +1,14 @@
 ﻿using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Supervisors.Complete;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Storages;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
-using Sanatana.DataGenerator.SpreadStrategies;
-using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.TotalCountProviders;
-using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.Internals.Reflection;
-using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Debugging;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
@@ -174,40 +165,9 @@ namespace Sanatana.DataGenerator
         internal virtual Dictionary<Type, EntityContext> SetupEntityContexts(
             Dictionary<Type, IEntityDescription> entityDescriptions)
         {
-            var entityContexts = new Dictionary<Type, EntityContext>();
-
-            foreach (IEntityDescription description in entityDescriptions.Values)
-            {
-                List<IEntityDescription> children = entityDescriptions.Values
-                    .Where(x => x.Required != null
-                        && x.Required.Select(req => req.Type).Contains(description.Type))
-                    .ToList();
-
-                List<IEntityDescription> parents = new List<IEntityDescription>();
-                if (description.Required != null)
-                {
-                    IEnumerable<Type> parentTypes = description.Required.Select(x => x.Type);
-                    parents = entityDescriptions.Values
-                       .Where(x => parentTypes.Contains(x.Type))
-                       .ToList();
-                }
-
-                ITotalCountProvider totalCountProvider = Defaults.GetTotalCountProvider(description);
-                long targetTotalCount = totalCountProvider.GetTargetCount();
-
-                entityContexts.Add(description.Type, new EntityContext
-                {
-                    Type = description.Type,
-                    Description = description,
-                    ChildEntities = children,
-                    ParentEntities = parents,
-                    EntityProgress = new EntityProgress
-                    {
-                        TargetCount = targetTotalCount
-                    }
-                });
-            }
-
+            Dictionary<Type, EntityContext> entityContexts = entityDescriptions.Values
+                .Select(description => EntityContext.Factory.Create(entityDescriptions, description, Defaults))
+                .ToDictionary(entityContext => entityContext.Type, entityContext => entityContext);
             return entityContexts;
         }
 
@@ -231,7 +191,7 @@ namespace Sanatana.DataGenerator
         //Execution loop
         protected virtual void ExecuteGenerationLoop()
         {
-            foreach (ICommand command in Supervisor.GetNextCommand())
+            foreach (ICommand command in Supervisor.IterateCommands())
             {
                 CommandsHistory.TrackCommand(command);
                 command.Execute();
@@ -274,7 +234,7 @@ namespace Sanatana.DataGenerator
         /// Will call Dispose() on ReaderWriterLockSlim for entities and IPersistentStorage storages
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        public void Dispose()
+        public virtual void Dispose()
         {
             foreach (EntityContext entityContext in _entityContexts.Values)
             {

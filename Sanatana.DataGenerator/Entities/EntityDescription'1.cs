@@ -13,6 +13,7 @@ using Sanatana.DataGenerator.Modifiers;
 using System.Linq.Expressions;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.Entities
 {
@@ -346,7 +347,7 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         /// <param name="capacity"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(long capacity)
+        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(int capacity)
         {
             RequestCapacityProvider = new StrictRequestCapacityProvider(capacity);
             return this;

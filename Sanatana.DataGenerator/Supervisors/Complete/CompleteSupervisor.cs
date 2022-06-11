@@ -56,7 +56,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //methods
-        public virtual IEnumerable<ICommand> GetNextCommand()
+        public virtual IEnumerable<ICommand> IterateCommands()
         {
             while (true)
             {
@@ -64,12 +64,14 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 if (nextCommand != null)
                 {
                     yield return nextCommand;
+                    continue;
                 }
 
                 nextCommand = _requiredQueueBuilder.GetNextCommand();
                 if (nextCommand != null)
                 {
                     yield return nextCommand;
+                    continue;
                 }
 
                 yield break;

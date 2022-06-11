@@ -37,7 +37,7 @@ namespace Sanatana.DataGenerator.Commands
             _generateIdsRange.SetFlushStatus(FlushStatus.Flushed);
         }
 
-        public virtual string GetDescription()
+        public virtual string GetLogEntry()
         {
             return $"Get storage Ids for {_entityContext.Type.Name} PreviousRangeFlushedCount={_generateIdsRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_generateIdsRange.ThisRangeFlushCount}";
         }

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
@@ -70,15 +71,14 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return parentEntityCount;
         }
 
-        public virtual bool CanGenerateFromParentNextReleaseCount(
-            EntityContext parentEntity, EntityContext childEntity)
+        public virtual bool CanGenerateFromParentRange(EntityContext parentEntity, 
+            FlushRange parentRange, EntityContext childEntity)
         {
             //Always accumulate parent entities in memory and never release to persistent storage
             //until child item generates all instances.
             //Parents are required to build combinations.
             return childEntity.EntityProgress.CurrentCount < childEntity.EntityProgress.TargetCount;
         }
-
 
 
         //Combinatorics methods
@@ -173,5 +173,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         protected abstract IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths);
 
         public abstract long GetTotalCount();
+
+
     }
 }

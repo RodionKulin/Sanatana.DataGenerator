@@ -14,7 +14,7 @@ namespace Sanatana.DataGenerator.Commands
     /// <summary>
     /// Call entity's generator and increment counters
     /// </summary>
-    public class GenerateEntityCommand : ICommand
+    public class GenerateCommand : ICommand
     {
         //fields
         protected GeneratorSetup _setup;
@@ -26,7 +26,7 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //init
-        public GenerateEntityCommand(EntityContext entityContext, GeneratorSetup setup,
+        public GenerateCommand(EntityContext entityContext, GeneratorSetup setup,
             Dictionary<Type, EntityContext> entityContexts)
         {
             EntityContext = entityContext;
@@ -52,18 +52,18 @@ namespace Sanatana.DataGenerator.Commands
                 RequiredEntities = GetRequiredEntities(),
             };
 
-            IList entities = generator.Generate(context);
-            _setup.Validator.CheckGeneratedCount(entities, description.Type, generator);
+            IList instances = generator.Generate(context);
+            _setup.Validator.CheckGeneratedCount(instances, description.Type, generator);
 
             foreach (IModifier modifier in modifiers)
             {
-                entities = modifier.Modify(context, entities);
-                _setup.Validator.CheckModifiedCount(entities, description.Type, modifier);
+                instances = modifier.Modify(context, instances);
+                _setup.Validator.CheckModifiedCount(instances, description.Type, modifier);
             }
 
-            requestCapacityProvider.TrackEntityGeneration(EntityContext, entities);
-            _setup.TemporaryStorage.InsertToTemporary(EntityContext, entities);
-            _setup.Supervisor.HandleGenerateCompleted(EntityContext, entities);
+            requestCapacityProvider.TrackEntityGeneration(EntityContext, instances);
+            _setup.TemporaryStorage.InsertToTemporary(EntityContext, instances);
+            _setup.Supervisor.HandleGenerateCompleted(EntityContext, instances);
         }
 
         protected virtual Dictionary<Type, object> GetRequiredEntities()
@@ -85,7 +85,7 @@ namespace Sanatana.DataGenerator.Commands
             return result;
         }
 
-        public virtual string GetDescription()
+        public virtual string GetLogEntry()
         {
             return $"Generate {EntityContext.Type.Name} CurrentCount={EntityContext.EntityProgress.CurrentCount}";
         }

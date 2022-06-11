@@ -1,4 +1,5 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.Progress;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,12 +13,12 @@ namespace Sanatana.DataGenerator.RequestCapacityProviders
     public class StrictRequestCapacityProvider : IRequestCapacityProvider
     {
         //properties
-        protected long _capacity;
+        protected int _capacity;
 
 
 
         //init
-        public StrictRequestCapacityProvider(long capacity)
+        public StrictRequestCapacityProvider(int capacity)
         {
             if (capacity < 1)
             {
@@ -30,18 +31,13 @@ namespace Sanatana.DataGenerator.RequestCapacityProviders
 
 
         //methods
-        public long GetCapacity(EntityContext entityContext)
+        public int GetCapacity(EntityContext entityContext, FlushRange flushRange)
         {
             return _capacity;
         }
 
         public void TrackEntityGeneration(EntityContext entityContext, IList instances)
         {
-        }
-
-        public static implicit operator StrictRequestCapacityProvider(long capacity)
-        {
-            return new StrictRequestCapacityProvider(capacity);
         }
 
         public static implicit operator StrictRequestCapacityProvider(int capacity)

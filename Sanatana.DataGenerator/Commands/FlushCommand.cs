@@ -44,7 +44,7 @@ namespace Sanatana.DataGenerator.Commands
             EntityContext.EntityProgress.RemoveRange(_flushRange);
         }
 
-        public virtual string GetDescription()
+        public virtual string GetLogEntry()
         {
             return $"Flush to persistent storage {EntityContext.Type.Name} PreviousRangeFlushedCount={_flushRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_flushRange.ThisRangeFlushCount}";
         }

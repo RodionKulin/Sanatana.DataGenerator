@@ -40,7 +40,7 @@ namespace Sanatana.DataGenerator.Commands
             _entityContext.EntityProgress.RemoveRange(_releaseRange);
         }
 
-        public virtual string GetDescription()
+        public virtual string GetLogEntry()
         {
             return $"Release from temp storage {_entityContext.Type.Name} ReleasedCount={_releaseRange.PreviousRangeFlushedCount} NextReleaseCount={_releaseRange.ThisRangeFlushCount} invokedBy={_invokedBy}";
         }
