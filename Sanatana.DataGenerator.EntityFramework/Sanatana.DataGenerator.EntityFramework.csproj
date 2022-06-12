@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EntityDescriptionExtensions.cs" />
     <Compile Include="EntityFrameworkRequestCapacityProvider.cs" />
     <Compile Include="EntityFrameworkPersistentStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
