@@ -64,7 +64,7 @@ namespace Sanatana.DataGenerator.Commands
 
             requestCapacityProvider.TrackEntityGeneration(EntityContext, instances);
             _setup.TemporaryStorage.InsertToTemporary(EntityContext, instances);
-            _setup.Supervisor.HandleGenerateCompleted(EntityContext, instances);
+            _setup._supervisor.HandleGenerateCompleted(EntityContext, instances);
         }
 
         protected virtual Dictionary<Type, object> GetRequiredEntities()

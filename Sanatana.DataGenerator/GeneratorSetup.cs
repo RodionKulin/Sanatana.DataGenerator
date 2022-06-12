@@ -24,27 +24,18 @@ namespace Sanatana.DataGenerator
     {
         //fields
         protected Dictionary<Type, EntityContext> _entityContexts;
+        protected DefaultSettings _defaults;
+        protected ISupervisor _supervisor;
         protected ReflectionInvoker _reflectionInvoker;
+        protected CommandsHistory _commandsHistory;
+        protected ProgressEventTrigger _progress;
 
 
         //public properties
         /// <summary>
         /// All entity types configured that will be used by OrderProvider to pick generation order.
         /// </summary>
-        public Dictionary<Type, IEntityDescription> EntityDescriptions { get; set; }        
-        /// <summary>
-        /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
-        /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
-        /// </summary>
-        public ISupervisor Supervisor { get; set; }
-        /// <summary>
-        /// Default settings used for entity generation if not specified entity specific settings.
-        /// </summary>
-        public DefaultSettings Defaults { get; set; }
-        /// <summary>
-        /// Progress change event holding class that will report overall completion percent in range from 0 to 100.
-        /// </summary>
-        public ProgressEventTrigger Progress { get; protected set; }
+        public Dictionary<Type, IEntityDescription> EntityDescriptions { get; set; }
 
 
         //internal properties
@@ -56,7 +47,6 @@ namespace Sanatana.DataGenerator
         /// Inmemory storage for generated entities to accumulate batches before inserting to persistent storage.
         /// </summary>
         public TemporaryStorage TemporaryStorage { get; set; }
-        internal CommandsHistory CommandsHistory { get; set; }
 
 
         //init
@@ -64,12 +54,36 @@ namespace Sanatana.DataGenerator
         {
             _reflectionInvoker = new ReflectionInvoker();
             EntityDescriptions = new Dictionary<Type, IEntityDescription>();
-            TemporaryStorage = new TemporaryStorage(this);
-            CommandsHistory = new CommandsHistory();
-            Progress = new ProgressEventTrigger(this);
+            _commandsHistory = new CommandsHistory();
 
-            Defaults = new DefaultSettings();
-            Supervisor = new CompleteSupervisor();
+            TemporaryStorage = new TemporaryStorage(this);
+            _defaults = new DefaultSettings();
+            _supervisor = new CompleteSupervisor();
+            _progress = new ProgressEventTrigger(_supervisor);
+        }
+
+        public GeneratorSetup(IEnumerable<IEntityDescription> entityDescriptions,
+            ISupervisor supervisor, DefaultSettings defaults, ProgressEventTrigger progress)
+        {
+            _reflectionInvoker = new ReflectionInvoker();
+            _commandsHistory = new CommandsHistory();
+            EntityDescriptions = entityDescriptions.ToDictionary(x => x.Type, x => x);
+
+            TemporaryStorage = new TemporaryStorage(this);
+            _defaults = defaults;
+            _supervisor = supervisor;
+            _progress = progress;
+        }
+
+        protected virtual GeneratorSetup Clone(IEnumerable<IEntityDescription> entityDescriptions = null,
+            ISupervisor supervisor = null, DefaultSettings defaults = null, ProgressEventTrigger progress = null)
+        {
+            entityDescriptions = entityDescriptions ?? new List<IEntityDescription>(EntityDescriptions.Values);
+            supervisor = supervisor ?? _supervisor.Clone();
+            defaults = defaults ?? _defaults.Clone();
+            progress = progress ?? _progress.Clone();   
+
+            return new GeneratorSetup(entityDescriptions, supervisor, defaults, progress);
         }
 
 
@@ -96,15 +110,13 @@ namespace Sanatana.DataGenerator
             }
             return this;
         }
-        
 
-        //Get registered entity
-        public virtual EntityDescription<TEntity> GetEntityDescription<TEntity>()
+        public virtual EntityDescription<TEntity> GetEntity<TEntity>()
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
 
-            IEntityDescription entityDescription = GetEntityDescription(entityType);
+            IEntityDescription entityDescription = GetEntity(entityType);
             if (!(entityDescription is EntityDescription<TEntity>))
             {
                 Type descriptionActualType = entityDescription.GetType();
@@ -115,7 +127,7 @@ namespace Sanatana.DataGenerator
             return (EntityDescription<TEntity>)entityDescription;
         }
 
-        public virtual IEntityDescription GetEntityDescription(Type entityType)
+        public virtual IEntityDescription GetEntity(Type entityType)
         {
             bool isEntityRegistered = EntityDescriptions.ContainsKey(entityType);
             if (!isEntityRegistered || EntityDescriptions[entityType] == null)
@@ -128,6 +140,50 @@ namespace Sanatana.DataGenerator
         }
 
 
+
+        //Configure services
+        /// <summary>
+        /// Default settings used for entity generation if not specified entity specific settings.
+        /// </summary>
+        public virtual GeneratorSetup ConfigureDefaultSettings(Func<DefaultSettings, DefaultSettings> defaultsSetup)
+        {
+            DefaultSettings defaults = _defaults.Clone();
+            defaultsSetup.Invoke(defaults);
+            return Clone(defaults: defaults);
+        }
+
+        /// <summary>
+        /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
+        /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
+        /// </summary>
+        public virtual GeneratorSetup ConfigureSupervisor(Func<ISupervisor, ISupervisor> supervisorSetup)
+        {
+            ISupervisor supervisor = _supervisor.Clone();
+            supervisorSetup.Invoke(supervisor);
+            return Clone(supervisor: supervisor);
+        }
+
+        /// <summary>
+        /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
+        /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
+        /// </summary>
+        public virtual GeneratorSetup SetSupervisor(ISupervisor supervisor)
+        {
+            return Clone(supervisor: supervisor);
+        }
+
+        /// <summary>
+        /// Progress change event holding class that will report overall completion percent in range from 0 to 100.
+        /// </summary>
+        public virtual GeneratorSetup ConfigureProgressEventTrigger(Action<ProgressEventTrigger> progressSetup)
+        {
+            ProgressEventTrigger progressEventTrigger = _progress.Clone();
+            progressSetup.Invoke(progressEventTrigger);
+            return Clone(progress: progressEventTrigger);
+        }
+
+
+
         //Generation start
         public virtual void Generate()
         {
@@ -136,7 +192,6 @@ namespace Sanatana.DataGenerator
             Setup();
 
             ExecuteGenerationLoop();
-
         }
 
         protected virtual void Validate()
@@ -152,20 +207,12 @@ namespace Sanatana.DataGenerator
 
         protected virtual void Setup()
         {
-            Progress.Clear();
-            CommandsHistory.Clear();
+            _progress.Setup(_supervisor);
+            _progress.Clear();
+            _commandsHistory.Clear();
             _entityContexts = SetupEntityContexts(EntityDescriptions);
             SetupSpreadStrategies();
-            Supervisor.Setup(this, _entityContexts);
-        }
-
-        internal virtual Dictionary<Type, EntityContext> SetupEntityContexts(
-            Dictionary<Type, IEntityDescription> entityDescriptions)
-        {
-            Dictionary<Type, EntityContext> entityContexts = entityDescriptions.Values
-                .Select(description => EntityContext.Factory.Create(entityDescriptions, description, Defaults))
-                .ToDictionary(entityContext => entityContext.Type, entityContext => entityContext);
-            return entityContexts;
+            _supervisor.Setup(this, _entityContexts);
         }
 
         protected virtual void SetupSpreadStrategies()
@@ -188,9 +235,9 @@ namespace Sanatana.DataGenerator
         //Execution loop
         protected virtual void ExecuteGenerationLoop()
         {
-            foreach (ICommand command in Supervisor.IterateCommands())
+            foreach (ICommand command in _supervisor.IterateCommands())
             {
-                CommandsHistory.LogCommand(command);
+                _commandsHistory.LogCommand(command);
                 command.Execute();
                 Progress.UpdateProgressInt(forceUpdate: false);
             }
@@ -198,7 +245,13 @@ namespace Sanatana.DataGenerator
             TemporaryStorage.WaitAllTasks();
             Progress.UpdateProgressInt(forceUpdate: true);
         }
-        
+
+
+        //Singular instances generation setup
+        public virtual SingularGeneratorSetup ToSingular()
+        {
+            return new SingularGeneratorSetup(this);
+        }
 
 
         //IDisposalbe
@@ -213,7 +266,7 @@ namespace Sanatana.DataGenerator
         {
             foreach (EntityContext entityContext in _entityContexts.Values)
             {
-                List<IPersistentStorage> storages = Defaults.GetPersistentStorages(entityContext.Description);
+                List<IPersistentStorage> storages = _defaults.GetPersistentStorages(entityContext.Description);
                 storages.ForEach(storage => storage.Dispose());
 
                 entityContext.Dispose();

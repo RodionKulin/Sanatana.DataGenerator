@@ -102,12 +102,6 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 _insertedComments.Should().OnlyContain(x => x.PostId != 0);
             }
 
-            [Test]
-            public void then_commands_history_should_be_populated()
-            {
-                string fullHistory = _generatorSetup.CommandsHistory.Combine();
-                _generatorSetup.CommandsHistory.Logs.Should().NotBeEmpty();
-            }
         }
 
     }

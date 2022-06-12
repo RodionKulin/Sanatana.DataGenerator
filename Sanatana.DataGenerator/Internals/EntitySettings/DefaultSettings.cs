@@ -18,17 +18,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
     /// </summary>
     public class DefaultSettings
     {
-        /// <summary>
-        /// Default strategy to trigger entity persistent storage writes.
-        /// Will be used for entity types that does not have a FlushStrategy specified.
-        /// </summary>
-        public IFlushStrategy FlushStrategy { get; set; }
-        /// <summary>
-        /// Default IRequestCapacityProvider that returns number of entity instances that can be inserted per single request to persistent storage.
-        /// Will be used for entity types that does not have a IRequestCapacityProvider specified.
-        /// StrictRequestCapacityProvider with a limit of 100 is set by default.
-        /// </summary>
-        public IRequestCapacityProvider RequestCapacityProvider { get; set; }
+
         /// <summary>
         /// Default entities generator. 
         /// Will be used for entity types that does not have a Generator specified.
@@ -47,17 +37,28 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// </summary>
         public ITotalCountProvider TotalCountProvider { get; set; }
         /// <summary>
-        /// Default strategy to reuse same parent entity instances among multiple child entity instances.
-        /// Will be used for Required entity types that does not have a SpreadStrategy specified.
-        /// EvenSpreadStrategy is set by default.
-        /// </summary>
-        public ISpreadStrategy SpreadStrategy { get; set; }
-        /// <summary>
         /// Default persistent storage(s) to store generated entities.
         /// Will be used for entity types that does not have a PersistentStorage specified.
         /// By default is not set.
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
+        /// <summary>
+        /// Default strategy to trigger entity persistent storage writes.
+        /// Will be used for entity types that does not have a FlushStrategy specified.
+        /// </summary>
+        public IFlushStrategy FlushStrategy { get; set; }
+        /// <summary>
+        /// Default IRequestCapacityProvider that returns number of entity instances that can be inserted per single request to persistent storage.
+        /// Will be used for entity types that does not have a IRequestCapacityProvider specified.
+        /// StrictRequestCapacityProvider with a limit of 100 is set by default.
+        /// </summary>
+        public IRequestCapacityProvider RequestCapacityProvider { get; set; }
+        /// <summary>
+        /// Default strategy to reuse same parent entity instances among multiple child entity instances.
+        /// Will be used for Required entity types that does not have a SpreadStrategy specified.
+        /// EvenSpreadStrategy is set by default.
+        /// </summary>
+        public ISpreadStrategy SpreadStrategy { get; set; }
 
 
         //init
@@ -68,6 +69,58 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             RequestCapacityProvider = new StrictRequestCapacityProvider(100);
             SpreadStrategy = new EvenSpreadStrategy();
         }
+
+
+
+        //Get entity specific or default service
+        public virtual DefaultSettings SetGenerator(IGenerator generator)
+        {
+            Generator = generator;
+            return this;
+        }
+
+        public virtual DefaultSettings AddModifiers(IModifier modifier)
+        {
+            Modifiers.Add(modifier);
+            return this;
+        }
+
+        public virtual DefaultSettings SetTotalCountProvider(ITotalCountProvider totalCountProvider)
+        {
+            TotalCountProvider = totalCountProvider;
+            return this;
+        }
+
+        public virtual DefaultSettings AddPersistentStorage(IPersistentStorage persistentStorage)
+        {
+            PersistentStorages.Add(persistentStorage);
+            return this;
+        }
+
+        public virtual DefaultSettings ClearPersistentStorages()
+        {
+            PersistentStorages.Clear();
+            return this;
+        }
+
+        public virtual DefaultSettings SetFlushStrategy(IFlushStrategy flushStrategy)
+        {
+            FlushStrategy = flushStrategy;
+            return this;
+        }
+
+        public virtual DefaultSettings SetRequestCapacityProvider(IRequestCapacityProvider requestCapacityProvider)
+        {
+            RequestCapacityProvider = requestCapacityProvider;
+            return this;
+        }
+
+        public virtual DefaultSettings SetSpreadStrategy(ISpreadStrategy spreadStrategy)
+        {
+            SpreadStrategy = spreadStrategy;
+            return this;
+        }
+
 
 
         //Get entity specific or default service
@@ -177,5 +230,20 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             throw new NullReferenceException($"Type {entityDescription.Type.FullName} for required entity {requiredEntity.Type} did not have an {nameof(ISpreadStrategy)} configured and {nameof(SpreadStrategy)} also was not provided.");
         }
 
+
+        //Clone
+        public virtual DefaultSettings Clone()
+        {
+            return new DefaultSettings()
+            {
+                Generator = Generator,
+                Modifiers = new List<IModifier>(Modifiers),
+                TotalCountProvider = TotalCountProvider,
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                FlushStrategy = FlushStrategy,
+                RequestCapacityProvider = RequestCapacityProvider,
+                SpreadStrategy = SpreadStrategy
+            };
+        }
     }
 }

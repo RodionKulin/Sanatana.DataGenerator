@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Generators
+namespace Sanatana.DataGenerator
 {
     /// <summary>
     /// Context object holding required data and configuration to generate new entity instance.

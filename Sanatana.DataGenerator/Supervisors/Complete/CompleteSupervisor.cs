@@ -17,10 +17,6 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     {
         //fields
         /// <summary>
-        /// Default services for entities.
-        /// </summary>
-        protected GeneratorSetup _generatorSetup;
-        /// <summary>
         /// All entities with their current generated count.
         /// </summary>
         protected Dictionary<Type, EntityContext> _entityContexts;
@@ -44,7 +40,6 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             _commandsQueue = new ConcurrentQueue<ICommand>();
 
             _entityContexts = entityContexts;
-            _generatorSetup = generatorSetup;
 
             ProgressState = new CompleteProgressState(entityContexts);
             _flushCandidatesRegistry = new CompleteFlushCandidatesRegistry(
@@ -106,6 +101,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, isFlushRequired);
         }
 
-      
+
+        //Clone
+        public ISupervisor Clone()
+        {
+            return new CompleteSupervisor();
+        }
     }
 }

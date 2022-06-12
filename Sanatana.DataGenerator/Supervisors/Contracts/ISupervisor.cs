@@ -15,5 +15,6 @@ namespace Sanatana.DataGenerator.Supervisors.Contracts
         IEnumerable<ICommand> IterateCommands();
         void HandleGenerateCompleted(EntityContext entityContext, IList generatedEntities);
         void EnqueueCommand(ICommand command);
+        ISupervisor Clone();
     }
 }

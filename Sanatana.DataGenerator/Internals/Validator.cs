@@ -38,10 +38,10 @@ namespace Sanatana.DataGenerator.Internals
         /// <param name="entityDescriptions"></param>
         public virtual void CheckGeneratorSetupComplete(Dictionary<Type, IEntityDescription> entityDescriptions)
         {
-            ISupervisor supervisor = _generatorSetup.Supervisor;
+            ISupervisor supervisor = _generatorSetup._supervisor;
             if (supervisor == null)
             {
-                throw new ArgumentNullException(nameof(_generatorSetup.Supervisor));
+                throw new ArgumentNullException(nameof(_generatorSetup._supervisor));
             }
 
             foreach (IEntityDescription description in entityDescriptions.Values)

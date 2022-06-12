@@ -8,7 +8,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
     public class ProgressEventTrigger : IDisposable
     {
         //fields
-        protected GeneratorSetup _generatorSetup;
+        protected ISupervisor _supervisor;
         protected decimal _lastPercents;
         protected long invokeOnEveryNCommand = 1000;
 
@@ -17,14 +17,16 @@ namespace Sanatana.DataGenerator.Internals.Progress
         /// <summary>
         /// Progress change event that will report overall completion percent in range from 0 to 100.
         /// </summary>
-        public event Action<GeneratorSetup, decimal> Changed;
+        public event Action<decimal> Changed;
+
 
 
         //init
-        public ProgressEventTrigger(GeneratorSetup generatorSetup)
+        public virtual void Setup(ISupervisor supervisor)
         {
-            _generatorSetup = generatorSetup;
+            _supervisor = supervisor;
         }
+
 
 
         //methods
@@ -44,7 +46,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
             }
 
             //check if percent updated
-            decimal percents = _generatorSetup.Supervisor.ProgressState.GetCompletionPercents();
+            decimal percents = _supervisor.ProgressState.GetCompletionPercents();
             if (_lastPercents == percents)
             {
                 return;
@@ -52,10 +54,10 @@ namespace Sanatana.DataGenerator.Internals.Progress
             _lastPercents = percents;
 
             //invoke handler
-            Action<GeneratorSetup, decimal> progressChanged = Changed;
+            Action<decimal> progressChanged = Changed;
             if (progressChanged != null)
             {
-                progressChanged(_generatorSetup, percents);
+                progressChanged(percents);
             }
         }
 
@@ -70,6 +72,14 @@ namespace Sanatana.DataGenerator.Internals.Progress
         }
 
 
+
+        //Clone
+        public virtual ProgressEventTrigger Clone()
+        {
+            return new ProgressEventTrigger();
+        }
+
+
         //IDisposalbe
         /// <summary>
         /// Will unsubscribe all ProgressChanged event handlers
@@ -79,7 +89,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
             if (Changed != null)
             {
                 foreach (Delegate d in Changed.GetInvocationList())
-                    Changed -= d as Action<GeneratorSetup, decimal>;
+                    Changed -= d as Action<decimal>;
             }
         }
     }
