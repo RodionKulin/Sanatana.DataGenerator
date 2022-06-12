@@ -6,7 +6,7 @@ using System.Threading;
 using System.Linq;
 using Sanatana.DataGenerator.TotalCountProviders;
 
-namespace Sanatana.DataGenerator.Internals
+namespace Sanatana.DataGenerator.Internals.EntitySettings
 {
     public class EntityContext : IDisposable
     {
@@ -60,7 +60,6 @@ namespace Sanatana.DataGenerator.Internals
                     }
                 };
             }
-
         }
 
 

@@ -9,6 +9,7 @@ using System.Collections;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

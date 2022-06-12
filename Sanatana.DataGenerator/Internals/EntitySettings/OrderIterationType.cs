@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Internals
+namespace Sanatana.DataGenerator.Internals.EntitySettings
 {
     public class OrderIterationType
     {

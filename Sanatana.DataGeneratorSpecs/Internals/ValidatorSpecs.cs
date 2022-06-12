@@ -6,8 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGeneratorSpecs.Samples;
 using Sanatana.DataGenerator.Storages;
+using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 
 namespace Sanatana.DataGeneratorSpecs.Internals
 {

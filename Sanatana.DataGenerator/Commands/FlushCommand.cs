@@ -5,6 +5,7 @@ using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Commands
 {

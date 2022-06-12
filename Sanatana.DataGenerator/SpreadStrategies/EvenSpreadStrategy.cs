@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
 
 namespace Sanatana.DataGenerator.SpreadStrategies

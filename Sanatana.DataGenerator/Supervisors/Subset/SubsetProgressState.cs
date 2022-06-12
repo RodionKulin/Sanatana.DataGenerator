@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Subset
 {

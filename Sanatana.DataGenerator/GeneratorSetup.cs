@@ -10,6 +10,8 @@ using System.Runtime.CompilerServices;
 using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.Internals.Reflection;
 using Sanatana.DataGenerator.Internals.Debugging;
+using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
@@ -21,16 +23,8 @@ namespace Sanatana.DataGenerator
     public class GeneratorSetup : IDisposable
     {
         //fields
-        protected decimal _lastPercents;
         protected Dictionary<Type, EntityContext> _entityContexts;
         protected ReflectionInvoker _reflectionInvoker;
-
-
-        //event
-        /// <summary>
-        /// Progress change event that will report overall completion percent in range from 0 to 100.
-        /// </summary>
-        public event Action<GeneratorSetup, decimal> ProgressChanged;
 
 
         //public properties
@@ -47,6 +41,10 @@ namespace Sanatana.DataGenerator
         /// Default settings used for entity generation if not specified entity specific settings.
         /// </summary>
         public DefaultSettings Defaults { get; set; }
+        /// <summary>
+        /// Progress change event holding class that will report overall completion percent in range from 0 to 100.
+        /// </summary>
+        public ProgressEventTrigger Progress { get; protected set; }
 
 
         //internal properties
@@ -66,8 +64,9 @@ namespace Sanatana.DataGenerator
         {
             _reflectionInvoker = new ReflectionInvoker();
             EntityDescriptions = new Dictionary<Type, IEntityDescription>();
-            TemporaryStorage = new TemporaryStorage();
+            TemporaryStorage = new TemporaryStorage(this);
             CommandsHistory = new CommandsHistory();
+            Progress = new ProgressEventTrigger(this);
 
             Defaults = new DefaultSettings();
             Supervisor = new CompleteSupervisor();
@@ -138,7 +137,6 @@ namespace Sanatana.DataGenerator
 
             ExecuteGenerationLoop();
 
-            UpdateProgress(forceUpdate: true);
         }
 
         protected virtual void Validate()
@@ -154,9 +152,8 @@ namespace Sanatana.DataGenerator
 
         protected virtual void Setup()
         {
-            _lastPercents = -1;
+            Progress.Clear();
             CommandsHistory.Clear();
-            TemporaryStorage.GeneratorSetup = this;
             _entityContexts = SetupEntityContexts(EntityDescriptions);
             SetupSpreadStrategies();
             Supervisor.Setup(this, _entityContexts);
@@ -193,45 +190,23 @@ namespace Sanatana.DataGenerator
         {
             foreach (ICommand command in Supervisor.IterateCommands())
             {
-                CommandsHistory.TrackCommand(command);
+                CommandsHistory.LogCommand(command);
                 command.Execute();
-                UpdateProgress(forceUpdate: false);
+                Progress.UpdateProgressInt(forceUpdate: false);
             }
 
             TemporaryStorage.WaitAllTasks();
+            Progress.UpdateProgressInt(forceUpdate: true);
         }
         
-        protected virtual void UpdateProgress(bool forceUpdate)
-        {
-            long actionCalls = IdIterator.GetNextId<IProgressState>();
-
-            //trigger event only every N generated instances
-            long invokeOnEveryNCall = 1000;
-            bool invoke = actionCalls % invokeOnEveryNCall == 0;
-            if (!invoke && forceUpdate == false)
-            {
-                return;
-            }
-
-            //invoke handler
-            decimal percents = Supervisor.ProgressState.GetCompletionPercents();
-            if(_lastPercents == percents)
-            {
-                return;
-            }
-            _lastPercents = percents;
-
-            Action<GeneratorSetup, decimal> progressChanged = ProgressChanged;
-            if (progressChanged != null)
-            {
-                progressChanged(this, percents);
-            }
-        }
 
 
         //IDisposalbe
         /// <summary>
-        /// Will call Dispose() on ReaderWriterLockSlim for entities and IPersistentStorage storages
+        /// Will 
+        /// -call Dispose() on ReaderWriterLockSlim for entities 
+        /// -call Dispose() on IPersistentStorage storages
+        /// -unsubscribe all ProgressChanged event handlers
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         public virtual void Dispose()
@@ -243,6 +218,8 @@ namespace Sanatana.DataGenerator
 
                 entityContext.Dispose();
             }
+
+            Progress.Dispose();
         }
     }
 }

@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System.Diagnostics;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {

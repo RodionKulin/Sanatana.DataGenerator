@@ -8,6 +8,7 @@ using System.Collections;
 using System.Text;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Commands
 {

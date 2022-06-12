@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.Commands;
 using System.Collections.Concurrent;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

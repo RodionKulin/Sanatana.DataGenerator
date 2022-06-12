@@ -9,7 +9,8 @@ using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Progress;
-using Sanatana.DataGenerator.Internals.Objects;
+using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.Internals.Collections;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

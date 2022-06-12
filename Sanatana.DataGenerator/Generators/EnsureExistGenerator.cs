@@ -6,10 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Sanatana.DataGenerator.StorageInsertGuards;
-using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Internals.Progress;
-
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -101,8 +100,7 @@ namespace Sanatana.DataGenerator.Generators
 
             foreach (TEntity nextInstance in nextInstances)
             {
-                TEntity existingInstance = null;
-                bool exist = existingInstances.TryGetValue(nextInstance, out existingInstance);
+                bool exist = existingInstances.TryGetValue(nextInstance, out TEntity existingInstance);
                 combination.Add(exist ? existingInstance : nextInstance);
                 exists.Add(exist);
             }

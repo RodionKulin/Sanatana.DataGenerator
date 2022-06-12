@@ -7,7 +7,7 @@ using System.Text;
 using FluentAssertions;
 using Sanatana.DataGenerator.Internals.Reflection;
 
-namespace Sanatana.DataGeneratorSpecs.Internals
+namespace Sanatana.DataGeneratorSpecs.Internals.Reflection
 {
     [TestClass]
     public class ListOperationsSpecs

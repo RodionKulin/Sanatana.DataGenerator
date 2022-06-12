@@ -31,7 +31,7 @@ namespace Sanatana.DataGenerator.Demo
                 .SetTargetCount(100000);
 
             //Generate
-            setup.ProgressChanged += PrintProgress;
+            setup.Progress.Changed += PrintProgress;
             setup.Generate();
             Console.WriteLine("Completed");
             Console.ReadKey();

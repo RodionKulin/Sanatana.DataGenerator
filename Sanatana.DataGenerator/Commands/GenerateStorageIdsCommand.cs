@@ -1,5 +1,5 @@
 ﻿using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.Internals.Objects;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Storages;
 using System;

@@ -2,6 +2,7 @@
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Internals.Progress;
 using System;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Commands
 {

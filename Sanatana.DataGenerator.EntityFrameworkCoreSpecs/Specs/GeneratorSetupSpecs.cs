@@ -34,6 +34,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 _markerString = GetType().FullName;
 
                 _generatorSetup = new GeneratorSetup();
+                _generatorSetup.CommandsHistory.IsFileLoggingEnabled = true;
                 _generatorSetup.Defaults.RequestCapacityProvider = new StrictRequestCapacityProvider(10);
                 _generatorSetup.Defaults.PersistentStorages.Add(
                     new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()));
@@ -105,7 +106,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             public void then_commands_history_should_be_populated()
             {
                 string fullHistory = _generatorSetup.CommandsHistory.Combine();
-                _generatorSetup.CommandsHistory.History.Should().NotBeEmpty();
+                _generatorSetup.CommandsHistory.Logs.Should().NotBeEmpty();
             }
         }
 

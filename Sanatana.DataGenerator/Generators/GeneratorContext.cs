@@ -1,5 +1,6 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using System;
 using System.Collections.Generic;
 using System.Text;

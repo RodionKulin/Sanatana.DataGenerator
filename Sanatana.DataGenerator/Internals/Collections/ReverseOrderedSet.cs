@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Collections;
 
-namespace Sanatana.DataGenerator.Internals.Objects
+namespace Sanatana.DataGenerator.Internals.Collections
 {
     public class ReverseOrderedSet<T> : ICollection<T>
     {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals;
 using System.Collections;
 using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Contracts
 {

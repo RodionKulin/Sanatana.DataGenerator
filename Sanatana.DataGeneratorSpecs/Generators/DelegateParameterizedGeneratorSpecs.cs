@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator.Generators;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
 using System.Collections.Generic;
 using System.Text;

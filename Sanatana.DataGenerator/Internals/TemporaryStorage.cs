@@ -1,4 +1,5 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.Reflection;
 using Sanatana.DataGenerator.StorageInsertGuards;
@@ -24,9 +25,7 @@ namespace Sanatana.DataGenerator.Internals
         protected List<Task> _runningTasks;
         protected ReflectionInvoker _reflectionInvoker;
         protected ListOperations _listOperations;
-
-        //props
-        internal GeneratorSetup GeneratorSetup { get; set; }
+        protected GeneratorSetup _generatorSetup;
 
 
         //properties
@@ -56,8 +55,9 @@ namespace Sanatana.DataGenerator.Internals
 
 
         //init
-        public TemporaryStorage()
+        public TemporaryStorage(GeneratorSetup generatorSetup)
         {
+            _generatorSetup = generatorSetup;
             _reflectionInvoker = new ReflectionInvoker();
             _listOperations = new ListOperations();
             _runningTasks = new List<Task>();
@@ -119,7 +119,7 @@ namespace Sanatana.DataGenerator.Internals
         }
 
 
-        //Flush to persistent
+        //Flush to persistent and release from temporary with single method
         /// <summary>
         /// Insert entities to persistent storage and remove from temporary storage
         /// </summary>
@@ -167,12 +167,10 @@ namespace Sanatana.DataGenerator.Internals
                 .Select(storage => _reflectionInvoker.InvokeInsert(storage, entityContext.Description, nextItems))
                 .ToArray();
             _runningTasks.AddRange(nextFlushTasks);
-
-            Task.WhenAll(nextFlushTasks);
         }
 
 
-        //InsertToPersistentStorageBeforeUse
+        //InsertToPersistentStorageBeforeUse: one method to insert to db, second to remove from temp storage
         /// <summary>
         /// Insert entities to persistent storage but keep in temporary storage
         /// </summary>
@@ -242,8 +240,6 @@ namespace Sanatana.DataGenerator.Internals
         //Tasks handling
         protected virtual void WaitRunningTask()
         {
-            _runningTasks.RemoveAll(p => p.IsCompleted);
-
             bool isMaxTasksRunning = _runningTasks.Count >= MaxTasksRunning;
             if (isMaxTasksRunning)
             {
@@ -254,7 +250,6 @@ namespace Sanatana.DataGenerator.Internals
 
         public virtual void WaitAllTasks()
         {
-            _runningTasks.RemoveAll(p => p.IsCompleted);
             Task.WaitAll(_runningTasks.ToArray());
             _runningTasks.RemoveAll(p => p.IsCompleted);
         }

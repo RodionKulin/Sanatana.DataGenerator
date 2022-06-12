@@ -7,7 +7,7 @@ namespace Sanatana.DataGenerator.Storages
 {
     public interface IPersistentStorage : IDisposable
     {
-        Task Insert<TEntity>(List<TEntity> entities)
+        Task Insert<TEntity>(List<TEntity> instances)
             where TEntity : class;
     }
 }

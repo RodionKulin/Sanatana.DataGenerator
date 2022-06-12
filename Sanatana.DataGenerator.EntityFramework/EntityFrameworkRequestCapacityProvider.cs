@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {

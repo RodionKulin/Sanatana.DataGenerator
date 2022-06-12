@@ -6,6 +6,7 @@ using System.Linq;
 using System.Collections;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

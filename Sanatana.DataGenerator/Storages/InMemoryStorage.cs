@@ -4,19 +4,20 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Sanatana.DataGenerator.Storages
 {
     public class InMemoryStorage : IPersistentStorage
     {
         //fields
-        protected ConcurrentDictionary<Type, ArrayList> _storages;
-
+        protected ConcurrentDictionary<Type, ConcurrentBag<object>> _storages;
+        
 
         //init
         public InMemoryStorage()
         {
-            _storages = new ConcurrentDictionary<Type, ArrayList>();
+            _storages = new ConcurrentDictionary<Type, ConcurrentBag<object>>();
         }
         
 
@@ -25,17 +26,23 @@ namespace Sanatana.DataGenerator.Storages
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
-            ArrayList storage = _storages.GetOrAdd(entityType, (t) => new ArrayList());
-            storage.AddRange(instances);
+            ConcurrentBag<object> storage = _storages.GetOrAdd(entityType, (t) => new ConcurrentBag<object>());
+            foreach (TEntity instance in instances)
+            {
+                storage.Add(instance);
+            }
             return Task.FromResult(0);
         }
 
         public virtual TEntity[] Select<TEntity>()
         {
             Type entityType = typeof(TEntity);
-            ArrayList storage = _storages[entityType];
-            TEntity[] instances = storage.ToArray(typeof(TEntity)) as TEntity[];
-            return instances;
+            return _storages[entityType].Cast<TEntity>().ToArray();
+        }
+
+        public virtual object[] Select(Type entityType)
+        {
+            return _storages[entityType].ToArray();
         }
 
         public virtual void Dispose()

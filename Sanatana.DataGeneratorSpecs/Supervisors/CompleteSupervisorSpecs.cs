@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
 using System.Collections.Generic;
 using System.Collections;
@@ -10,6 +10,7 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Complete;
 using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGeneratorSpecs.Supervisors
 {

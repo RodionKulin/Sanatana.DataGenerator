@@ -6,6 +6,7 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using System.Collections;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

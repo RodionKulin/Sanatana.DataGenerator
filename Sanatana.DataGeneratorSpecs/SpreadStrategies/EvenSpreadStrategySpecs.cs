@@ -7,6 +7,7 @@ using System.Text;
 using FluentAssertions;
 using System.Diagnostics;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {

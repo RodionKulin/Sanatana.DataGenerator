@@ -14,6 +14,7 @@ using System.Linq.Expressions;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Entities
 {
@@ -89,6 +90,7 @@ namespace Sanatana.DataGenerator.Entities
         public EntityDescription()
         {
             Required = new List<RequiredEntity>();
+            PersistentStorages = new List<IPersistentStorage>();
             Modifiers = new List<IModifier>();
         }
 
@@ -287,7 +289,6 @@ namespace Sanatana.DataGenerator.Entities
                 throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
             
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(persistentStorage);
             return this;
         }
@@ -305,7 +306,6 @@ namespace Sanatana.DataGenerator.Entities
                 throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
 
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
             return this;
         }

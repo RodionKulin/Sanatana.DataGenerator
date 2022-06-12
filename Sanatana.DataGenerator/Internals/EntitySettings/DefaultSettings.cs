@@ -11,7 +11,7 @@ using Sanatana.DataGenerator.TotalCountProviders;
 using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 
-namespace Sanatana.DataGenerator.Internals
+namespace Sanatana.DataGenerator.Internals.EntitySettings
 {
     /// <summary>
     /// Default settings used for entity generation if not specified entity specific settings.
