@@ -141,8 +141,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
 
         public virtual List<IModifier> GetModifiers(IEntityDescription entityDescription)
         {
-            if (entityDescription.Modifiers != null
-                && entityDescription.Modifiers.Count > 0)
+            if (entityDescription.Modifiers != null && entityDescription.Modifiers.Count > 0)
             {
                 return entityDescription.Modifiers;
             }
@@ -237,9 +236,9 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return new DefaultSettings()
             {
                 Generator = Generator,
-                Modifiers = new List<IModifier>(Modifiers),
+                Modifiers = Modifiers == null ? null : new List<IModifier>(Modifiers),
                 TotalCountProvider = TotalCountProvider,
-                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
                 SpreadStrategy = SpreadStrategy

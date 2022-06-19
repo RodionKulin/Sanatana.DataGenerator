@@ -5,23 +5,34 @@ using System.Text;
 
 namespace Sanatana.DataGenerator.Internals.Progress
 {
-    public class ProgressEventTrigger : IDisposable
+    public class ProgressEventTrigger
     {
         //fields
         protected ISupervisor _supervisor;
         protected decimal _lastPercents;
         protected long invokeOnEveryNCommand = 1000;
-
-
-        //events
         /// <summary>
-        /// Progress change event that will report overall completion percent in range from 0 to 100.
+        /// Progress change event handlers that will receive completion percent change events. Percents are supplied in form in range from 0 to 100.
         /// </summary>
-        public event Action<decimal> Changed;
+        protected List<Action<decimal>> _eventHandlers;
 
 
 
         //init
+        public ProgressEventTrigger()
+        {}
+
+        public ProgressEventTrigger(List<Action<decimal>> eventHandlers)
+        {
+            _eventHandlers = eventHandlers;
+        }
+
+        public virtual ProgressEventTrigger Clone()
+        {
+            _eventHandlers = _eventHandlers == null ? null : new List<Action<decimal>>(_eventHandlers);
+            return new ProgressEventTrigger(_eventHandlers);
+        }
+
         public virtual void Setup(ISupervisor supervisor)
         {
             _supervisor = supervisor;
@@ -30,6 +41,21 @@ namespace Sanatana.DataGenerator.Internals.Progress
 
 
         //methods
+        public virtual void Subscribe(Action<decimal> eventHandler)
+        {
+            _eventHandlers = _eventHandlers ?? new List<Action<decimal>>();
+            _eventHandlers.Add(eventHandler);
+        }
+
+        public virtual void Unsubscribe(Action<decimal> eventHandler)
+        {
+            if(_eventHandlers == null)
+            {
+                return;
+            }
+            _eventHandlers.Remove(eventHandler);
+        }
+
         /// <summary>
         /// Internal method to update progress that is called by GeneratorSetup after each ICommand.
         /// </summary>
@@ -53,11 +79,13 @@ namespace Sanatana.DataGenerator.Internals.Progress
             }
             _lastPercents = percents;
 
-            //invoke handler
-            Action<decimal> progressChanged = Changed;
-            if (progressChanged != null)
+            //invoke handlers
+            if (_eventHandlers != null)
             {
-                progressChanged(percents);
+                foreach (Action<decimal> eventHandler in _eventHandlers)
+                {
+                    eventHandler(percents);
+                }
             }
         }
 
@@ -72,25 +100,5 @@ namespace Sanatana.DataGenerator.Internals.Progress
         }
 
 
-
-        //Clone
-        public virtual ProgressEventTrigger Clone()
-        {
-            return new ProgressEventTrigger();
-        }
-
-
-        //IDisposalbe
-        /// <summary>
-        /// Will unsubscribe all ProgressChanged event handlers
-        /// </summary>
-        public virtual void Dispose()
-        {
-            if (Changed != null)
-            {
-                foreach (Delegate d in Changed.GetInvocationList())
-                    Changed -= d as Action<decimal>;
-            }
-        }
     }
 }

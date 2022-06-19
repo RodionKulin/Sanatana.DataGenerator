@@ -22,13 +22,13 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         public void GetNextFlushCommands_ReturnsExpectedFlushActions()
         {
             //Arrange
-            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetEntityContexts(targetCount: 100);
+            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntityContexts(targetCount: 100);
             var provider = new CompleteSupervisorProvider(entityDescriptions);
             provider.SetEntityCurrentCount(new Dictionary<Type, long>
             {
                 { typeof(Category), 100 },  //flush candidate 1
-                { typeof(Post), 100 },    //flush candidate 2
-                { typeof(Comment), 98 },
+                { typeof(Post), 100 },      //flush candidate 2
+                { typeof(Comment), 98 },    //child that prevents flush candidates from flushing
             });
             provider.SetEntityRequestCapacity(100);
             provider.UpdateFlushCandidates();
@@ -67,78 +67,16 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         {
             //arrange
             var flushCandidates = new HashSet<EntityContext>();
-            Dictionary<Type, EntityContext> entityContexts = GetEntityContexts(new Dictionary<Type, long>
-            {
-                { typeof(Category), 50 }
-            }, 100);
+            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntityContexts(targetCount: 100);
+            Dictionary<Type, EntityContext> entityContexts = CompleteSupervisorProvider.ToEntityContexts(entityDescriptions);
             EntityContext categoryContext = entityContexts[typeof(Category)];
             flushCandidates.Add(categoryContext);
-            categoryContext.EntityProgress.CurrentCount++;
 
             //act
             flushCandidates.Add(categoryContext);
 
             //Assert
             flushCandidates.Count.Should().Be(1);
-        }
-
-
-
-        //Setup helpers
-        private Dictionary<Type, EntityContext> GetEntityContexts(
-            Dictionary<Type, long> entityCurrentCount, long targetCount)
-        {
-
-            //set TargetCount
-            var category = new EntityDescription<Category>()
-                .SetTargetCount(targetCount);
-            var post = new EntityDescription<Post>()
-                .SetTargetCount(targetCount)
-                .SetRequired(typeof(Category));
-            var comment = new EntityDescription<Comment>()
-                .SetTargetCount(targetCount)
-                .SetRequired(typeof(Post))
-                .SetRequired(typeof(Category));
-            Dictionary<Type, IEntityDescription> dictDescriptions = new List<IEntityDescription>
-                { category, post, comment }
-                .ToDictionary(x => x.Type, x => x);
-
-            //set RequestCapacity
-            GeneratorServices generatorServices = new GeneratorSetup().GetGeneratorServices();
-            generatorServices.SetupEntityContexts(dictDescriptions);
-            Dictionary<Type, EntityContext> contexts = generatorServices.EntityContexts;
-
-            //set Capacity
-            foreach (EntityContext entityContext in contexts.Values)
-            {
-                FlushRange firstFlushRange = entityContext.EntityProgress.CreateNewRangeIfRequired();
-                firstFlushRange.UpdateCapacity(100);
-            }
-
-            //set CurrentCount
-            foreach (KeyValuePair<Type, long> entity in entityCurrentCount)
-            {
-                contexts[entity.Key].EntityProgress.CurrentCount = entity.Value;
-            }
-
-            return contexts;
-        }
-
-        private CompleteFlushCandidatesRegistry SetupCompleteFlushCandidatesRegistry(
-            Dictionary<Type, EntityContext> contexts)
-        {
-            var generatorSetup = new GeneratorSetup();
-            var progressState = new CompleteProgressState(contexts);
-            var target = new CompleteFlushCandidatesRegistry(generatorSetup.GetGeneratorServices(), progressState);
-
-            //Add flush candidates
-            foreach (Type entityType in contexts.Keys)
-            {
-                target.UpdateRequestCapacity(contexts[entityType]);
-                target.UpdateFlushRequired(contexts[entityType]);
-            }
-
-            return target;
         }
 
     }

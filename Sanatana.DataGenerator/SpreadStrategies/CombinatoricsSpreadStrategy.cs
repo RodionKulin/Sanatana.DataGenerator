@@ -18,6 +18,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         protected IEnumerator<long[]> _combinationsEnumerator;
         protected long _currentCombinationIndex = -1;
         protected Dictionary<long, long[]> _combinationsBuffer;
+        protected bool _isSetupCompleted = false;
 
 
         //init
@@ -28,6 +29,10 @@ namespace Sanatana.DataGenerator.SpreadStrategies
 
         public virtual void Setup(EntityContext childEntity, Dictionary<Type, EntityContext> allEntities)
         {
+            //1. This method prepares combination placements for all parents of child entity.
+            //2. Setup can be called multiple times for each parent entity.
+            //3. Should be called before GetTargetCount.
+
             _parentEntities = childEntity.Description.Required
                 .Select(x => allEntities[x.Type])
                 .ToDictionary(x => x.Type, x => x);
@@ -35,6 +40,8 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             _parentsCombinationPlacements = _parentEntities.Keys
                 .Select((x, i) => new { Type = x, Placement = i })
                 .ToDictionary(keyValue => keyValue.Type, keyValue => keyValue.Placement);
+
+            _isSetupCompleted = true;
         }
 
 
@@ -78,7 +85,8 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         {
             //Always accumulate parent entities in memory and never release to persistent storage
             //until child item generates all instances.
-            //Parents are required to build combinations.
+            //1.Parents are used multiple times starting from 1 to end.
+            //2.List of combinations can reset and start from beginnning if TargetCount is larger then total number of possible combinations.
             return childEntity.EntityProgress.CurrentCount < childEntity.EntityProgress.TargetCount;
         }
 

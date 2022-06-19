@@ -14,13 +14,16 @@ namespace Sanatana.DataGeneratorSpecs
     [TestClass]
     public class GeneratorSetupSpecs
     {
+        //Progress specs
         [TestMethod]
         public void GeneratorSetup_WhenSubscribedToProgressChange_ReturnsProgress()
         {
             //Arrange
             GeneratorSetup generatorSetup = GetGeneratorSetup();
             var completionPercents = new List<decimal>();
-            generatorSetup = generatorSetup.SetProgressHandler((decimal completionPercent) => completionPercents.Add(completionPercent));
+            generatorSetup = generatorSetup.SetProgressHandler(
+                (decimal completionPercent) => completionPercents.Add(completionPercent)
+            );
 
             //Act
             generatorSetup.Generate();
@@ -28,10 +31,10 @@ namespace Sanatana.DataGeneratorSpecs
             //Assert
             completionPercents.Should().NotBeEmpty();
             completionPercents.Should().EndWith(100);
-
-            generatorSetup.Dispose();
         }
 
+
+        //Generate specs
         [TestMethod]
         public void GeneratorSetup_WhenInsertingSameEntityInParallel_InsertsExpectedCountOfInstances()
         {
@@ -41,7 +44,7 @@ namespace Sanatana.DataGeneratorSpecs
             int instancesPerRequest = 10;
 
             var generatorSetup = new GeneratorSetup()
-                .SetTemporaryStorage(tempStorage => tempStorage.MaxTasksRunning = 4)
+                .SetMaxParallelInserts(4)
                 .SetDefaultSettings(defaults => defaults.AddPersistentStorage(slowStorage))
                 .RegisterEntity<Post>(entity => entity
                     .SetTargetCount(targetCount)
@@ -58,8 +61,6 @@ namespace Sanatana.DataGeneratorSpecs
 
             int expectedRequestsCount = targetCount / instancesPerRequest;
             slowStorage.InsertTime.Should().HaveCount(expectedRequestsCount);
-
-            generatorSetup.Dispose();
         }
 
         [TestMethod]
@@ -74,7 +75,7 @@ namespace Sanatana.DataGeneratorSpecs
                 .ToList();
 
             var generatorSetup = new GeneratorSetup()
-                .SetTemporaryStorage(tempStorage => tempStorage.MaxTasksRunning = 4)
+                .SetMaxParallelInserts(4)
                 .SetDefaultSettings(defaults => defaults.AddPersistentStorage(slowStorage))
                 .RegisterEntity<Post>(entity => entity
                     .SetTargetCount(targetCount)

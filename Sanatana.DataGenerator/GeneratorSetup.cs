@@ -20,10 +20,9 @@ namespace Sanatana.DataGenerator
     /// <summary>
     /// Setup class to register all the entities with their generators and start to generate
     /// </summary>
-    public class GeneratorSetup : IDisposable
+    public class GeneratorSetup
     {
         //fields
-        protected Dictionary<Type, EntityContext> _entityContexts;
         protected DefaultSettings _defaults;
         protected ISupervisor _supervisor;
         protected ReflectionInvoker _reflectionInvoker;
@@ -34,13 +33,10 @@ namespace Sanatana.DataGenerator
         /// </summary>
         protected Dictionary<Type, IEntityDescription> _entityDescriptions;
         /// <summary>
-        /// Configuration validator that will throw errors on missing or inconsistent setup
-        /// </summary>
-        protected Validator _validator;
-        /// <summary>
         /// Inmemory storage for generated entities to accumulate batches before inserting to persistent storage.
         /// </summary>
         protected TemporaryStorage _temporaryStorage;
+
 
 
         //init
@@ -280,7 +276,6 @@ namespace Sanatana.DataGenerator
 
         /// <summary>
         /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
-        /// Subsribe to Change event with single or multiple event handlers. 
         /// </summary>
         public virtual GeneratorSetup SetProgressHandler(Action<ProgressEventTrigger> progressSetup)
         {
@@ -291,42 +286,37 @@ namespace Sanatana.DataGenerator
 
         /// <summary>
         /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
-        /// Only single event handler is used. If need multiple event handler, use SetProgressHandler method with Action&lt;ProgressEventTrigger&gt;. 
         /// </summary>
         public virtual GeneratorSetup SetProgressHandler(Action<decimal> progressHandler)
         {
             ProgressEventTrigger progressEventTrigger = _progress.Clone();
-            progressEventTrigger.Changed += progressHandler;
+            progressEventTrigger.Subscribe(progressHandler);
             return Clone(progress: progressEventTrigger);
         }
 
         /// <summary>
-        /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
-        /// Subsribe to Change event with single or multiple event handlers. 
+        /// Remove handler for progress change event. Progress is reported as percent in range from 0 to 100.
         /// </summary>
-        public virtual GeneratorSetup SetTemporaryStorage(Action<TemporaryStorage> temporaryStorageSetup)
+        public virtual GeneratorSetup RemoveProgressHandler(Action<decimal> progressHandler)
+        {
+            ProgressEventTrigger progressEventTrigger = _progress.Clone();
+            progressEventTrigger.Unsubscribe(progressHandler);
+            return Clone(progress: progressEventTrigger);
+        }
+
+        /// <summary>
+        /// Set maximum running parallel tasks to insert entities into persistent storage.
+        /// Default value equals to number of processor cores count.
+        /// </summary>
+        public virtual GeneratorSetup SetMaxParallelInserts(int maxTasksRunning)
         {
             TemporaryStorage temporaryStorage = _temporaryStorage.Clone();
-            temporaryStorageSetup.Invoke(temporaryStorage);
+            temporaryStorage.MaxTasksRunning = maxTasksRunning;
             return Clone(temporaryStorage: temporaryStorage);
         }
 
 
-
-
         //Generation start
-        internal GeneratorServices GetGeneratorServices()
-        {
-            return new GeneratorServices()
-            {
-                TemporaryStorage = _temporaryStorage,
-                Defaults = _defaults,
-                EntityDescriptions = _entityDescriptions,
-                Validator = _validator,
-                Supervisor = _supervisor
-            };
-        }
-
         public virtual void Generate()
         {
             GeneratorServices generatorServices = GetGeneratorServices();
@@ -338,10 +328,21 @@ namespace Sanatana.DataGenerator
             ExecuteGenerationLoop();
         }
 
+        internal GeneratorServices GetGeneratorServices()
+        {
+            return new GeneratorServices()
+            {
+                TemporaryStorage = _temporaryStorage,
+                Defaults = _defaults,
+                EntityDescriptions = _entityDescriptions,
+                Supervisor = _supervisor
+            };
+        }
+
         protected virtual void Validate(GeneratorServices generatorServices)
         {
-            _validator = new Validator(generatorServices);
-            _validator.ValidateOnStart(_entityDescriptions);
+            var validator = new Validator(generatorServices);
+            validator.ValidateOnStart(_entityDescriptions);
         }
 
         protected virtual void Setup(GeneratorServices generatorServices)
@@ -350,15 +351,13 @@ namespace Sanatana.DataGenerator
             _progress.Clear();
             _commandsHistory.Clear();
 
-            generatorServices.SetupSpreadStrategies();
             generatorServices.SetupEntityContexts(_entityDescriptions);
+            generatorServices.SetupSpreadStrategies();
+            generatorServices.SetupTargetCount();
 
             _supervisor.Setup(generatorServices);
         }
 
-
-
-        //Execution loop
         protected virtual void ExecuteGenerationLoop()
         {
             foreach (ICommand command in _supervisor.IterateCommands())
@@ -373,32 +372,14 @@ namespace Sanatana.DataGenerator
         }
 
 
-        //Singular instances generation setup
-        //public virtual SingularGeneratorSetup ToSingular()
-        //{
-        //    return new SingularGeneratorSetup(this);
-        //}
-
-
-        //IDisposalbe
         /// <summary>
-        /// Will 
-        /// -call Dispose() on ReaderWriterLockSlim for entities 
-        /// -call Dispose() on IPersistentStorage storages
-        /// -unsubscribe all ProgressChanged event handlers
+        /// Convert to SubsetGeneratorSetup that has methods to generating subset portion of all entities configured.
         /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
-        public virtual void Dispose()
+        /// <returns></returns>
+        public virtual SubsetGeneratorSetup ToSubsetSetup()
         {
-            foreach (EntityContext entityContext in _entityContexts.Values)
-            {
-                List<IPersistentStorage> storages = _defaults.GetPersistentStorages(entityContext.Description);
-                storages.ForEach(storage => storage.Dispose());
-
-                entityContext.Dispose();
-            }
-
-            _progress.Dispose();
+            return new SubsetGeneratorSetup(this);
         }
+
     }
 }

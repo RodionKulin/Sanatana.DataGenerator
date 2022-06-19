@@ -12,6 +12,11 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         //methods
         public override long GetTargetCount()
         {
+            if (!_isSetupCompleted)
+            {
+                throw new NotSupportedException($"{nameof(CartesianProductSpreadStrategy)} method {nameof(Setup)} should be called before {nameof(GetTargetCount)}.");
+            }
+
             List<long> targetCounts = _parentEntities.Values
                 .Select(x => x.EntityProgress.TargetCount)
                 .ToList();

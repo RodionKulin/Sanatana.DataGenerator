@@ -15,7 +15,7 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
 {
     internal class EntityDescriptionProvider
     {
-        public static Dictionary<Type, IEntityDescription> GetEntityContexts(long targetCount)
+        public static Dictionary<Type, IEntityDescription> GetAllEntityContexts(long targetCount)
         {
             var category = new EntityDescription<Category>()
                 .SetTargetCount(targetCount);
@@ -33,5 +33,6 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
                 { category, post, comment }
                 .ToDictionary(x => x.Type, x => x);
         }
+
     }
 }

@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Internals
 {
@@ -339,92 +340,6 @@ namespace Sanatana.DataGenerator.Internals
                 entity.Generator.ValidateEntitySettings(entity);                
             }
         }
-
-
-
-        //Generation runtime checks
-        /// <summary>
-        /// Validate that number of generated entities is greater than 0 and returned type is List<>
-        /// </summary>
-        /// <param name="entities"></param>
-        /// <param name="entityType"></param>
-        /// <param name="generator"></param>
-        public virtual void CheckGeneratedCount(IList entities, Type entityType, IGenerator generator)
-        {
-            string generatorType = generator.GetType().FullName;
-            string resultCountMsg = "Number of entities returned must be greater than 0. " +
-                $"{nameof(IGenerator)} {generatorType} for entity {entityType} returned 0 entities.";
-
-            if (entities == null)
-            {
-                throw new NotSupportedException(resultCountMsg);
-            }
-
-            Type entitiesListType = entities.GetType();
-            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
-            {
-                string resultTypeMessage = $"List returned from {nameof(IGenerator)} must be a generic List<>. {nameof(IGenerator)} {generatorType} returned list of type {entitiesListType}.";
-
-                throw new NotSupportedException(resultTypeMessage);
-            }
-
-            if (entities.Count == 0)
-            {
-                throw new NotSupportedException(resultCountMsg);
-            }
-        }
-
-        /// <summary>
-        /// Validate that number of modified entities is greater than 0 and returned type is List&lt;&gt;
-        /// </summary>
-        /// <param name="entities"></param>
-        /// <param name="entityType"></param>
-        /// <param name="modifier"></param>
-        public virtual void CheckModifiedCount(IList entities, Type entityType, IModifier modifier)
-        {
-            string modifierType = modifier.GetType().FullName;
-            string resultCountMsg = "Number of entities returned must be greater than 0. " +
-                $"Modifier {modifierType} for entity {entityType} returned 0 entities.";
-
-            if (entities == null)
-            {
-                throw new NotSupportedException(resultCountMsg);
-            }
-
-            Type entitiesListType = entities.GetType();
-            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
-            {
-                string resultTypeMessage = $"List returned from {nameof(IModifier)} must be a generic List<>. Modifier {modifierType} returned list of type {entitiesListType}.";
-                throw new NotSupportedException(resultTypeMessage);
-            }
-
-            if (entities == null || entities.Count == 0)
-            {
-                throw new NotSupportedException(resultCountMsg);
-            }
-        }
-
-        /// <summary>
-        /// Throw exception on Next node finding misfunction, when next node is not found.
-        /// </summary>
-        /// <param name="progressState"></param>
-        public virtual void ThrowNoNextGeneratorFound(IProgressState progressState)
-        {
-            string[] completedNames = progressState.CompletedEntityTypes
-                .Select(x => $"[{x.Name}]")
-                .ToArray();
-            string[] notCompletedNames = progressState.NotCompletedEntities
-                .Select(x => $"[{x.Type.FullName}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
-                .ToArray();
-
-            string completedList = string.Join(", ", completedNames);
-            string notCompletedList = string.Join(", ", notCompletedNames);
-
-            throw new NullReferenceException("Could not find next entity to generate. "
-                + $"Following list of entities generated successfully: {completedList}. "
-                + $"Following list of entities still was not fully generated [TypeName:remainingCount]: {notCompletedList}");
-        }
-
 
     }
 }

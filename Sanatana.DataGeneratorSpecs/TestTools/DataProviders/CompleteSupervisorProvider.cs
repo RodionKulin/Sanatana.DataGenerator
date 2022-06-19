@@ -14,6 +14,7 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
     internal class CompleteSupervisorProvider
     {
         //properties
+        public ISupervisor Supervisor { get; protected set; }
         public IProgressState ProgressState { get; protected set; }
         public IFlushCandidatesRegistry FlushCandidatesRegistry { get; private set; }
         public IRequiredQueueBuilder RequiredQueueBuilder { get; private set; }
@@ -30,7 +31,7 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
         }
 
 
-        //methods
+        //individual setup methods
         private void SetupCompleteSupervisor()
         {
             var generatorSetup = new GeneratorSetup();
@@ -38,8 +39,10 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             GeneratorServices generatorServices = generatorSetup.GetGeneratorServices();
             generatorServices.SetupEntityContexts(EntityDescriptions);
             generatorServices.SetupSpreadStrategies();
+            generatorServices.SetupTargetCount();
             EntityContexts = generatorServices.EntityContexts;
 
+            Supervisor = new CompleteSupervisor();
             ProgressState = new CompleteProgressState(generatorServices.EntityContexts);
             FlushCandidatesRegistry = new CompleteFlushCandidatesRegistry(
                 generatorServices, ProgressState);
@@ -48,8 +51,7 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             RequiredQueueBuilder = new CompleteRequiredQueueBuilder(
                 generatorServices, NextNodeFinder);
 
-            var validator = new Validator(generatorServices);
-            validator.ValidateOnStart(EntityDescriptions);
+            Supervisor.Setup(generatorServices);
         }
 
         public void SetEntityRequestCapacity(int capacity)
@@ -69,6 +71,15 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             }
         }
 
+        public void UpdateFlushCandidates()
+        {
+            foreach (Type entityType in EntityContexts.Keys)
+            {
+                FlushCandidatesRegistry.UpdateRequestCapacity(EntityContexts[entityType]);
+                FlushCandidatesRegistry.UpdateFlushRequired(EntityContexts[entityType]);
+            }
+        }
+
         public void UpdateFlushCandidates(params Type[] typesToUpdate)
         {
             typesToUpdate = EntityContexts.Keys.Intersect(typesToUpdate).ToArray();
@@ -80,5 +91,22 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             }
         }
 
+
+
+        //combination of setup methods
+        public static Dictionary<Type, EntityContext> ToEntityContexts(Dictionary<Type, IEntityDescription> entityDescriptions)
+        {
+            var provider = new CompleteSupervisorProvider(entityDescriptions);
+            provider.SetEntityRequestCapacity(100);
+            provider.UpdateFlushCandidates();
+            return provider.EntityContexts;
+        }
+
+        public static CompleteSupervisor GetCompleteSupervisor(IEnumerable<IEntityDescription> entityDescriptions)
+        {
+            Dictionary<Type, IEntityDescription> dictDescriptions = entityDescriptions.ToDictionary(x => x.Type, x => x);
+            var provider = new CompleteSupervisorProvider(dictDescriptions);
+            return (CompleteSupervisor)provider.Supervisor;
+        }
     }
 }

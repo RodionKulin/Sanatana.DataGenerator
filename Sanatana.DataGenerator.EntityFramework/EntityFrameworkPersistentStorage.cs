@@ -42,10 +42,6 @@ namespace Sanatana.DataGenerator.EntityFramework
             }
         }
 
-        public virtual void Dispose()
-        {
-        }
-
 
         //selectors
         public virtual List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter,

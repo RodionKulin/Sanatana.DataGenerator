@@ -14,6 +14,6 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Strategy to reuse same parent entities among multiple child entities.
         /// </summary>
-        public ISpreadStrategy SpreadStrategy { get; set; } = new EvenSpreadStrategy();
+        public ISpreadStrategy SpreadStrategy { get; set; }
     }
 }

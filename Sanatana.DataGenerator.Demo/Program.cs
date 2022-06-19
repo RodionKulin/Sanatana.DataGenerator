@@ -1,9 +1,6 @@
 ﻿using Sanatana.DataGenerator.Csv;
 using Sanatana.DataGenerator.Demo.Entities;
-using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.SpreadStrategies;
-using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
 
@@ -15,6 +12,7 @@ namespace Sanatana.DataGenerator.Demo
         {
             //Setup
             var setup = new GeneratorSetup()
+                .SetMaxParallelInserts(1)
                 .RegisterEntity<Buyer>(entity => entity
                     .SetGenerator(GenerateBuyer)
                     .AddPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
@@ -30,7 +28,7 @@ namespace Sanatana.DataGenerator.Demo
                     .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
                     .AddPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
                     .SetSpreadStrategy(new CartesianProductSpreadStrategy())
-                    .SetTargetCount(100000)
+                    .SetTargetCount(10000)
                 )
                 .SetProgressHandler(PrintProgress);
 

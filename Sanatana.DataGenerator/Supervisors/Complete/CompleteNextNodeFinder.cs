@@ -55,10 +55,31 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 return nextLeafNode;
             }
 
-            _generatorServices.Validator.ThrowNoNextGeneratorFound(_progressState);
+            ThrowNoNextGeneratorFound(_progressState);
             return null;
         }
-        
+
+        /// <summary>
+        /// Throw exception on Next node finding misfunction, when next node is not found.
+        /// </summary>
+        /// <param name="progressState"></param>
+        protected virtual void ThrowNoNextGeneratorFound(IProgressState progressState)
+        {
+            string[] completedNames = progressState.CompletedEntityTypes
+                .Select(x => $"[{x.Name}]")
+                .ToArray();
+            string[] notCompletedNames = progressState.NotCompletedEntities
+                .Select(x => $"[{x.Type.FullName}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
+                .ToArray();
+
+            string completedList = string.Join(", ", completedNames);
+            string notCompletedList = string.Join(", ", notCompletedNames);
+
+            throw new NullReferenceException("Could not find next entity to generate. "
+                + $"Following list of entities generated successfully: {completedList}. "
+                + $"Following list of entities still was not fully generated [TypeName:remainingCount]: {notCompletedList}");
+        }
+
         /// <summary>
         /// Find next leaf node. Leaf nodes have no children depending on them, so can be flushed to storage as soon as generated. That makes em a good to start with.
         /// </summary>

@@ -90,7 +90,6 @@ namespace Sanatana.DataGenerator.Entities
         public EntityDescription()
         {
             Required = new List<RequiredEntity>();
-            PersistentStorages = new List<IPersistentStorage>();
             Modifiers = new List<IModifier>();
         }
 
@@ -101,7 +100,7 @@ namespace Sanatana.DataGenerator.Entities
                 Required = new List<RequiredEntity>(Required),
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
-                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
                 TotalCountProvider = TotalCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
@@ -228,6 +227,19 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
+        /// Set SpreadStrategy for Required entities and set TargetCount as total number of combinations that can be generated.
+        /// </summary>
+        /// <param name="spreadStrategy"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetSpreadStrategyAndTargetCount(CombinatoricsSpreadStrategy spreadStrategy)
+        {
+            SetSpreadStrategy(spreadStrategy);
+            SetTargetCount(spreadStrategy);
+
+            return this;
+        }
+
+        /// <summary>
         /// Set total number of entities that need to be generated.
         /// </summary>
         /// <param name="totalCountProvider"></param>
@@ -266,7 +278,8 @@ namespace Sanatana.DataGenerator.Entities
             {
                 throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
-            
+
+            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(persistentStorage);
             return this;
         }
@@ -284,6 +297,7 @@ namespace Sanatana.DataGenerator.Entities
                 throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
 
+            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
             return this;
         }

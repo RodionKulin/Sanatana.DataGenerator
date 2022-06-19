@@ -53,12 +53,12 @@ namespace Sanatana.DataGenerator.Commands
             };
 
             IList instances = generator.Generate(context);
-            _generatorServices.Validator.CheckGeneratedCount(instances, description.Type, generator);
+            CheckGeneratedCount(instances, description.Type, generator);
 
             foreach (IModifier modifier in modifiers)
             {
                 instances = modifier.Modify(context, instances);
-                _generatorServices.Validator.CheckModifiedCount(instances, description.Type, modifier);
+                CheckModifiedCount(instances, description.Type, modifier);
             }
 
             requestCapacityProvider.TrackEntityGeneration(EntityContext, instances);
@@ -85,6 +85,70 @@ namespace Sanatana.DataGenerator.Commands
             return result;
         }
 
+        /// <summary>
+        /// Validate that number of generated entities is greater than 0 and returned type is List<>
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="entityType"></param>
+        /// <param name="generator"></param>
+        protected virtual void CheckGeneratedCount(IList entities, Type entityType, IGenerator generator)
+        {
+            string generatorType = generator.GetType().FullName;
+            string resultCountMsg = "Number of entities returned must be greater than 0. " +
+                $"{nameof(IGenerator)} {generatorType} for entity {entityType} returned 0 entities.";
+
+            if (entities == null)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+
+            Type entitiesListType = entities.GetType();
+            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
+            {
+                string resultTypeMessage = $"List returned from {nameof(IGenerator)} must be a generic List<>. {nameof(IGenerator)} {generatorType} returned list of type {entitiesListType}.";
+
+                throw new NotSupportedException(resultTypeMessage);
+            }
+
+            if (entities.Count == 0)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+        }
+
+        /// <summary>
+        /// Validate that number of modified entities is greater than 0 and returned type is List&lt;&gt;
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="entityType"></param>
+        /// <param name="modifier"></param>
+        protected virtual void CheckModifiedCount(IList entities, Type entityType, IModifier modifier)
+        {
+            string modifierType = modifier.GetType().FullName;
+            string resultCountMsg = "Number of entities returned must be greater than 0. " +
+                $"Modifier {modifierType} for entity {entityType} returned 0 entities.";
+
+            if (entities == null)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+
+            Type entitiesListType = entities.GetType();
+            if (entitiesListType.IsAssignableFrom(typeof(List<>)))
+            {
+                string resultTypeMessage = $"List returned from {nameof(IModifier)} must be a generic List<>. Modifier {modifierType} returned list of type {entitiesListType}.";
+                throw new NotSupportedException(resultTypeMessage);
+            }
+
+            if (entities == null || entities.Count == 0)
+            {
+                throw new NotSupportedException(resultCountMsg);
+            }
+        }
+
+
+
+        //Logging methods
         public virtual string GetLogEntry()
         {
             return $"Generate {EntityContext.Type.FullName} CurrentCount={EntityContext.EntityProgress.CurrentCount}";
