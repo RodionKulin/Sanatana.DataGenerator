@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator
 {
+    /// <summary>
+    /// Random pick methods
+    /// </summary>
     public class RandomPicker
     {
         //fields

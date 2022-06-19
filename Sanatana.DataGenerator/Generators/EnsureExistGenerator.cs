@@ -12,26 +12,33 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
+    /// <summary>
+    /// Generator that provides new instance only if it does not exist in PersistentStorage yet.
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <typeparam name="TOrderByKey"></typeparam>
     public class EnsureExistGenerator<TEntity, TOrderByKey> : IGenerator, IStorageInsertGuard, IFlushStrategy
         where TEntity : class
     {
+        //fields
         protected IGenerator _newInstancesGenerator;
         protected IEqualityComparer<TEntity> _comparer;
         protected IPersistentStorageSelector _persistentStorageSelector;
-        protected Expression<Func<TEntity, bool>> _storageSelectorfilter = (entity) => true;
+        protected Expression<Func<TEntity, bool>> _storageSelectorFilter = (entity) => true;
         protected Expression<Func<TEntity, TOrderByKey>> _storageSelectorOrderBy = null;
         protected Dictionary<TEntity, TEntity> _existingInstancesCache;
         protected NewInstanceCounter _newInstanceCounter;
         protected int _maxInstancesInTempStorage = 10000;
 
 
+
         //init
         public EnsureExistGenerator(IPersistentStorageSelector persistentStorageSelector, 
             IGenerator newInstancesGenerator, IEqualityComparer<TEntity> comparer)
         {
-            _persistentStorageSelector = persistentStorageSelector;
-            _newInstancesGenerator = newInstancesGenerator;
-            _comparer = comparer;
+            _persistentStorageSelector = persistentStorageSelector ?? throw new ArgumentNullException(nameof(persistentStorageSelector));
+            _newInstancesGenerator = newInstancesGenerator ?? throw new ArgumentNullException(nameof(newInstancesGenerator));
+            _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
             _newInstanceCounter = new NewInstanceCounter();
         }
 
@@ -41,16 +48,17 @@ namespace Sanatana.DataGenerator.Generators
         /// Set optional filter expression to select existing entity instances from persistent storage.
         /// By default will include all instances.
         /// </summary>
-        /// <param name="storageSelectorfilter"></param>
+        /// <param name="storageSelectorFilter"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetFilter(Expression<Func<TEntity, bool>> storageSelectorfilter)
+        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetFilter(
+            Expression<Func<TEntity, bool>> storageSelectorFilter)
         {
-            if (storageSelectorfilter == null)
+            if (storageSelectorFilter == null)
             {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(storageSelectorfilter)} can not be null");
+                throw new ArgumentNullException(nameof(storageSelectorFilter));
             }
-            _storageSelectorfilter = storageSelectorfilter;
+            _storageSelectorFilter = storageSelectorFilter;
             return this;
         }
 
@@ -66,12 +74,13 @@ namespace Sanatana.DataGenerator.Generators
         {
             if (storageSelectorOrderBy == null)
             {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(storageSelectorOrderBy)} can not be null");
+                throw new ArgumentNullException(nameof(storageSelectorOrderBy));
             }
             _storageSelectorOrderBy = storageSelectorOrderBy;
             return this;
         }
 
+    
 
         //generation
         public virtual IList Generate(GeneratorContext context)
@@ -86,7 +95,7 @@ namespace Sanatana.DataGenerator.Generators
             if (_existingInstancesCache == null)
             {
                 var storageInstances = _persistentStorageSelector.Select(
-                    _storageSelectorfilter, _storageSelectorOrderBy, 0, int.MaxValue);
+                    _storageSelectorFilter, _storageSelectorOrderBy, 0, int.MaxValue);
                 _existingInstancesCache = storageInstances.ToDictionary(x => x, _comparer);
             }
 
@@ -114,6 +123,43 @@ namespace Sanatana.DataGenerator.Generators
         //validation
         public virtual void ValidateEntitySettings(IEntityDescription entity)
         {
+            //check generic type of _newInstancesGenerator Generator
+            Type newGenType = _newInstancesGenerator.GetType();
+            if (typeof(DelegateParameterizedGenerator<>).IsAssignableFrom(newGenType))
+            {
+                //not a perfect solution to check only first generic argument, better check all
+                Type[] typeArguments = newGenType.GetGenericArguments();
+                if(typeof(TEntity) != typeArguments[0])
+                {
+                    throw new NotSupportedException($"newInstancesGenerator with generic argument {typeArguments[0].FullName} should produce same entity type {typeof(TEntity).FullName}");
+                }
+            }
+
+            //_newInstancesGenerator Generator should only generate new instances. Other scenarios may be supported, but not tested yet.
+            Type[] notSupportedInnerTypes = new[]
+            {
+                typeof(EnsureExistGenerator<,>),
+                typeof(EnsureExistRangeGenerator<,>),
+                typeof(ReuseExistingGenerator<,>),
+            };
+            bool hasNotSupportedInnerTypes = notSupportedInnerTypes
+                .Select(type => type.IsAssignableFrom(newGenType))
+                .Any(x => x == true);
+            if (hasNotSupportedInnerTypes)
+            {
+                string notSupportedJoined = string.Join(", ", notSupportedInnerTypes.Select(x => x.Name));
+                throw new NotSupportedException($"newInstancesGenerator should produce new instances and should not be assignable from {notSupportedJoined}");
+            }
+
+            //check count of instances in PersistentStorage to prevent selecting to large number
+            long storageCount = _persistentStorageSelector.Count(_storageSelectorFilter);
+            int maxCacheSize = 100000;
+            if (storageCount > maxCacheSize)
+            {
+                throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {maxCacheSize} instances. " +
+                    $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
+                    $"Optionally can override {nameof(ValidateEntitySettings)} method to disable this check.");
+            }
         }
 
 

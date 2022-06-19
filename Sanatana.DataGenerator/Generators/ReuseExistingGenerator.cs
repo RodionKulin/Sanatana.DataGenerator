@@ -12,6 +12,12 @@ using System.Linq.Expressions;
 
 namespace Sanatana.DataGenerator.Generators
 {
+    /// <summary>
+    /// Generator that provides existing entity instances from persistent storage instead of creating new.
+    /// Such existing entities can be used to populate foreign key of other entities.
+    /// </summary>
+    /// <typeparam name="TEntity"></typeparam>
+    /// <typeparam name="TOrderByKey"></typeparam>
     public class ReuseExistingGenerator<TEntity, TOrderByKey> : IGenerator
         where TEntity : class
     {
@@ -25,7 +31,7 @@ namespace Sanatana.DataGenerator.Generators
         //init
         public ReuseExistingGenerator(IPersistentStorageSelector persistentStorageSelector)
         {
-            _persistentStorageSelector = persistentStorageSelector;
+            _persistentStorageSelector = persistentStorageSelector ?? throw new ArgumentNullException(nameof(persistentStorageSelector));
         }
 
 

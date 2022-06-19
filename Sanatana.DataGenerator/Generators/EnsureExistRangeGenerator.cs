@@ -15,8 +15,8 @@ namespace Sanatana.DataGenerator.Generators
     {
         protected IGenerator _newInstancesGenerator;
         protected IEqualityComparer<TEntity> _comparer;
-        protected IPersistentStorageSelector _persistentStorageSelector;
-        protected Expression<Func<TEntity, bool>> _storageSelectorfilter = (entity) => true;
+        protected IPersistentStorageSelector _storageSelector;
+        protected Expression<Func<TEntity, bool>> _storageSelectorFilter = (entity) => true;
         protected Expression<Func<TEntity, TOrderByKey>> _storageSelectorOrderBy = null;
         protected Dictionary<TEntity, TEntity> _existingInstancesCache;
         protected Func<TEntity, long> _idSelector = null;
@@ -28,13 +28,12 @@ namespace Sanatana.DataGenerator.Generators
         public EnsureExistRangeGenerator(IPersistentStorageSelector persistentStorageSelector,
             IGenerator newInstancesGenerator, Func<TEntity, long> idSelector)
         {
-            _persistentStorageSelector = persistentStorageSelector;
-            _newInstancesGenerator = newInstancesGenerator;
+            _storageSelector = persistentStorageSelector ?? throw new ArgumentNullException(nameof(persistentStorageSelector));
+            _newInstancesGenerator = newInstancesGenerator ?? throw new ArgumentNullException(nameof(newInstancesGenerator));
+            _idSelector = idSelector ?? throw new ArgumentNullException(nameof(idSelector));
             _comparer = new IdEqualityComparer<TEntity>(idSelector);
-            _idSelector = idSelector;
             _existingInstancesCache = new Dictionary<TEntity, TEntity>(_comparer);
         }
-
 
 
         //setup
@@ -49,9 +48,9 @@ namespace Sanatana.DataGenerator.Generators
         {
             if (storageSelectorfilter == null)
             {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(storageSelectorfilter)} can not be null");
+                throw new ArgumentNullException(nameof(storageSelectorfilter));
             }
-            _storageSelectorfilter = storageSelectorfilter;
+            _storageSelectorFilter = storageSelectorfilter;
             return this;
         }
 
@@ -67,7 +66,7 @@ namespace Sanatana.DataGenerator.Generators
         {
             if (storageSelectorOrderBy == null)
             {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(storageSelectorOrderBy)} can not be null");
+                throw new ArgumentNullException(nameof(storageSelectorOrderBy));
             }
             _storageSelectorOrderBy = storageSelectorOrderBy;
             return this;
@@ -81,7 +80,6 @@ namespace Sanatana.DataGenerator.Generators
             Dictionary<TEntity, TEntity> existingInstancesCache = GetExistingInstancesCache(context, nextInstances);
             return CombineInstances(existingInstancesCache, nextInstances);
         }
-
 
         protected virtual Dictionary<TEntity, TEntity> GetExistingInstancesCache(GeneratorContext context, List<TEntity> nextInstances)
         {
@@ -101,8 +99,8 @@ namespace Sanatana.DataGenerator.Generators
                 long nextCount = context.TargetCount - context.CurrentCount;
                 int takeNumber = Math.Min(_storageSelectorBatchSize, (int)nextCount);
 
-                List<TEntity> storageInstances = _persistentStorageSelector.Select(
-                    _storageSelectorfilter, _storageSelectorOrderBy, skipNumber, takeNumber);
+                List<TEntity> storageInstances = _storageSelector.Select(
+                    _storageSelectorFilter, _storageSelectorOrderBy, skipNumber, takeNumber);
                 foreach (var storageInstance in storageInstances)
                 {
                     if (!_existingInstancesCache.ContainsKey(storageInstance))
@@ -133,6 +131,43 @@ namespace Sanatana.DataGenerator.Generators
         //validation
         public virtual void ValidateEntitySettings(IEntityDescription entity)
         {
+            //check generic type of _newInstancesGenerator Generator
+            Type newGenType = _newInstancesGenerator.GetType();
+            if (typeof(DelegateParameterizedGenerator<>).IsAssignableFrom(newGenType))
+            {
+                //not a perfect solution to check only first generic argument, better check all
+                Type[] typeArguments = newGenType.GetGenericArguments();
+                if (typeof(TEntity) != typeArguments[0])
+                {
+                    throw new NotSupportedException($"newInstancesGenerator with generic argument {typeArguments[0].FullName} should produce same entity type {typeof(TEntity).FullName}");
+                }
+            }
+
+            //_newInstancesGenerator Generator should only generate new instances. Other scenarios may be supported, but not tested yet.
+            Type[] notSupportedInnerTypes = new[]
+            {
+                typeof(EnsureExistGenerator<,>),
+                typeof(EnsureExistRangeGenerator<,>),
+                typeof(ReuseExistingGenerator<,>),
+            };
+            bool hasNotSupportedInnerTypes = notSupportedInnerTypes
+                .Select(type => type.IsAssignableFrom(newGenType))
+                .Any(x => x == true);
+            if (hasNotSupportedInnerTypes)
+            {
+                string notSupportedJoined = string.Join(", ", notSupportedInnerTypes.Select(x => x.Name));
+                throw new NotSupportedException($"newInstancesGenerator should produce new instances and should not be assignable from {notSupportedJoined}");
+            }
+
+            //check count of instances in PersistentStorage to prevent selecting to large number
+            long storageCount = _storageSelector.Count(_storageSelectorFilter);
+            int maxCacheSize = 100000;
+            if (storageCount > maxCacheSize)
+            {
+                throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {maxCacheSize} instances. " +
+                    $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
+                    $"Optionally can override {nameof(ValidateEntitySettings)} method to disable this check.");
+            }
         }
     }
 }

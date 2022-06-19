@@ -4,6 +4,9 @@ using System.Text;
 
 namespace Sanatana.DataGenerator
 {
+    /// <summary>
+    /// Generator of sequential long Id per Type.
+    /// </summary>
     public class IdIterator
     {
         //fields

@@ -375,7 +375,7 @@ namespace Sanatana.DataGenerator.Entities
 
         #region Generator that reuses instances from persistent storage
         /// <summary>
-        /// Generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Set generator that provides existing entity instances from persistent storage instead of creating new.
         /// Such existing entities can be used to populate foreign key of other entities.
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
         /// </summary>
@@ -393,7 +393,9 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Set generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Such existing entities can be used to populate foreign key of other entities.
+        /// Will set SetBatchSizeMax to select all instances from persistent storage matchign filter.
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
         /// Will set CountExistingTotalCountProvider as TotalCountProvider to select all instances.
         /// </summary>
@@ -429,6 +431,15 @@ namespace Sanatana.DataGenerator.Entities
             return this;
         }
 
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding existing instances. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey"></typeparam>
+        /// <param name="generator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey>(
             EnsureExistGenerator<TEntity, TOrderByKey> generator)
         {
@@ -440,7 +451,6 @@ namespace Sanatana.DataGenerator.Entities
 
             return this;
         }
-
         #endregion
 
 

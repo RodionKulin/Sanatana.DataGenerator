@@ -8,6 +8,13 @@ namespace Sanatana.DataGenerator.Entities
 {
     public static class EntityDescriptionExtensions
     {
+        /// <summary>
+        /// Add EntityFrameworkCorePersistentStorage and set EFCore RequestCapacityProvider, that will maximise number of instances inserted per single request.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="entityDescription"></param>
+        /// <param name="dbContextFactory"></param>
+        /// <returns></returns>
         public static EntityDescription<TEntity> AddPersistentStorageEfCore<TEntity>(
             this EntityDescription<TEntity> entityDescription, Func<DbContext> dbContextFactory)
             where TEntity : class
