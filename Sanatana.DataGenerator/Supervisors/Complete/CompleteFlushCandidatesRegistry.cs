@@ -16,13 +16,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 {
     public class CompleteFlushCandidatesRegistry : IFlushCandidatesRegistry
     {
-        /// <summary>
-        /// Default services for entities.
-        /// </summary>
-        protected GeneratorSetup _generatorSetup;
-        /// <summary>
-        /// All entities and their related extra properties and current generated count.
-        /// </summary>
+        protected GeneratorServices _generatorServices;
         protected Dictionary<Type, EntityContext> _entityContexts;
         /// <summary>
         ///  Entities that are stored at temporary storage and reached a point when have enough count to flush to persistent storage. 
@@ -36,12 +30,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //init
-        public CompleteFlushCandidatesRegistry(GeneratorSetup generatorSetup,
-            Dictionary<Type, EntityContext> entityContexts, IProgressState progressState)
+        public CompleteFlushCandidatesRegistry(GeneratorServices generatorServices, IProgressState progressState)
         {
             _flushCandidates = new ReverseOrderedSet<EntityContext>();
-            _generatorSetup = generatorSetup;
-            _entityContexts = entityContexts;
+            _generatorServices = generatorServices;
+            _entityContexts = generatorServices.EntityContexts;
             _progressState = progressState;
         }
         
@@ -50,8 +43,8 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         public virtual void UpdateRequestCapacity(EntityContext entityContext)
         {
             //NextReleaseCount will be used by child entities to check if they still can generate from this parent
-            IRequestCapacityProvider requestCapacityProvider = _generatorSetup.Defaults.GetRequestCapacityProvider(entityContext.Description);
-            IFlushStrategy flushStrategy = _generatorSetup.Defaults.GetFlushStrategy(entityContext.Description);
+            IRequestCapacityProvider requestCapacityProvider = _generatorServices.Defaults.GetRequestCapacityProvider(entityContext.Description);
+            IFlushStrategy flushStrategy = _generatorServices.Defaults.GetFlushStrategy(entityContext.Description);
 
             //update capacity for latest range
             FlushRange latestRange = entityContext.EntityProgress.FlushRanges.LastOrDefault();
@@ -75,7 +68,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         public virtual bool UpdateFlushRequired(EntityContext entityContext)
         {
             //should support starting next FlushCommand (for next range) for same entity before previous flush command has ended.
-            IFlushStrategy flushStrategy = _generatorSetup.Defaults.GetFlushStrategy(entityContext.Description);
+            IFlushStrategy flushStrategy = _generatorServices.Defaults.GetFlushStrategy(entityContext.Description);
 
             List<FlushRange> flushRequiredRanges = entityContext.EntityProgress.FlushRanges
                 .Where(flushRange => flushRange.FlushStatus == FlushStatus.FlushNotRequired)
@@ -103,11 +96,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 if (entityContext.Description.InsertToPersistentStorageBeforeUse)
                 {
                     flushRange.SetFlushStatus(FlushStatus.FlushInProgress);
-                    flushCommands.Add(new GenerateStorageIdsCommand(entityContext, flushRange, _generatorSetup));
+                    flushCommands.Add(new GenerateStorageIdsCommand(entityContext, flushRange, _generatorServices));
                 }
 
                 //also check parent entities, if they are no longer required and can be flushed too
-                AppendParentsFlushCommands(entityContext.ParentEntities, flushCommands, entityContext.Type.Name);
+                AppendParentsFlushCommands(entityContext.ParentEntities, flushCommands, entityContext.Type.FullName);
 
                 //don't flush and release instances if child entities can still use it to generate
                 bool hasChildThatCanGenerate = FindChildThatCanGenerate(entityContext, flushRange, true) != null;
@@ -119,8 +112,8 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 {
                     flushRange.SetFlushStatus(FlushStatus.FlushInProgress);
                     ICommand command = entityContext.Description.InsertToPersistentStorageBeforeUse
-                        ? new ReleaseCommand(entityContext, flushRange, _generatorSetup, this, entityContext.Type.Name)
-                        : (ICommand)new FlushCommand(entityContext, flushRange, _generatorSetup, this);
+                        ? new ReleaseCommand(entityContext, flushRange, _generatorServices, entityContext.Type.FullName)
+                        : (ICommand)new FlushCommand(entityContext, flushRange, _generatorServices);
                     flushCommands.Add(command);
                 }
             }
@@ -158,8 +151,8 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 {
                     flushRange.SetFlushStatus(FlushStatus.FlushInProgress);
                     flushCommands.Add(parentContext.Description.InsertToPersistentStorageBeforeUse
-                        ? new ReleaseCommand(parentContext, flushRange, _generatorSetup, this, invokedBy)
-                        : (ICommand)new FlushCommand(parentContext, flushRange, _generatorSetup, this));
+                        ? new ReleaseCommand(parentContext, flushRange, _generatorServices, invokedBy)
+                        : (ICommand)new FlushCommand(parentContext, flushRange, _generatorServices));
 
                     AppendParentsFlushCommands(parentContext.ParentEntities, flushCommands, invokedBy);
                 }
@@ -199,7 +192,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         {
             Type typeToFlush = parent.Type;
             RequiredEntity requiredParent = child.Description.Required.First(x => x.Type == typeToFlush);
-            ISpreadStrategy spreadStrategy = _generatorSetup.Defaults.GetSpreadStrategy(child.Description, requiredParent);
+            ISpreadStrategy spreadStrategy = _generatorServices.Defaults.GetSpreadStrategy(child.Description, requiredParent);
 
             //check if child can still use parent entities from temporary storage to generate
             return spreadStrategy.CanGenerateFromParentRange(parent, parentRange, child);

@@ -15,31 +15,31 @@ namespace Sanatana.DataGenerator.Commands
     {
         //field
         protected EntityContext _entityContext;
-        protected GeneratorSetup _setup;
+        protected GeneratorServices _generatorServices;
         protected FlushRange _generateIdsRange;
 
 
         //init
-        public GenerateStorageIdsCommand(EntityContext entityContext, FlushRange generateIdsRange, GeneratorSetup setup)
+        public GenerateStorageIdsCommand(EntityContext entityContext, FlushRange generateIdsRange, GeneratorServices generatorServices)
         {
             _entityContext = entityContext;
             _generateIdsRange = generateIdsRange ?? throw new ArgumentNullException(nameof(generateIdsRange));
-            _setup = setup;
+            _generatorServices = generatorServices;
         }
 
 
         //methods
         public virtual void Execute()
         {
-            List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(_entityContext.Description);
-            _setup.TemporaryStorage.GenerateStorageIds(_entityContext, _generateIdsRange, persistentStorages);
+            List<IPersistentStorage> persistentStorages = _generatorServices.Defaults.GetPersistentStorages(_entityContext.Description);
+            _generatorServices.TemporaryStorage.GenerateStorageIds(_entityContext, _generateIdsRange, persistentStorages);
 
             _generateIdsRange.SetFlushStatus(FlushStatus.Flushed);
         }
 
         public virtual string GetLogEntry()
         {
-            return $"Get storage Ids for {_entityContext.Type.Name} PreviousRangeFlushedCount={_generateIdsRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_generateIdsRange.ThisRangeFlushCount}";
+            return $"Get storage Ids for {_entityContext.Type.FullName} PreviousRangeFlushedCount={_generateIdsRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_generateIdsRange.ThisRangeFlushCount}";
         }
     }
 }

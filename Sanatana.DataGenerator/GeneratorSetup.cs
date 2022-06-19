@@ -29,123 +29,218 @@ namespace Sanatana.DataGenerator
         protected ReflectionInvoker _reflectionInvoker;
         protected CommandsHistory _commandsHistory;
         protected ProgressEventTrigger _progress;
-
-
-        //public properties
         /// <summary>
         /// All entity types configured that will be used by OrderProvider to pick generation order.
         /// </summary>
-        public Dictionary<Type, IEntityDescription> EntityDescriptions { get; set; }
-
-
-        //internal properties
+        protected Dictionary<Type, IEntityDescription> _entityDescriptions;
         /// <summary>
         /// Configuration validator that will throw errors on missing or inconsistent setup
         /// </summary>
-        internal Validator Validator { get; set; }
+        protected Validator _validator;
         /// <summary>
         /// Inmemory storage for generated entities to accumulate batches before inserting to persistent storage.
         /// </summary>
-        public TemporaryStorage TemporaryStorage { get; set; }
+        protected TemporaryStorage _temporaryStorage;
 
 
         //init
         public GeneratorSetup()
         {
             _reflectionInvoker = new ReflectionInvoker();
-            EntityDescriptions = new Dictionary<Type, IEntityDescription>();
+            _entityDescriptions = new Dictionary<Type, IEntityDescription>();
             _commandsHistory = new CommandsHistory();
 
-            TemporaryStorage = new TemporaryStorage(this);
+            _temporaryStorage = new TemporaryStorage();
             _defaults = new DefaultSettings();
             _supervisor = new CompleteSupervisor();
-            _progress = new ProgressEventTrigger(_supervisor);
+            _progress = new ProgressEventTrigger();
         }
 
-        public GeneratorSetup(IEnumerable<IEntityDescription> entityDescriptions,
-            ISupervisor supervisor, DefaultSettings defaults, ProgressEventTrigger progress)
+        public GeneratorSetup(Dictionary<Type, IEntityDescription> entityDescriptions, ISupervisor supervisor,
+            DefaultSettings defaults, ProgressEventTrigger progress, TemporaryStorage temporaryStorage)
         {
             _reflectionInvoker = new ReflectionInvoker();
             _commandsHistory = new CommandsHistory();
-            EntityDescriptions = entityDescriptions.ToDictionary(x => x.Type, x => x);
+            _entityDescriptions = entityDescriptions;
 
-            TemporaryStorage = new TemporaryStorage(this);
+            _temporaryStorage = new TemporaryStorage();
             _defaults = defaults;
             _supervisor = supervisor;
             _progress = progress;
+            _temporaryStorage = temporaryStorage;
         }
 
-        protected virtual GeneratorSetup Clone(IEnumerable<IEntityDescription> entityDescriptions = null,
-            ISupervisor supervisor = null, DefaultSettings defaults = null, ProgressEventTrigger progress = null)
+        protected virtual GeneratorSetup Clone(Dictionary<Type, IEntityDescription> entityDescriptions = null,
+            ISupervisor supervisor = null, DefaultSettings defaults = null, ProgressEventTrigger progress = null,
+            TemporaryStorage temporaryStorage = null)
         {
-            entityDescriptions = entityDescriptions ?? new List<IEntityDescription>(EntityDescriptions.Values);
+            entityDescriptions = entityDescriptions ?? _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
             supervisor = supervisor ?? _supervisor.Clone();
             defaults = defaults ?? _defaults.Clone();
-            progress = progress ?? _progress.Clone();   
+            progress = progress ?? _progress.Clone();
+            temporaryStorage = temporaryStorage ?? _temporaryStorage.Clone();
 
-            return new GeneratorSetup(entityDescriptions, supervisor, defaults, progress);
+            return new GeneratorSetup(entityDescriptions, supervisor, defaults, progress, temporaryStorage);
         }
 
 
         //Register entity
-        public virtual EntityDescription<TEntity> RegisterEntity<TEntity>()
+        /// <summary>
+        /// Add new IEntityDescription.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual GeneratorSetup RegisterEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
             where TEntity : class
         {
             var entityDescription = new EntityDescription<TEntity>();
-            EntityDescriptions.Add(entityDescription.Type, entityDescription);
-            return entityDescription;
+            entityDescription = entityDescriptionSetup(entityDescription);
+         
+            return RegisterEntity(entityDescription);
         }
 
+        /// <summary>
+        /// Add new IEntityDescription.
+        /// </summary>
+        /// <param name="entityDescription"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public virtual GeneratorSetup RegisterEntity(IEntityDescription entityDescription)
         {
-            EntityDescriptions.Add(entityDescription.Type, entityDescription);
-            return this;
+            entityDescription = entityDescription ?? throw new ArgumentNullException($"Provided {nameof(entityDescription)} is null");
+            if (_entityDescriptions.ContainsKey(entityDescription.Type))
+            {
+                throw new ArgumentException($"Entity type {entityDescription.Type} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
+            }
+
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            allEntityDescriptions.Add(entityDescription.Type, entityDescription);
+            return Clone(entityDescriptions: allEntityDescriptions);
         }
 
+        /// <summary>
+        /// Add multiple IEntityDescription items.
+        /// </summary>
+        /// <param name="entityDescriptions"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public virtual GeneratorSetup RegisterEntity(IEnumerable<IEntityDescription> entityDescriptions)
         {
-            foreach (IEntityDescription item in entityDescriptions)
+            entityDescriptions = entityDescriptions ?? throw new ArgumentNullException($"Provided {nameof(entityDescriptions)} is null");
+
+            List<Type> duplicateEntityTypes = _entityDescriptions.Keys
+                .Intersect(entityDescriptions.Select(x => x.Type))
+                .ToList();
+            if (duplicateEntityTypes.Count > 0)
             {
-                EntityDescriptions.Add(item.Type, item);
+                string duplicateTypesJoined = string.Join(",", duplicateEntityTypes.Select(x => x.Name));
+                throw new ArgumentException($"Entity type(s) {duplicateTypesJoined} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
             }
-            return this;
+
+            string[] duplicateTypes = entityDescriptions.Select(x => x.Type)
+                .GroupBy(type => type)
+                .Where(group => group.Count() > 1)
+                .Select(group => $"Entity of type {group.Key.FullName} included multiple times in {nameof(entityDescriptions)} parameter. Duplicates are not allowed.")
+                .ToArray();
+            if (duplicateTypes.Length > 0)
+            {
+                throw new ArgumentException(string.Join(", ", duplicateTypes));
+            }
+
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            foreach (IEntityDescription entityDescription in entityDescriptions)
+            {
+                allEntityDescriptions.Add(entityDescription.Type, entityDescription);
+            }
+            return Clone(entityDescriptions: allEntityDescriptions);
         }
 
-        public virtual EntityDescription<TEntity> GetEntity<TEntity>()
+        /// <summary>
+        /// Get existing EntityDescription&lt;TEntity&gt; to modify.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="TypeAccessException"></exception>
+        public virtual GeneratorSetup ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
-
-            IEntityDescription entityDescription = GetEntity(entityType);
-            if (!(entityDescription is EntityDescription<TEntity>))
-            {
-                Type descriptionActualType = entityDescription.GetType();
-                Type descriptionBaseType = typeof(EntityDescription<>);
-                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with description of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use {nameof(EntityDescriptions)} property instead.");
-            }
-
-            return (EntityDescription<TEntity>)entityDescription;
-        }
-
-        public virtual IEntityDescription GetEntity(Type entityType)
-        {
-            bool isEntityRegistered = EntityDescriptions.ContainsKey(entityType);
-            if (!isEntityRegistered || EntityDescriptions[entityType] == null)
+            if (!_entityDescriptions.ContainsKey(entityType))
             {
                 throw new KeyNotFoundException($"Entity type [{entityType.FullName}] is not registered. Use {nameof(RegisterEntity)} method first.");
             }
 
-            IEntityDescription entityDescription = EntityDescriptions[entityType];
-            return entityDescription;
+            IEntityDescription entityDescription = _entityDescriptions[entityType];
+            if (!(entityDescription is EntityDescription<TEntity>))
+            {
+                Type descriptionActualType = entityDescription.GetType();
+                Type descriptionBaseType = typeof(EntityDescription<>);
+                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with IEntityDescription of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use another {nameof(ModifyEntity)} method instead.");
+            }
+
+            entityDescription = entityDescription.Clone();
+            entityDescription = entityDescriptionSetup((EntityDescription<TEntity>)entityDescription);
+
+            entityDescription = entityDescription ?? throw new ArgumentNullException($"Provided {nameof(entityDescription)} is null");
+            if (entityDescription.Type != entityType)
+            {
+                throw new ArgumentException($"Entity type {entityDescription.Type.FullName} returned from {nameof(ModifyEntity)}. Not allowed to change type of existing entity {entityType.FullName}.");
+            }
+
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            allEntityDescriptions[entityDescription.Type] = entityDescription;
+            return Clone(entityDescriptions: allEntityDescriptions);
         }
 
+        /// <summary>
+        /// Get existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual GeneratorSetup ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        {
+            if (!_entityDescriptions.ContainsKey(entityType))
+            {
+                throw new KeyNotFoundException($"Entity type [{entityType.FullName}] is not registered. Use {nameof(RegisterEntity)} method first.");
+            }
+
+            IEntityDescription entityDescription = _entityDescriptions[entityType];
+            entityDescription = entityDescription.Clone();
+            entityDescription = entityDescriptionSetup(entityDescription);
+
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            allEntityDescriptions[entityDescription.Type] = entityDescription;
+            return Clone(entityDescriptions: allEntityDescriptions);
+        }
+
+        /// <summary>
+        /// Get all existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual GeneratorSetup ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        {
+            IEntityDescription[] newEntityDescriptions = _entityDescriptions.Values
+                .Select(x => x.Clone())
+                .ToArray();
+            newEntityDescriptions = entityDescriptionSetup(newEntityDescriptions);
+
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            return Clone(entityDescriptions: allEntityDescriptions);
+        }
 
 
         //Configure services
         /// <summary>
+        /// Configure existing DefaultSettings or provide new.
         /// Default settings used for entity generation if not specified entity specific settings.
         /// </summary>
-        public virtual GeneratorSetup ConfigureDefaultSettings(Func<DefaultSettings, DefaultSettings> defaultsSetup)
+        public virtual GeneratorSetup SetDefaultSettings(Func<DefaultSettings, DefaultSettings> defaultsSetup)
         {
             DefaultSettings defaults = _defaults.Clone();
             defaultsSetup.Invoke(defaults);
@@ -153,10 +248,20 @@ namespace Sanatana.DataGenerator
         }
 
         /// <summary>
+        /// Provide new DefaultSettings.
+        /// Default settings used for entity generation if not specified entity specific settings.
+        /// </summary>
+        public virtual GeneratorSetup SetDefaultSettings(DefaultSettings defaults)
+        {
+            return Clone(defaults: defaults);
+        }
+
+        /// <summary>
+        /// Configure existing ISupervisor or provide new.
         /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
         /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
         /// </summary>
-        public virtual GeneratorSetup ConfigureSupervisor(Func<ISupervisor, ISupervisor> supervisorSetup)
+        public virtual GeneratorSetup SetSupervisor(Func<ISupervisor, ISupervisor> supervisorSetup)
         {
             ISupervisor supervisor = _supervisor.Clone();
             supervisorSetup.Invoke(supervisor);
@@ -164,6 +269,7 @@ namespace Sanatana.DataGenerator
         }
 
         /// <summary>
+        /// Provide new ISupervisor.
         /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
         /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
         /// </summary>
@@ -173,63 +279,83 @@ namespace Sanatana.DataGenerator
         }
 
         /// <summary>
-        /// Progress change event holding class that will report overall completion percent in range from 0 to 100.
+        /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
+        /// Subsribe to Change event with single or multiple event handlers. 
         /// </summary>
-        public virtual GeneratorSetup ConfigureProgressEventTrigger(Action<ProgressEventTrigger> progressSetup)
+        public virtual GeneratorSetup SetProgressHandler(Action<ProgressEventTrigger> progressSetup)
         {
             ProgressEventTrigger progressEventTrigger = _progress.Clone();
             progressSetup.Invoke(progressEventTrigger);
             return Clone(progress: progressEventTrigger);
         }
 
+        /// <summary>
+        /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
+        /// Only single event handler is used. If need multiple event handler, use SetProgressHandler method with Action&lt;ProgressEventTrigger&gt;. 
+        /// </summary>
+        public virtual GeneratorSetup SetProgressHandler(Action<decimal> progressHandler)
+        {
+            ProgressEventTrigger progressEventTrigger = _progress.Clone();
+            progressEventTrigger.Changed += progressHandler;
+            return Clone(progress: progressEventTrigger);
+        }
+
+        /// <summary>
+        /// Add handler for progress change event. Progress is reported as percent in range from 0 to 100.
+        /// Subsribe to Change event with single or multiple event handlers. 
+        /// </summary>
+        public virtual GeneratorSetup SetTemporaryStorage(Action<TemporaryStorage> temporaryStorageSetup)
+        {
+            TemporaryStorage temporaryStorage = _temporaryStorage.Clone();
+            temporaryStorageSetup.Invoke(temporaryStorage);
+            return Clone(temporaryStorage: temporaryStorage);
+        }
+
+
 
 
         //Generation start
+        internal GeneratorServices GetGeneratorServices()
+        {
+            return new GeneratorServices()
+            {
+                TemporaryStorage = _temporaryStorage,
+                Defaults = _defaults,
+                EntityDescriptions = _entityDescriptions,
+                Validator = _validator,
+                Supervisor = _supervisor
+            };
+        }
+
         public virtual void Generate()
         {
-            Validate();
+            GeneratorServices generatorServices = GetGeneratorServices();
 
-            Setup();
+            Validate(generatorServices);
+
+            Setup(generatorServices);
 
             ExecuteGenerationLoop();
         }
 
-        protected virtual void Validate()
+        protected virtual void Validate(GeneratorServices generatorServices)
         {
-            Validator = new Validator(this);
-            Validator.CheckGeneratorSetupComplete(EntityDescriptions);
-            Validator.CheckRequiredEntitiesPresent(EntityDescriptions);
-            Validator.CheckCircularDependencies(EntityDescriptions);
-            Validator.CheckGeneratorsParams(EntityDescriptions);
-            Validator.CheckModifiersParams(EntityDescriptions);
-            Validator.CheckEntitySettingsForGenerators(EntityDescriptions);
+            _validator = new Validator(generatorServices);
+            _validator.ValidateOnStart(_entityDescriptions);
         }
 
-        protected virtual void Setup()
+        protected virtual void Setup(GeneratorServices generatorServices)
         {
             _progress.Setup(_supervisor);
             _progress.Clear();
             _commandsHistory.Clear();
-            _entityContexts = SetupEntityContexts(EntityDescriptions);
-            SetupSpreadStrategies();
-            _supervisor.Setup(this, _entityContexts);
+
+            generatorServices.SetupSpreadStrategies();
+            generatorServices.SetupEntityContexts(_entityDescriptions);
+
+            _supervisor.Setup(generatorServices);
         }
 
-        protected virtual void SetupSpreadStrategies()
-        {
-            foreach (EntityContext entity in _entityContexts.Values)
-            {
-                if (entity.Description.Required == null)
-                {
-                    continue;
-                }
-
-                foreach (RequiredEntity required in entity.Description.Required)
-                {
-                    required.SpreadStrategy.Setup(entity, _entityContexts);
-                }
-            }
-        }
 
 
         //Execution loop
@@ -239,19 +365,19 @@ namespace Sanatana.DataGenerator
             {
                 _commandsHistory.LogCommand(command);
                 command.Execute();
-                Progress.UpdateProgressInt(forceUpdate: false);
+                _progress.UpdateProgressInt(forceUpdate: false);
             }
 
-            TemporaryStorage.WaitAllTasks();
-            Progress.UpdateProgressInt(forceUpdate: true);
+            _temporaryStorage.WaitAllTasks();
+            _progress.UpdateProgressInt(forceUpdate: true);
         }
 
 
         //Singular instances generation setup
-        public virtual SingularGeneratorSetup ToSingular()
-        {
-            return new SingularGeneratorSetup(this);
-        }
+        //public virtual SingularGeneratorSetup ToSingular()
+        //{
+        //    return new SingularGeneratorSetup(this);
+        //}
 
 
         //IDisposalbe
@@ -272,7 +398,7 @@ namespace Sanatana.DataGenerator
                 entityContext.Dispose();
             }
 
-            Progress.Dispose();
+            _progress.Dispose();
         }
     }
 }

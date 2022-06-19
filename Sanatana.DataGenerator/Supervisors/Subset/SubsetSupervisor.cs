@@ -27,18 +27,17 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
             _entitiesSubset = entitiesSubset;
         }
 
-        public override void Setup(GeneratorSetup generatorSetup, 
-            Dictionary<Type, EntityContext> entityContexts)
+        public override void Setup(GeneratorServices generatorServices)
         {
-            base.Setup(generatorSetup, entityContexts);
+            base.Setup(generatorServices);
 
-            ProgressState = new SubsetProgressState(_entitiesSubset, entityContexts);
+            ProgressState = new SubsetProgressState(_entitiesSubset, generatorServices.EntityContexts);
             _flushCandidatesRegistry = new SubsetFlushCandidatesRegistry(
-                _entitiesSubset, generatorSetup, entityContexts, ProgressState);
-            _nextNodeFinder = new SubsetNodeFinder(_entitiesSubset, generatorSetup,
+                _entitiesSubset, generatorServices, ProgressState);
+            _nextNodeFinder = new SubsetNodeFinder(_entitiesSubset, generatorServices,
                 _flushCandidatesRegistry, ProgressState);
             _requiredQueueBuilder = new CompleteRequiredQueueBuilder(
-                generatorSetup, entityContexts, _nextNodeFinder);
+                generatorServices, _nextNodeFinder);
         }
 
 

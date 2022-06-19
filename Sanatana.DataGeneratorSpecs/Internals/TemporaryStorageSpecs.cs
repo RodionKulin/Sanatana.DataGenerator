@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator;
 using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Storages;
@@ -16,11 +17,11 @@ namespace Sanatana.DataGeneratorSpecs.Internals
     {
         [TestMethod]
         [ExpectedException(typeof(AggregateException))]
-        public void FlushToPersistent_WhenStorageThrows_Rethrows()
+        public void FlushToPersistent_WhenStorageThrows_ExceptionIsPropagated()
         {
             //Arrange
             var generatorSetup = new GeneratorSetup();
-            var target = generatorSetup.TemporaryStorage;
+            TemporaryStorage target = generatorSetup.GetGeneratorServices().TemporaryStorage;
             var entityContext = new EntityContext() { 
                 Type = typeof(Post),
                 Description = new EntityDescription() { Type = typeof(Post) }

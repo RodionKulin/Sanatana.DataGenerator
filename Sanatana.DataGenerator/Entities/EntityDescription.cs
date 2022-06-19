@@ -67,5 +67,25 @@ namespace Sanatana.DataGenerator.Entities
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }
+
+
+
+        //init
+        public IEntityDescription Clone()
+        {
+            return new EntityDescription
+            {
+                Type = Type,
+                Required = new List<RequiredEntity>(Required),
+                Generator = Generator,
+                Modifiers = new List<IModifier>(Modifiers),
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                TotalCountProvider = TotalCountProvider,
+                FlushStrategy = FlushStrategy,
+                RequestCapacityProvider = RequestCapacityProvider,
+                StorageInsertGuard = StorageInsertGuard,
+                InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse
+            };
+        }
     }
 }

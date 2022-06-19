@@ -21,14 +21,14 @@ namespace Sanatana.DataGeneratorSpecs.Internals.Reflection
         [DataRow(0, 20, 0)]
         public void Take_ReturnsExpectedLengthList(int startingListCount, int takeAmount, int expectedCount)
         {
-            //prepare
+            //Arrange
             var target = new ListOperations();
             List<int> startingList = Enumerable.Range(10, startingListCount).ToList();
 
-            //invoke
+            //Act
             IList newList = target.Take(typeof(int), startingList, takeAmount);
 
-            //assert
+            //Assert
             newList.Count.Should().Be(expectedCount);
 
             List<int> expectedList = Enumerable.Range(10, expectedCount).ToList();
@@ -45,14 +45,14 @@ namespace Sanatana.DataGeneratorSpecs.Internals.Reflection
         public void Skip_ReturnsExpectedLengthList(int startingListCount, int skipAmount, 
             int expectedCount, int expectedStartsFrom)
         {
-            //prepare
+            //Arrange
             var target = new ListOperations();
             List<int> startingList = Enumerable.Range(10, startingListCount).ToList();
 
-            //invoke
+            //Act
             IList newList = target.Skip(typeof(int), startingList, skipAmount);
 
-            //assert
+            //Assert
             newList.Count.Should().Be(expectedCount);
 
             List<int> expectedList = Enumerable.Range(expectedStartsFrom, expectedCount).ToList();

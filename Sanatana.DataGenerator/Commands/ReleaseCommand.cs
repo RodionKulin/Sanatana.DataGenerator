@@ -15,19 +15,17 @@ namespace Sanatana.DataGenerator.Commands
         //field
         protected EntityContext _entityContext;
         protected FlushRange _releaseRange;
-        protected GeneratorSetup _setup;
-        protected IFlushCandidatesRegistry _flushCandidatesRegistry;
+        protected GeneratorServices _generatorServices;
         protected string _invokedBy;
 
 
         //init
-        public ReleaseCommand(EntityContext entityContext, FlushRange releaseRange, GeneratorSetup setup,
-            IFlushCandidatesRegistry flushCandidatesRegistry, string invokedBy)
+        public ReleaseCommand(EntityContext entityContext, FlushRange releaseRange, GeneratorServices generatorServices,
+            string invokedBy)
         {
             _entityContext = entityContext;
             _releaseRange = releaseRange ?? throw new ArgumentNullException(nameof(releaseRange));
-            _setup = setup;
-            _flushCandidatesRegistry = flushCandidatesRegistry;
+            _generatorServices = generatorServices;
             _invokedBy = invokedBy;
         }
 
@@ -35,7 +33,7 @@ namespace Sanatana.DataGenerator.Commands
         //methods
         public virtual void Execute()
         {
-            _setup.TemporaryStorage.ReleaseFromTemporary(_entityContext, _releaseRange);
+            _generatorServices.TemporaryStorage.ReleaseFromTemporary(_entityContext, _releaseRange);
 
             _releaseRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
             _entityContext.EntityProgress.RemoveRange(_releaseRange);
@@ -43,7 +41,7 @@ namespace Sanatana.DataGenerator.Commands
 
         public virtual string GetLogEntry()
         {
-            return $"Release from temp storage {_entityContext.Type.Name} ReleasedCount={_releaseRange.PreviousRangeFlushedCount} NextReleaseCount={_releaseRange.ThisRangeFlushCount} invokedBy={_invokedBy}";
+            return $"Release from temp storage {_entityContext.Type.FullName} ReleasedCount={_releaseRange.PreviousRangeFlushedCount} NextReleaseCount={_releaseRange.ThisRangeFlushCount} invokedBy={_invokedBy}";
         }
     }
 }

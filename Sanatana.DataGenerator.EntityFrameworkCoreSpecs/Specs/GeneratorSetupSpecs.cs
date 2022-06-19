@@ -33,34 +33,36 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
             {
                 _markerString = GetType().FullName;
 
-                _generatorSetup = new GeneratorSetup();
-                _generatorSetup.CommandsHistory.IsFileLoggingEnabled = true;
-                _generatorSetup.Defaults.RequestCapacityProvider = new StrictRequestCapacityProvider(10);
-                _generatorSetup.Defaults.PersistentStorages.Add(
-                    new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()));
-
-                _generatorSetup.RegisterEntity<Category>()
-                    .SetTargetCount(25)
-                    .SetGenerator(ctx => new Category()
-                    {
-                        Name = $"Category #{ctx.CurrentCount}",
-                        MarkerText = _markerString
-                    });
-                _generatorSetup.RegisterEntity<Post>()
-                    .SetInsertToPersistentStorageBeforeUse(true)
-                    .SetTargetCount(100)
-                    .SetGenerator(ctx => new Post()
-                    {
-                        MarkerText = _markerString
-                    });
-                _generatorSetup.RegisterEntity<Comment>()
-                    .SetTargetCount(50)
-                    .SetGenerator<Category, Post>((ctx, category, post) => new Comment()
-                    {
-                        PostId = post.Id,
-                        CommentText = $"Comment in category: {category.Name}",
-                        MarkerText = _markerString
-                    });
+                _generatorSetup = new GeneratorSetup()
+                    .SetDefaultSettings(defaults => defaults
+                        .SetRequestCapacityProvider(new StrictRequestCapacityProvider(10))
+                        .AddPersistentStorage(new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()))
+                    )
+                    .RegisterEntity<Category>(entity => entity
+                        .SetTargetCount(25)
+                        .SetGenerator(ctx => new Category()
+                        {
+                            Name = $"Category #{ctx.CurrentCount}",
+                            MarkerText = _markerString
+                        })
+                    )
+                    .RegisterEntity<Post>(entity => entity
+                        .SetInsertToPersistentStorageBeforeUse(true)
+                        .SetTargetCount(100)
+                        .SetGenerator(ctx => new Post()
+                        {
+                            MarkerText = _markerString
+                        })
+                    )
+                    .RegisterEntity<Comment>(entity => entity
+                        .SetTargetCount(50)
+                        .SetGenerator<Category, Post>((ctx, category, post) => new Comment()
+                        {
+                            PostId = post.Id,
+                            CommentText = $"Comment in category: {category.Name}",
+                            MarkerText = _markerString
+                        })
+                    );
             }
 
             protected override void When()

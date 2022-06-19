@@ -15,8 +15,7 @@ namespace Sanatana.DataGenerator.Commands
     public class FlushCommand : ICommand
     { 
         //fields
-        protected GeneratorSetup _setup;
-        protected IFlushCandidatesRegistry _flushCandidatesRegistry;
+        protected GeneratorServices _generatorServices;
         protected FlushRange _flushRange;
 
 
@@ -25,21 +24,19 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //init
-        public FlushCommand(EntityContext entityContext, FlushRange flushRange, GeneratorSetup setup,
-             IFlushCandidatesRegistry flushCandidatesRegistry)
+        public FlushCommand(EntityContext entityContext, FlushRange flushRange, GeneratorServices generatorServices)
         {
             EntityContext = entityContext;
             _flushRange = flushRange ?? throw new ArgumentNullException(nameof(flushRange));
-            _setup = setup;
-            _flushCandidatesRegistry = flushCandidatesRegistry;
+            _generatorServices = generatorServices;
         }
 
 
         //methods
         public virtual void Execute()
         {
-            List<IPersistentStorage> persistentStorages = _setup.Defaults.GetPersistentStorages(EntityContext.Description);
-            _setup.TemporaryStorage.FlushToPersistent(EntityContext, _flushRange, persistentStorages);
+            List<IPersistentStorage> persistentStorages = _generatorServices.Defaults.GetPersistentStorages(EntityContext.Description);
+            _generatorServices.TemporaryStorage.FlushToPersistent(EntityContext, _flushRange, persistentStorages);
 
             _flushRange.SetFlushStatus(FlushStatus.FlushedAndReleased);
             EntityContext.EntityProgress.RemoveRange(_flushRange);
@@ -47,7 +44,7 @@ namespace Sanatana.DataGenerator.Commands
 
         public virtual string GetLogEntry()
         {
-            return $"Flush to persistent storage {EntityContext.Type.Name} PreviousRangeFlushedCount={_flushRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_flushRange.ThisRangeFlushCount}";
+            return $"Flush to persistent storage {EntityContext.Type.FullName} PreviousRangeFlushedCount={_flushRange.PreviousRangeFlushedCount} ThisRangeFlushCount={_flushRange.ThisRangeFlushCount}";
         }
     }
 }

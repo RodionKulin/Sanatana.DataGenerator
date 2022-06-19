@@ -6,10 +6,11 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.TotalCountProviders;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
-    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy
+    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy, ITotalCountProvider
     {
         //fields
         protected Dictionary<Type, EntityContext> _parentEntities;
@@ -173,8 +174,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         //Abstract methods to implement combinatorics
         protected abstract IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths);
 
-        public abstract long GetTotalCount();
-
-
+        public abstract long GetTargetCount();
     }
 }

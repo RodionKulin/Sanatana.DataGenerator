@@ -13,16 +13,16 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     public class CompleteNextNodeFinder : INextNodeFinder
     {
         //fields
-        protected GeneratorSetup _generatorSetup;
+        protected GeneratorServices _generatorServices;
         protected IProgressState _progressState;
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;
 
+
         //init
-        public CompleteNextNodeFinder(GeneratorSetup generatorSetup, 
-            IFlushCandidatesRegistry flushCandidatesRegistry,
-            IProgressState progressState)
+        public CompleteNextNodeFinder(GeneratorServices generatorServices, 
+            IFlushCandidatesRegistry flushCandidatesRegistry, IProgressState progressState)
         {
-            _generatorSetup = generatorSetup;
+            _generatorServices = generatorServices;
             _flushCandidatesRegistry = flushCandidatesRegistry;
             _progressState = progressState;
         }
@@ -55,7 +55,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
                 return nextLeafNode;
             }
 
-            _generatorSetup.Validator.ThrowNoNextGeneratorFound(_progressState);
+            _generatorServices.Validator.ThrowNoNextGeneratorFound(_progressState);
             return null;
         }
         

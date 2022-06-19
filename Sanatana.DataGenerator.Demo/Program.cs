@@ -14,30 +14,33 @@ namespace Sanatana.DataGenerator.Demo
         static void Main(string[] args)
         {
             //Setup
-            var setup = new GeneratorSetup();
-            setup.RegisterEntity<Buyer>()
-                .SetGenerator(GenerateBuyer)
-                .AddPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
-                .SetTargetCount(100);
-            setup.RegisterEntity<Supplier>()
-                .SetGenerator(GenerateSupplier)
-                .AddPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
-                .SetTargetCount(100);
-            setup.RegisterEntity<PurchaseOrder>()
-                .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
-                .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
-                .AddPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
-                .SetSpreadStrategy(new CartesianProductSpreadStrategy())
-                .SetTargetCount(100000);
+            var setup = new GeneratorSetup()
+                .RegisterEntity<Buyer>(entity => entity
+                    .SetGenerator(GenerateBuyer)
+                    .AddPersistentStorage(new CsvPersistentStorage("Set-Buyers.csv"))
+                    .SetTargetCount(100)
+                )
+                .RegisterEntity<Supplier>(entity => entity
+                    .SetGenerator(GenerateSupplier)
+                    .AddPersistentStorage(new CsvPersistentStorage("Set-Suppliers.csv"))
+                    .SetTargetCount(100)
+                )
+                .RegisterEntity<PurchaseOrder>(entity => entity
+                    .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
+                    .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
+                    .AddPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
+                    .SetSpreadStrategy(new CartesianProductSpreadStrategy())
+                    .SetTargetCount(100000)
+                )
+                .SetProgressHandler(PrintProgress);
 
             //Generate
-            setup.Progress.Changed += PrintProgress;
             setup.Generate();
             Console.WriteLine("Completed");
             Console.ReadKey();
         }
 
-        private static void PrintProgress(GeneratorSetup setup, decimal percent)
+        private static void PrintProgress(decimal percent)
         {
             Console.CursorTop = 0;
             Console.WriteLine(percent.ToString("F"));

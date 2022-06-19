@@ -1,5 +1,6 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,16 +29,33 @@ namespace Sanatana.DataGenerator.Internals
         /// </summary>
         public DefaultSettings Defaults { get; set; }
 
+        public Dictionary<Type, EntityContext> EntityContexts { get; set; }
+
+        public ISupervisor Supervisor { get; set; }
 
 
         //methods
-        public virtual Dictionary<Type, EntityContext> SetupEntityContexts(
-            Dictionary<Type, IEntityDescription> entityDescriptions)
+        public virtual void SetupEntityContexts(Dictionary<Type, IEntityDescription> entityDescriptions)
         {
-            Dictionary<Type, EntityContext> entityContexts = entityDescriptions.Values
+            EntityContexts = entityDescriptions.Values
                 .Select(description => EntityContext.Factory.Create(entityDescriptions, description, Defaults))
-                .ToDictionary(entityContext => entityContext.Type, entityContext => entityContext);
-            return entityContexts;
+                .ToDictionary(ctx => ctx.Type, ctx => ctx);
+        }
+
+        public virtual void SetupSpreadStrategies()
+        {
+            foreach (EntityContext entity in EntityContexts.Values)
+            {
+                if (entity.Description.Required == null)
+                {
+                    continue;
+                }
+
+                foreach (RequiredEntity required in entity.Description.Required)
+                {
+                    required.SpreadStrategy.Setup(entity, EntityContexts);
+                }
+            }
         }
     }
 }

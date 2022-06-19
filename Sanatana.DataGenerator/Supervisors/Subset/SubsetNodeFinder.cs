@@ -17,16 +17,12 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
 
         //init
-        public SubsetNodeFinder(List<Type> entitiesSubset, GeneratorSetup generatorSetup,
+        public SubsetNodeFinder(List<Type> entitiesSubset, GeneratorServices generatorServices,
             IFlushCandidatesRegistry flushCandidatesRegistry,
             IProgressState progressState)
-            : base(generatorSetup, flushCandidatesRegistry, progressState)
+            : base(generatorServices, flushCandidatesRegistry, progressState)
         {
-            if (entitiesSubset == null)
-            {
-                throw new ArgumentNullException(nameof(entitiesSubset));
-            }
-            _entitiesSubset = entitiesSubset;
+            _entitiesSubset = entitiesSubset ?? throw new ArgumentNullException(nameof(entitiesSubset));
         }
 
 
@@ -35,12 +31,12 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
         {
             EntityContext leafNode = _progressState.NotCompletedEntities
                 .Where(x => _entitiesSubset.Contains(x.Type))   //only subset of types
-               .Where(x => x.ChildEntities
-                   .Select(req => req.Type)
-                   .Where(c => _entitiesSubset.Contains(c))   //only subset of child types
-                   .Except(_progressState.CompletedEntityTypes)
-                   .Count() == 0)
-               .FirstOrDefault();
+                .Where(x => x.ChildEntities
+                    .Select(req => req.Type)
+                    .Where(c => _entitiesSubset.Contains(c))    //only subset of child types
+                    .Except(_progressState.CompletedEntityTypes)
+                    .Count() == 0)
+                .FirstOrDefault();
 
             return leafNode;
         }

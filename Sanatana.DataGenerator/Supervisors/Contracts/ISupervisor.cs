@@ -11,7 +11,7 @@ namespace Sanatana.DataGenerator.Supervisors.Contracts
     public interface ISupervisor
     {
         IProgressState ProgressState { get; }
-        void Setup(GeneratorSetup generatorSetup, Dictionary<Type, EntityContext> entityContexts);
+        void Setup(GeneratorServices generatorServices);
         IEnumerable<ICommand> IterateCommands();
         void HandleGenerateCompleted(EntityContext entityContext, IList generatedEntities);
         void EnqueueCommand(ICommand command);

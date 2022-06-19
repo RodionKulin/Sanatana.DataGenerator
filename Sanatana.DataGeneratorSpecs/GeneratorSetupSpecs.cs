@@ -18,10 +18,9 @@ namespace Sanatana.DataGeneratorSpecs
         public void GeneratorSetup_WhenSubscribedToProgressChange_ReturnsProgress()
         {
             //Arrange
-            using GeneratorSetup generatorSetup = GetGeneratorSetup();
+            GeneratorSetup generatorSetup = GetGeneratorSetup();
             var completionPercents = new List<decimal>();
-            generatorSetup.Progress.Changed += new Action<GeneratorSetup, decimal>(
-                (GeneratorSetup _, decimal completionPercent) => completionPercents.Add(completionPercent));
+            generatorSetup = generatorSetup.SetProgressHandler((decimal completionPercent) => completionPercents.Add(completionPercent));
 
             //Act
             generatorSetup.Generate();
@@ -29,6 +28,8 @@ namespace Sanatana.DataGeneratorSpecs
             //Assert
             completionPercents.Should().NotBeEmpty();
             completionPercents.Should().EndWith(100);
+
+            generatorSetup.Dispose();
         }
 
         [TestMethod]
@@ -39,13 +40,14 @@ namespace Sanatana.DataGeneratorSpecs
             int targetCount = 100;
             int instancesPerRequest = 10;
 
-            using var generatorSetup = new GeneratorSetup();
-            generatorSetup.TemporaryStorage.MaxTasksRunning = 4;
-            generatorSetup.Defaults.PersistentStorages.Add(slowStorage);
-            generatorSetup.RegisterEntity<Post>()
-                .SetTargetCount(targetCount)
-                .SetRequestCapacityProvider(10) //will make 10 parallel db requests
-                .SetGenerator((x) => new Post() { Id = (int)x.CurrentCount });
+            var generatorSetup = new GeneratorSetup()
+                .SetTemporaryStorage(tempStorage => tempStorage.MaxTasksRunning = 4)
+                .SetDefaultSettings(defaults => defaults.AddPersistentStorage(slowStorage))
+                .RegisterEntity<Post>(entity => entity
+                    .SetTargetCount(targetCount)
+                    .SetRequestCapacityProvider(10) //will make 10 parallel db requests
+                    .SetGenerator((x) => new Post() { Id = (int)x.CurrentCount })
+                );
 
             //Act
             generatorSetup.Generate();
@@ -56,6 +58,8 @@ namespace Sanatana.DataGeneratorSpecs
 
             int expectedRequestsCount = targetCount / instancesPerRequest;
             slowStorage.InsertTime.Should().HaveCount(expectedRequestsCount);
+
+            generatorSetup.Dispose();
         }
 
         [TestMethod]
@@ -69,13 +73,14 @@ namespace Sanatana.DataGeneratorSpecs
                 .Select(id => new Post { Id = id })
                 .ToList();
 
-            using var generatorSetup = new GeneratorSetup();
-            generatorSetup.TemporaryStorage.MaxTasksRunning = 4;
-            generatorSetup.Defaults.PersistentStorages.Add(slowStorage);
-            generatorSetup.RegisterEntity<Post>()
-                .SetTargetCount(targetCount)
-                .SetRequestCapacityProvider(10) //will make 10 parallel db requests
-                .SetMultiGenerator((x) => postsToGenerate);
+            var generatorSetup = new GeneratorSetup()
+                .SetTemporaryStorage(tempStorage => tempStorage.MaxTasksRunning = 4)
+                .SetDefaultSettings(defaults => defaults.AddPersistentStorage(slowStorage))
+                .RegisterEntity<Post>(entity => entity
+                    .SetTargetCount(targetCount)
+                    .SetRequestCapacityProvider(10) //will make 10 parallel db requests
+                    .SetMultiGenerator((x) => postsToGenerate)
+                );
 
             //Act
             generatorSetup.Generate();
@@ -94,18 +99,20 @@ namespace Sanatana.DataGeneratorSpecs
         {
             long targetCount = 100;
 
-            var generatorSetup = new GeneratorSetup();
-            generatorSetup.Defaults.PersistentStorages.Add(new InMemoryStorage());
-
-            generatorSetup.RegisterEntity<Category>()
-                .SetTargetCount(targetCount)
-                .SetGenerator(x => new Category());
-            generatorSetup.RegisterEntity<Post>()
-                .SetTargetCount(targetCount)
-                .SetGenerator(x => new Post());
-            generatorSetup.RegisterEntity<Comment>()
-                .SetTargetCount(targetCount)
-                .SetGenerator(x => new Comment());
+            var generatorSetup = new GeneratorSetup()
+                .SetDefaultSettings(defaults => defaults.AddPersistentStorage(new InMemoryStorage()))
+                .RegisterEntity<Category>(entity => entity
+                    .SetTargetCount(targetCount)
+                    .SetGenerator(x => new Category())
+                )
+                .RegisterEntity<Post>(entity => entity
+                    .SetTargetCount(targetCount)
+                    .SetGenerator(x => new Post())
+                )
+                .RegisterEntity<Comment>(entity => entity
+                    .SetTargetCount(targetCount)
+                    .SetGenerator(x => new Comment())
+                );
 
             return generatorSetup;
         }

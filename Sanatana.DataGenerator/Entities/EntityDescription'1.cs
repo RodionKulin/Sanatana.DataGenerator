@@ -94,6 +94,22 @@ namespace Sanatana.DataGenerator.Entities
             Modifiers = new List<IModifier>();
         }
 
+        public IEntityDescription Clone()
+        {
+            return new EntityDescription<TEntity>
+            {
+                Required = new List<RequiredEntity>(Required),
+                Generator = Generator,
+                Modifiers = new List<IModifier>(Modifiers),
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                TotalCountProvider = TotalCountProvider,
+                FlushStrategy = FlushStrategy,
+                RequestCapacityProvider = RequestCapacityProvider,
+                StorageInsertGuard = StorageInsertGuard,
+                InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse
+            };
+        }
+
 
         #region Configure methods
         /// <summary>
@@ -200,51 +216,13 @@ namespace Sanatana.DataGenerator.Entities
 
             if (Required.Count == 0)
             {
-                throw new NotSupportedException($"Was not able to set {nameof(ISpreadStrategy)}. No {nameof(Required)} entities were configured on type {Type.FullName}.");
+                throw new NotSupportedException($"Not able to set {nameof(ISpreadStrategy)}. No {nameof(Required)} entities were configured on type {Type.FullName}.");
             }
 
             foreach (RequiredEntity requiredEntity in Required)
             {
                 requiredEntity.SpreadStrategy = spreadStrategy;
             }
-
-            return this;
-        }
-
-        /// <summary>
-        /// Call SetSpreadStrategy on Required entities and set TargetCount as total number of distinct combinations that can be generated.
-        /// </summary>
-        /// <param name="spreadStrategy"></param>
-        /// <param name="generatorSetup"></param>
-        /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetSpreadStrategyAndTargetCount(
-            CombinatoricsSpreadStrategy spreadStrategy, GeneratorSetup generatorSetup)
-        {
-            SetSpreadStrategy(spreadStrategy);
-
-            //Get subset of all entities that are required
-            var requiredTypes = Required.Select(x => x.Type);
-            Dictionary<Type, IEntityDescription> requiredDescriptions = generatorSetup.EntityDescriptions
-                .Where(x => requiredTypes.Contains(x.Key))
-                .ToDictionary(x => x.Key, x => x.Value);
-
-            //validate
-            var validator = new Validator(generatorSetup);
-            validator.CheckGeneratorSetupComplete(requiredDescriptions);
-
-            //Setup spread strategy
-            var entityContext = new EntityContext
-            {
-                Description = this,
-                EntityProgress = new EntityProgress(),
-                Type = Type
-            };
-            Dictionary<Type, EntityContext> requiredEntities = generatorSetup.SetupEntityContexts(requiredDescriptions);
-            spreadStrategy.Setup(entityContext, requiredEntities);
-
-            //Get total count of combinations
-            long totalCount = spreadStrategy.GetTotalCount();
-            SetTargetCount(totalCount);
 
             return this;
         }

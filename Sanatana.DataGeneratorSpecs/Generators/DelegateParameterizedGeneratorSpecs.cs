@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Sanatana.DataGenerator;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
@@ -13,7 +14,7 @@ namespace Sanatana.DataGeneratorSpecs.Generators
         [TestMethod]
         public void Generate_WhenParametersOutOfOrder_ReturnsEntity()
         {
-            //Prepare
+            //Arrange
             var t = DelegateParameterizedGenerator<Comment>.Factory.Create(
                 (GeneratorContext ctx, Category cat, Post pst) =>
                 {
@@ -24,7 +25,7 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                     };
                 });
 
-            //Invoke
+            //Act
             var generatorContext = new GeneratorContext()
             {
                 RequiredEntities = new Dictionary<Type, object>

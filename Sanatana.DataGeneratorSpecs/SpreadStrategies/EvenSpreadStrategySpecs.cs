@@ -33,7 +33,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void GetParentIndex_WhenParentCountLower_ReturnsExpected(
             long currentChildCount, long expectedParentIndex)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -45,7 +45,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 TargetCount = 9
             });
             
-            //Invoke
+            //Act
             long actualParentIndex = target.GetParentIndex(parentProgress, childProgress);
             
             //Assert
@@ -62,7 +62,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void GetParentIndex_WhenParentCountHigher_ReturnsExpected(
             long currentChildCount, long expectedParentIndex)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -74,7 +74,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 TargetCount = 3
             });
 
-            //Invoke
+            //Act
             long actualParentIndex = target.GetParentIndex(parentProgress, childProgress);
 
             //Assert
@@ -95,7 +95,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void GetNextIterationParentCount_WhenParentCountLower_ReturnsExpected(
             long nextIterationChildCount, long expectedParentCount)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -107,7 +107,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 NextIterationCount = nextIterationChildCount
             });
 
-            //Invoke
+            //Act
             long actualParentCount = target.GetNextIterationParentCount(parentProgress, childProgress);
 
             //Assert
@@ -125,7 +125,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void GetNextIterationParentCount_WhenParentCountLarger_ReturnsExpected(
             long nextIterationChildCount, long expectedParentCount)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -137,7 +137,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 NextIterationCount = nextIterationChildCount
             });
 
-            //Invoke
+            //Act
             long actualParentCount = target.GetNextIterationParentCount(parentProgress, childProgress);
 
             //Assert
@@ -158,7 +158,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void CanGenerateMoreFromParentsNextFlushCount_WhenParentCountLower_ReturnsExpected(
             int parentNextReleaseCount, int childCurrentCount, bool expectedCanGenegate)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -171,7 +171,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
             FlushRange parentRange = new FlushRange(0, parentNextReleaseCount);
 
-            //Invoke
+            //Act
             bool actualCanBeGenerated = target.CanGenerateFromParentRange(
                 parentProgress, parentRange, childProgress);
 
@@ -192,7 +192,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void CanGenerateMoreFromParentsNextFlushCount_WhenParentCountLarger_ReturnsExpected(
            int parentNextReleaseCount, int childCurrentCount, bool expectedCanGenegate)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -205,7 +205,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
             FlushRange parentRange = new FlushRange(0, parentNextReleaseCount);
 
-            //Invoke
+            //Act
             bool actualCanBeGenerated = target.CanGenerateFromParentRange(
                 parentProgress, parentRange, childProgress);
 
@@ -221,7 +221,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         public void GetParentIndexAndGetParentCount_ReturnConsistentResults(
             long childCurrentCount)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -234,7 +234,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 NextIterationCount = childCurrentCount + 1
             });
 
-            //Invoke
+            //Act
             long actualParentIndex = target.GetParentIndex(
                 parentProgress, childProgress);
             long actualParentsCount = target.GetNextIterationParentCount(
@@ -254,7 +254,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             int parentNextReleaseCount, int childCurrentCount, 
             bool expectedCanGenerate, int expectedParentIndex)
         {
-            //Prepare
+            //Arrange
             var target = new EvenSpreadStrategy();
             EntityContext parentProgress = ToEntityContext(new EntityProgress
             {
@@ -268,7 +268,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
             FlushRange parentRange = new FlushRange(0, parentNextReleaseCount);
 
-            //Invoke
+            //Act
             long actualParentIndex = target.GetParentIndex(
                 parentProgress, childProgress);
             long actualParentCount = target.GetNextIterationParentCount(
@@ -303,7 +303,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                     parentNextReleaseCount += 10;
                 }
 
-                //Prepare
+                //Arrange
                 var target = new EvenSpreadStrategy();
                 EntityContext parentProgress = ToEntityContext(new EntityProgress
                 {
@@ -317,7 +317,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
                 });
                 FlushRange parentRange = new FlushRange(0, parentNextReleaseCount);
 
-                //Invoke
+                //Act
                 long actualParentIndex = target.GetParentIndex(
                     parentProgress, childProgress);
                 long actualParentCount = target.GetNextIterationParentCount(

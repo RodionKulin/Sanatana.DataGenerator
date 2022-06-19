@@ -18,7 +18,7 @@ namespace Sanatana.DataGenerator.Commands
     public class GenerateCommand : ICommand
     {
         //fields
-        protected GeneratorSetup _setup;
+        protected GeneratorServices _generatorServices;
         protected Dictionary<Type, EntityContext> _entityContexts;
 
 
@@ -27,12 +27,11 @@ namespace Sanatana.DataGenerator.Commands
 
 
         //init
-        public GenerateCommand(EntityContext entityContext, GeneratorSetup setup,
-            Dictionary<Type, EntityContext> entityContexts)
+        public GenerateCommand(EntityContext entityContext, GeneratorServices generatorServices)
         {
             EntityContext = entityContext;
-            _setup = setup;
-            _entityContexts = entityContexts;
+            _generatorServices = generatorServices;
+            _entityContexts = generatorServices.EntityContexts;
         }
 
 
@@ -40,9 +39,9 @@ namespace Sanatana.DataGenerator.Commands
         public virtual void Execute()
         {
             IEntityDescription description = EntityContext.Description;
-            IGenerator generator = _setup.Defaults.GetGenerator(description);
-            List<IModifier> modifiers = _setup.Defaults.GetModifiers(description);
-            IRequestCapacityProvider requestCapacityProvider = _setup.Defaults.GetRequestCapacityProvider(description);
+            IGenerator generator = _generatorServices.Defaults.GetGenerator(description);
+            List<IModifier> modifiers = _generatorServices.Defaults.GetModifiers(description);
+            IRequestCapacityProvider requestCapacityProvider = _generatorServices.Defaults.GetRequestCapacityProvider(description);
 
             var context = new GeneratorContext
             {
@@ -54,17 +53,17 @@ namespace Sanatana.DataGenerator.Commands
             };
 
             IList instances = generator.Generate(context);
-            _setup.Validator.CheckGeneratedCount(instances, description.Type, generator);
+            _generatorServices.Validator.CheckGeneratedCount(instances, description.Type, generator);
 
             foreach (IModifier modifier in modifiers)
             {
                 instances = modifier.Modify(context, instances);
-                _setup.Validator.CheckModifiedCount(instances, description.Type, modifier);
+                _generatorServices.Validator.CheckModifiedCount(instances, description.Type, modifier);
             }
 
             requestCapacityProvider.TrackEntityGeneration(EntityContext, instances);
-            _setup.TemporaryStorage.InsertToTemporary(EntityContext, instances);
-            _setup._supervisor.HandleGenerateCompleted(EntityContext, instances);
+            _generatorServices.TemporaryStorage.InsertToTemporary(EntityContext, instances);
+            _generatorServices.Supervisor.HandleGenerateCompleted(EntityContext, instances);
         }
 
         protected virtual Dictionary<Type, object> GetRequiredEntities()
@@ -76,10 +75,10 @@ namespace Sanatana.DataGenerator.Commands
                 Type parent = requiredEntity.Type;
                 EntityContext parentEntityContext = _entityContexts[parent];
 
-                ISpreadStrategy spreadStrategy = _setup.Defaults.GetSpreadStrategy(EntityContext.Description, requiredEntity);
+                ISpreadStrategy spreadStrategy = _generatorServices.Defaults.GetSpreadStrategy(EntityContext.Description, requiredEntity);
                 long parentEntityIndex = spreadStrategy.GetParentIndex(parentEntityContext, EntityContext);
 
-                object parentEntity = _setup.TemporaryStorage.Select(parentEntityContext, parentEntityIndex);
+                object parentEntity = _generatorServices.TemporaryStorage.Select(parentEntityContext, parentEntityIndex);
                 result.Add(parent, parentEntity);
             }
 
@@ -88,7 +87,7 @@ namespace Sanatana.DataGenerator.Commands
 
         public virtual string GetLogEntry()
         {
-            return $"Generate {EntityContext.Type.Name} CurrentCount={EntityContext.EntityProgress.CurrentCount}";
+            return $"Generate {EntityContext.Type.FullName} CurrentCount={EntityContext.EntityProgress.CurrentCount}";
         }
     }
 }

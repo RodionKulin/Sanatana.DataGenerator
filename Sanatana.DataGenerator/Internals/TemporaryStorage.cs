@@ -25,7 +25,6 @@ namespace Sanatana.DataGenerator.Internals
         protected List<Task> _runningTasks;
         protected ReflectionInvoker _reflectionInvoker;
         protected ListOperations _listOperations;
-        protected GeneratorSetup _generatorSetup;
 
 
         //properties
@@ -55,13 +54,20 @@ namespace Sanatana.DataGenerator.Internals
 
 
         //init
-        public TemporaryStorage(GeneratorSetup generatorSetup)
+        public TemporaryStorage()
         {
-            _generatorSetup = generatorSetup;
             _reflectionInvoker = new ReflectionInvoker();
             _listOperations = new ListOperations();
             _runningTasks = new List<Task>();
             _entitiesAwaitingFlush = new ConcurrentDictionary<Type, IList>(_maxTasksRunning, 100);
+        }
+
+        public virtual TemporaryStorage Clone()
+        {
+            return new TemporaryStorage
+            {
+                MaxTasksRunning = MaxTasksRunning
+            };
         }
 
 

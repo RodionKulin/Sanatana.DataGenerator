@@ -20,15 +20,26 @@ namespace Sanatana.DataGenerator.Internals
     public class Validator
     {
         //fields
-        protected GeneratorSetup _generatorSetup;
+        protected GeneratorServices _generatorServices;
+
 
         //init
-        public Validator(GeneratorSetup generatorSetup)
+        public Validator(GeneratorServices generatorServices)
         {
-            _generatorSetup = generatorSetup;
+            _generatorServices = generatorServices;
         }
 
 
+
+        public virtual void ValidateOnStart(Dictionary<Type, IEntityDescription> entityDescriptions)
+        {
+            CheckGeneratorSetupComplete(entityDescriptions);
+            CheckRequiredEntitiesPresent(entityDescriptions);
+            CheckCircularDependencies(entityDescriptions);
+            CheckGeneratorsParams(entityDescriptions);
+            CheckModifiersParams(entityDescriptions);
+            CheckEntitySettingsForGenerators(entityDescriptions);
+        }
 
 
         //Prestart checks for GeneratorSetup
@@ -38,10 +49,10 @@ namespace Sanatana.DataGenerator.Internals
         /// <param name="entityDescriptions"></param>
         public virtual void CheckGeneratorSetupComplete(Dictionary<Type, IEntityDescription> entityDescriptions)
         {
-            ISupervisor supervisor = _generatorSetup._supervisor;
+            ISupervisor supervisor = _generatorServices.Supervisor;
             if (supervisor == null)
             {
-                throw new ArgumentNullException(nameof(_generatorSetup._supervisor));
+                throw new ArgumentNullException(nameof(_generatorServices.Supervisor));
             }
 
             foreach (IEntityDescription description in entityDescriptions.Values)
@@ -49,39 +60,39 @@ namespace Sanatana.DataGenerator.Internals
                 string msgFormat = $"Entity description [{description.Type}] did not have {{0}} configured and {nameof(GeneratorSetup)} {{1}} was not provided";
 
                 ITotalCountProvider totalCountProvider = description.TotalCountProvider
-                    ?? _generatorSetup.Defaults.TotalCountProvider;
+                    ?? _generatorServices.Defaults.TotalCountProvider;
                 if (totalCountProvider == null)
                 {
-                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
+                    string defName = nameof(_generatorServices.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.TotalCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
                 
-                IGenerator generator = description.Generator ?? _generatorSetup.Defaults.Generator;
+                IGenerator generator = description.Generator ?? _generatorServices.Defaults.Generator;
                 if (generator == null)
                 {
-                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
+                    string defName = nameof(_generatorServices.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.TotalCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
                 List<IPersistentStorage> persistentStorages = description.PersistentStorages
-                    ?? _generatorSetup.Defaults.PersistentStorages;
+                    ?? _generatorServices.Defaults.PersistentStorages;
                 if (persistentStorages == null || persistentStorages.Count == 0)
                 {
-                    string defName = nameof(_generatorSetup.Defaults.PersistentStorages);
+                    string defName = nameof(_generatorServices.Defaults.PersistentStorages);
                     string msg = string.Format(msgFormat
                         , nameof(description.PersistentStorages), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
                 IFlushStrategy flushTrigger = description.FlushStrategy
-                    ?? _generatorSetup.Defaults.FlushStrategy;
+                    ?? _generatorServices.Defaults.FlushStrategy;
                 if (flushTrigger == null)
                 {
-                    string defName = nameof(_generatorSetup.Defaults.FlushStrategy);
+                    string defName = nameof(_generatorServices.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
                         , nameof(description.FlushStrategy), defName);
                     throw new ArgumentNullException(defName, msg);
@@ -92,10 +103,10 @@ namespace Sanatana.DataGenerator.Internals
                     foreach (RequiredEntity required in description.Required)
                     {
                         ISpreadStrategy spreadStrategy = required.SpreadStrategy
-                            ?? _generatorSetup.Defaults.SpreadStrategy;
+                            ?? _generatorServices.Defaults.SpreadStrategy;
                         if (spreadStrategy == null)
                         {
-                            string defName = nameof(_generatorSetup.Defaults.SpreadStrategy);
+                            string defName = nameof(_generatorServices.Defaults.SpreadStrategy);
                             string msg = $"Entity description [{description.Type}] with required type [{required.Type}] did not have {nameof(RequiredEntity.SpreadStrategy)} configured and {nameof(GeneratorSetup)} {defName} was not provided";
                             throw new ArgumentNullException(defName, msg);
                         }
@@ -217,7 +228,7 @@ namespace Sanatana.DataGenerator.Internals
                 Type[] requiredEntitiesTypes = entity.Required
                     .Select(x => x.Type)
                     .ToArray();
-                IGenerator generator = _generatorSetup.Defaults.GetGenerator(entity);
+                IGenerator generator = _generatorServices.Defaults.GetGenerator(entity);
                 Type generatorInstanceType = generator.GetType();
                 CheckDuplicates(requiredEntitiesTypes, entity, generatorInstanceType);
 
@@ -243,7 +254,7 @@ namespace Sanatana.DataGenerator.Internals
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
                 Type[] requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToArray();
-                List<IModifier> modifiers = _generatorSetup.Defaults.GetModifiers(entity);
+                List<IModifier> modifiers = _generatorServices.Defaults.GetModifiers(entity);
                 modifiers.Where(x => x is IDelegateParameterizedModifier).ToList();
 
                 for (int i = 0; i < modifiers.Count; i++)
@@ -403,7 +414,7 @@ namespace Sanatana.DataGenerator.Internals
                 .Select(x => $"[{x.Name}]")
                 .ToArray();
             string[] notCompletedNames = progressState.NotCompletedEntities
-                .Select(x => $"[{x.Type.Name}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
+                .Select(x => $"[{x.Type.FullName}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
                 .ToArray();
 
             string completedList = string.Join(", ", completedNames);

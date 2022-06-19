@@ -18,9 +18,8 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
 
         //init
-        public SubsetFlushCandidatesRegistry(List<Type> entitiesSubset, GeneratorSetup generatorSetup,
-            Dictionary<Type, EntityContext> entityContexts, IProgressState orderProgress)
-            : base(generatorSetup, entityContexts, orderProgress)
+        public SubsetFlushCandidatesRegistry(List<Type> entitiesSubset, GeneratorServices generatorServices, IProgressState orderProgress)
+            : base(generatorServices, orderProgress)
         {
             if (entitiesSubset == null)
             {

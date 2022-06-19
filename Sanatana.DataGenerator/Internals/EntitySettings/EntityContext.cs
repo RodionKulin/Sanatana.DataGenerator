@@ -46,7 +46,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 }
 
                 ITotalCountProvider totalCountProvider = defaultSettings.GetTotalCountProvider(description);
-                long targetTotalCount = totalCountProvider.GetTargetCount();
+                long targetCount = totalCountProvider.GetTargetCount();
 
                 return new EntityContext
                 {
@@ -56,7 +56,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                     ParentEntities = parents,
                     EntityProgress = new EntityProgress
                     {
-                        TargetCount = targetTotalCount
+                        TargetCount = targetCount
                     }
                 };
             }

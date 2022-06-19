@@ -20,7 +20,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         [TestMethod]
         public void GetNext_WhenPyramidHierarcy_ReturnsExpectedCount()
         {
-            //Prepare
+            //Arrange
             var category = new EntityDescription<Category>()
                 .SetTargetCount(1);
             var post = new EntityDescription<Post>()
@@ -37,7 +37,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             };
             CompleteSupervisor target = SetupCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -48,7 +48,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         [TestMethod]
         public void GetNext_WhenMiddleBulgeHierarcy_ReturnsExpectedCount()
         {
-            //Prepare
+            //Arrange
             var category = new EntityDescription<Category>()
                 .SetTargetCount(1);
             var post = new EntityDescription<Post>()
@@ -65,7 +65,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             };
             CompleteSupervisor target = SetupCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -76,7 +76,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         [TestMethod]
         public void GetNext_WhenBranchingHierarcy_ReturnsExpectedCount()
         {
-            //Prepare
+            //Arrange
             var category = new EntityDescription<Category>()
                 .SetTargetCount(1);
             var post = new EntityDescription<Post>()
@@ -97,7 +97,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             };
             CompleteSupervisor target = SetupCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -113,10 +113,10 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         {
             var generatorSetup = new GeneratorSetup();
             Dictionary<Type, IEntityDescription> dictDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
-            Dictionary<Type, EntityContext> contexts = generatorSetup.SetupEntityContexts(dictDescriptions);
-
+            GeneratorServices generatorServices = generatorSetup.GetGeneratorServices();
+            
             var target = new CompleteSupervisor();
-            target.Setup(generatorSetup, contexts);
+            target.Setup(generatorServices);
             return target;
         }
 

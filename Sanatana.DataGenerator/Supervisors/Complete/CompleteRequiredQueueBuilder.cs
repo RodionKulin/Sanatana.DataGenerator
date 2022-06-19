@@ -16,7 +16,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     public class CompleteRequiredQueueBuilder : IRequiredQueueBuilder
     {
         //fields
-        protected GeneratorSetup _generatorSetup;
+        protected GeneratorServices _generatorServices;
         protected Dictionary<Type, EntityContext> _entityContexts;
         protected INextNodeFinder _nextNodeFinder;
         /// <summary>
@@ -26,11 +26,10 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //init
-        public CompleteRequiredQueueBuilder(GeneratorSetup generatorSetup, 
-            Dictionary<Type, EntityContext> entityContexts, INextNodeFinder nextNodeFinder)
+        public CompleteRequiredQueueBuilder(GeneratorServices generatorServices, INextNodeFinder nextNodeFinder)
         {
-            _generatorSetup = generatorSetup;
-            _entityContexts = entityContexts;
+            _generatorServices = generatorServices;
+            _entityContexts = generatorServices.EntityContexts;
             _nextNodeFinder = nextNodeFinder;
         }
 
@@ -50,7 +49,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             }
 
             OrderIterationType next = _queue.Peek();
-            return new GenerateCommand(_entityContexts[next.EntityType], _generatorSetup, _entityContexts);
+            return new GenerateCommand(_entityContexts[next.EntityType], _generatorServices);
         }
 
         /// <summary>
@@ -110,7 +109,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             foreach (RequiredEntity requiredEntity in child.Description.Required)
             {
                 EntityContext parent = _entityContexts[requiredEntity.Type];
-                ISpreadStrategy spreadStrategy = _generatorSetup.Defaults.GetSpreadStrategy(child.Description, requiredEntity);
+                ISpreadStrategy spreadStrategy = _generatorServices.Defaults.GetSpreadStrategy(child.Description, requiredEntity);
 
                 long parentRequiredCount = spreadStrategy.GetNextIterationParentCount(parent, child);
                 long parentNewItemsCount = parentRequiredCount - parent.EntityProgress.CurrentCount;
@@ -130,7 +129,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             OrderIterationType next = _queue.Peek();
             if (entityContext.Type != next.EntityType)
             {
-                throw new ArgumentException($"Type {entityContext.Type.Name} provided in {nameof(UpdateCounters)} does not match the latest action Type {next.EntityType}");
+                throw new ArgumentException($"Type {entityContext.Type.FullName} provided in {nameof(UpdateCounters)} does not match the latest action Type {next.EntityType}");
             }
 
             next.GenerateCount -= generatedEntities.Count;

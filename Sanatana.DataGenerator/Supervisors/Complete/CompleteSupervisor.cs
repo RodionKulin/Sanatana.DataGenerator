@@ -17,10 +17,6 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     {
         //fields
         /// <summary>
-        /// All entities with their current generated count.
-        /// </summary>
-        protected Dictionary<Type, EntityContext> _entityContexts;
-        /// <summary>
         /// Next actions to execute between generate entity actions
         /// </summary>
         protected ConcurrentQueue<ICommand> _commandsQueue;
@@ -34,20 +30,17 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //init
-        public virtual void Setup(GeneratorSetup generatorSetup, 
-            Dictionary<Type, EntityContext> entityContexts)
+        public virtual void Setup(GeneratorServices generatorServices)
         {
             _commandsQueue = new ConcurrentQueue<ICommand>();
 
-            _entityContexts = entityContexts;
-
-            ProgressState = new CompleteProgressState(entityContexts);
+            ProgressState = new CompleteProgressState(generatorServices.EntityContexts);
             _flushCandidatesRegistry = new CompleteFlushCandidatesRegistry(
-                generatorSetup, entityContexts, ProgressState);
+                generatorServices, ProgressState);
             _nextNodeFinder = new CompleteNextNodeFinder(
-                generatorSetup, _flushCandidatesRegistry, ProgressState);
+                generatorServices, _flushCandidatesRegistry, ProgressState);
             _requiredQueueBuilder = new CompleteRequiredQueueBuilder(
-                generatorSetup, entityContexts, _nextNodeFinder);
+                generatorServices, _nextNodeFinder);
         }
 
 

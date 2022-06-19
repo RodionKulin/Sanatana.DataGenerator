@@ -10,7 +10,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
     public class CartesianProductSpreadStrategy : CombinatoricsSpreadStrategy
     {
         //methods
-        public override long GetTotalCount()
+        public override long GetTargetCount()
         {
             List<long> targetCounts = _parentEntities.Values
                 .Select(x => x.EntityProgress.TargetCount)
