@@ -8,10 +8,10 @@ using System.Collections;
 using System.Linq;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Complete;
-using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
+using Sanatana.DataGenerator.Internals.Commands;
 
 namespace Sanatana.DataGeneratorSpecs.Supervisors
 {
@@ -19,7 +19,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
     public class CompleteSupervisorSpecs
     {
         [TestMethod]
-        public void GetNext_WhenPyramidHierarcy_ReturnsExpectedCount()
+        public void GetNext_WhenPyramidHierarcy_ThenReturnsExpectedCount()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>
@@ -44,7 +44,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenMiddleBulgeHierarcy_ReturnsExpectedCount()
+        public void GetNext_WhenMiddleBulgeHierarcy_ThenReturnsExpectedCount()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>
@@ -69,7 +69,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenBranchingHierarcy_ReturnsExpectedCount()
+        public void GetNext_WhenBranchingHierarcy_ThenReturnsExpectedCount()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>
@@ -130,8 +130,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
 
 
         //Assert helpers
-        private void AssertPlanCount(List<IEntityDescription> descriptions,
-            List<ICommand> actualCommands)
+        private void AssertPlanCount(List<IEntityDescription> descriptions, List<ICommand> actualCommands)
         {
             Dictionary<Type, long> expectedCalls = descriptions
                 .Select(x => new

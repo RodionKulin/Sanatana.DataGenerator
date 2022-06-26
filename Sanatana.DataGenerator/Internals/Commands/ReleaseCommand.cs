@@ -4,7 +4,7 @@ using Sanatana.DataGenerator.Internals.Progress;
 using System;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
-namespace Sanatana.DataGenerator.Commands
+namespace Sanatana.DataGenerator.Internals.Commands
 {
     /// <summary>
     /// Remove entity instances already flushed to persistent storage from temporary storage as well.

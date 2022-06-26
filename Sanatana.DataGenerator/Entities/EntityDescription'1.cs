@@ -91,6 +91,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             Required = new List<RequiredEntity>();
             Modifiers = new List<IModifier>();
+            PersistentStorages = new List<IPersistentStorage>();
         }
 
         public IEntityDescription Clone()
@@ -100,7 +101,7 @@ namespace Sanatana.DataGenerator.Entities
                 Required = new List<RequiredEntity>(Required),
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
-                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
                 TotalCountProvider = TotalCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
@@ -279,7 +280,6 @@ namespace Sanatana.DataGenerator.Entities
                 throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
 
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(persistentStorage);
             return this;
         }
@@ -297,8 +297,17 @@ namespace Sanatana.DataGenerator.Entities
                 throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(AddPersistentStorage)} can not be null.");
             }
 
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Remove all database storage providers that will receive generated entity instances.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemovePersistentStorages()
+        {
+            PersistentStorages.Clear();
             return this;
         }
 
@@ -1229,7 +1238,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
-        /// <param name="modifyFunc"></param>
+        /// <param name="modifier"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier(IModifier modifier)
         {

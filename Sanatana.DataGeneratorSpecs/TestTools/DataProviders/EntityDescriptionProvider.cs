@@ -1,21 +1,14 @@
-﻿using Sanatana.DataGenerator;
-using Sanatana.DataGenerator.Commands;
-using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.Supervisors.Complete;
+﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Sanatana.DataGenerator.Internals.Progress;
-using Sanatana.DataGenerator.Internals.EntitySettings;
-using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
 
 namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
 {
     internal class EntityDescriptionProvider
     {
-        public static Dictionary<Type, IEntityDescription> GetAllEntityContexts(long targetCount)
+        public static Dictionary<Type, IEntityDescription> GetAllEntities(long targetCount)
         {
             var category = new EntityDescription<Category>()
                 .SetTargetCount(targetCount);
@@ -34,5 +27,24 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
                 .ToDictionary(x => x.Type, x => x);
         }
 
+
+        public static Dictionary<Type, IEntityDescription> GetMixedRequiredOrderEntities(long targetCount)
+        {
+            var category = new EntityDescription<Category>()
+                .SetTargetCount(targetCount)
+                .SetGenerator(x => new Category());
+
+            var post = new EntityDescription<Post>()
+                .SetTargetCount(targetCount)
+                .SetGenerator<Category>((x, category) => new Post());
+
+            var comment = new EntityDescription<Comment>()
+                .SetTargetCount(targetCount)
+                .SetGenerator<Category, Post>((x, category, post) => new Comment()); //category goes before post in lambda
+
+            return new List<IEntityDescription>
+                { category, post, comment }
+                .ToDictionary(x => x.Type, x => x);
+        }
     }
 }

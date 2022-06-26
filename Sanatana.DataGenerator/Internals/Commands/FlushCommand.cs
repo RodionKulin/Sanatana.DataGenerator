@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
-namespace Sanatana.DataGenerator.Commands
+namespace Sanatana.DataGenerator.Internals.Commands
 {
     /// <summary>
     /// Insert entity instances to persistent storage and remove from temporary storage.

@@ -4,7 +4,7 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.Commands;
 using System.Collections.Concurrent;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
@@ -96,7 +96,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //Clone
-        public ISupervisor Clone()
+        public virtual ISupervisor Clone()
         {
             return new CompleteSupervisor();
         }

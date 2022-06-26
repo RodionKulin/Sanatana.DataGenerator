@@ -20,7 +20,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         [DataRow(50, 10, 5)]
         [DataRow(1, 1, 1)]
         [DataRow(2, 1, 2)]
-        public void GetTotalCount_ReturnsExpectedProductsLength(
+        public void GetTotalCount_WhenCalledWithVariousInputs_ThenReturnsExpectedProductsLength(
             int expectedCombinationsCount, int categoriesCount, int postsCount)
         {
             //Arrange
@@ -38,7 +38,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetTotalCount_WhenNoRequired_ReturnsExpectedProductsLength()
+        public void GetTotalCount_WhenNoRequiredEntities_ThenReturnsExpectedProductsLength()
         {
             //Arrange
             var parentCounts = new (Type, int)[0];
@@ -53,7 +53,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetParentIndex_WhenTargetCountIncludeAllCombinations_ReturnDistinct()
+        public void GetParentIndex_WhenTargetCountIncludeAllCombinations_ThenReturnDistinct()
         {
             //Arrange
             (Type, int)[] parentCounts = new[]
@@ -80,7 +80,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetParentIndex_WhenTargetCountExceedsAllCombinations_ResetAndRepeat()
+        public void GetParentIndex_WhenTargetCountExceedsAllCombinations_ThenResetAndRepeat()
         {
             //Arrange
             (Type, int)[] parentCounts = new[]
@@ -117,7 +117,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetNextIterationParentsCount_Increment_ResetAndRepeat()
+        public void GetNextIterationParentsCount_WhenReachesEndOfSequence_ThenResetAndRepeats()
         {
             //Arrange
             (Type, int)[] parentCounts = new[]

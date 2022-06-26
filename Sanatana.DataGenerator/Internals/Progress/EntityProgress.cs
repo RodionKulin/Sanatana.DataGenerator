@@ -86,7 +86,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
                 //final flush may be required
                 //if all target number of instances generated
                 //if still have some instances in temp storage and
-                //if not have enough instances to reach full capacity db insert request 
+                //if not have enough entity instances to reach full capacity db insert request 
                 return true;
             }
 

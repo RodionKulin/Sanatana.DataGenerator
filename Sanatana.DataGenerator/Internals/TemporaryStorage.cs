@@ -63,6 +63,12 @@ namespace Sanatana.DataGenerator.Internals
             };
         }
 
+        public virtual void Setup()
+        {
+            _entitiesAwaitingFlush.Clear();
+            _runningTasks.Clear();
+        }
+
 
         //Temporary storage command and query
         /// <summary>

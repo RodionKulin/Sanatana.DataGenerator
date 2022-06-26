@@ -16,7 +16,7 @@ namespace Sanatana.DataGeneratorSpecs
     {
         //Progress specs
         [TestMethod]
-        public void GeneratorSetup_WhenSubscribedToProgressChange_ReturnsProgress()
+        public void SetProgressHandler_WhenSubscribedToProgressChange_ThenReturnsProgress()
         {
             //Arrange
             GeneratorSetup generatorSetup = GetGeneratorSetup();
@@ -36,7 +36,7 @@ namespace Sanatana.DataGeneratorSpecs
 
         //Generate specs
         [TestMethod]
-        public void GeneratorSetup_WhenInsertingSameEntityInParallel_InsertsExpectedCountOfInstances()
+        public void Generate_WhenInsertingSameEntityInParallel_ThenInsertsExpectedCountOfInstances()
         {
             //Arrange
             var slowStorage = new SlowStorage();
@@ -64,7 +64,7 @@ namespace Sanatana.DataGeneratorSpecs
         }
 
         [TestMethod]
-        public void GeneratorSetup_WhenInsertingSameEntityInParallelFromSingleGeneratorInvocation_InsertsExpectedCountOfInstances()
+        public void Generator_WhenInsertingSameEntityInParallelFromSingleGeneratorInvocation_ThenInsertsExpectedCountOfInstances()
         {
             //Arrange
             var slowStorage = new SlowStorage();

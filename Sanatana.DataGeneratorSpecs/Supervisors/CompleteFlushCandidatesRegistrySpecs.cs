@@ -1,17 +1,15 @@
 ﻿using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator;
-using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Supervisors.Complete;
 using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
-using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
+using Sanatana.DataGenerator.Internals.Commands;
 
 namespace Sanatana.DataGeneratorSpecs.Supervisors
 {
@@ -19,10 +17,10 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
     public class CompleteFlushCandidatesRegistrySpecs
     {
         [TestMethod]
-        public void GetNextFlushCommands_ReturnsExpectedFlushActions()
+        public void GetNextFlushCommands_WhenFlushCandidatesGetReleased_ThenReturnsExpectedFlushCommands()
         {
             //Arrange
-            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntityContexts(targetCount: 100);
+            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntities(targetCount: 100);
             var provider = new CompleteSupervisorProvider(entityDescriptions);
             provider.SetEntityCurrentCount(new Dictionary<Type, long>
             {
@@ -63,16 +61,16 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
 
 
         [TestMethod]
-        public void FlushCandidatesHashSet_KeepsUniqueEntities()
+        public void AddOnFlushCandidatesHashSet_WhenAddedDuplicates_ThenKeepsUniqueEntitiesOnly()
         {
-            //arrange
+            //Arrange
             var flushCandidates = new HashSet<EntityContext>();
-            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntityContexts(targetCount: 100);
+            Dictionary<Type, IEntityDescription> entityDescriptions = EntityDescriptionProvider.GetAllEntities(targetCount: 100);
             Dictionary<Type, EntityContext> entityContexts = CompleteSupervisorProvider.ToEntityContexts(entityDescriptions);
             EntityContext categoryContext = entityContexts[typeof(Category)];
             flushCandidates.Add(categoryContext);
 
-            //act
+            //Act
             flushCandidates.Add(categoryContext);
 
             //Assert

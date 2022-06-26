@@ -34,10 +34,10 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
 
 
         //methods
-        public virtual void SetupEntityContexts(Dictionary<Type, IEntityDescription> entityDescriptions)
+        public virtual void SetupEntityContexts()
         {
-            EntityContexts = entityDescriptions.Values
-                .Select(description => EntityContext.Factory.Create(entityDescriptions, description))
+            EntityContexts = EntityDescriptions.Values
+                .Select(description => EntityContext.Factory.Create(EntityDescriptions, description))
                 .ToDictionary(ctx => ctx.Type, ctx => ctx);
         }
 
@@ -75,6 +75,48 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 {
                     TargetCount = totalCountProvider.GetTargetCount()
                 };
+            }
+        }
+
+        public virtual void SetupPersistentStorages()
+        {
+            foreach (EntityContext entityCtx in EntityContexts.Values)
+            {
+                entityCtx.Description.PersistentStorages.ForEach(x => x.Setup());
+            }
+        }
+
+
+        //validation methods
+        public virtual void ValidateEntitiesConfigured(Type entityType)
+        {
+            if (!EntityDescriptions.ContainsKey(entityType))
+            {
+                throw new ArgumentException($"Entity of type {entityType.FullName} not found in {nameof(EntityDescriptions)}. Need to invoke {nameof(GeneratorSetup)}.{nameof(GeneratorSetup.RegisterEntity)} method first.");
+            }
+        }
+
+        public virtual void ValidateEntitiesConfigured(IEnumerable<Type> entityTypes)
+        {
+            string[] missingTypes = entityTypes
+                .Where(entityType => !EntityDescriptions.ContainsKey(entityType))
+                .Select(entityType => $"Entity of type {entityType.FullName} not found in {nameof(EntityDescriptions)}. Need to invoke {nameof(GeneratorSetup)}.{nameof(GeneratorSetup.RegisterEntity)} method first.")
+                .ToArray();
+            if (missingTypes.Length > 0)
+            {
+                throw new ArgumentException(string.Join(", ", missingTypes));
+            }
+        }
+
+        public virtual void ValidateNoEntityDuplicates(IEnumerable<Type> entityTypes)
+        {
+            string[] duplicateTypes = entityTypes.GroupBy(type => type)
+                 .Where(group => group.Count() > 1)
+                 .Select(group => $"Entity of type {group.Key.FullName} included multiple times in {nameof(entityTypes)} parameter. Duplicates are not allowed.")
+                 .ToArray();
+            if (duplicateTypes.Length > 0)
+            {
+                throw new ArgumentException(string.Join(", ", duplicateTypes));
             }
         }
     }

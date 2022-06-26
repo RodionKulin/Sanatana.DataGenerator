@@ -10,7 +10,7 @@ using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
-namespace Sanatana.DataGenerator.Commands
+namespace Sanatana.DataGenerator.Internals.Commands
 {
     /// <summary>
     /// Call entity's generator and increment counters

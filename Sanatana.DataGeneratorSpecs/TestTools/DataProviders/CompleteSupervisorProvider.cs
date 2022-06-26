@@ -3,6 +3,7 @@ using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Supervisors.Complete;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
@@ -14,6 +15,8 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
     internal class CompleteSupervisorProvider
     {
         //properties
+        public GeneratorSetup GeneratorSetup { get; protected set; }
+        public GeneratorServices GeneratorServices { get; protected set; }
         public ISupervisor Supervisor { get; protected set; }
         public IProgressState ProgressState { get; protected set; }
         public IFlushCandidatesRegistry FlushCandidatesRegistry { get; private set; }
@@ -34,24 +37,21 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
         //individual setup methods
         private void SetupCompleteSupervisor()
         {
-            var generatorSetup = new GeneratorSetup();
+            var generatorSetup = new PublicPropsGeneratorSetup(EntityDescriptions.Values);
+            GeneratorSetup = generatorSetup;
 
-            GeneratorServices generatorServices = generatorSetup.GetGeneratorServices();
-            generatorServices.SetupEntityContexts(EntityDescriptions);
-            generatorServices.SetupSpreadStrategies();
-            generatorServices.SetupTargetCount();
-            EntityContexts = generatorServices.EntityContexts;
+            var supervisor = new PublicPropsCompleteSupervisor();
+            generatorSetup.Supervisor = supervisor;
+            generatorSetup.PublicSetup();
 
-            Supervisor = new CompleteSupervisor();
-            ProgressState = new CompleteProgressState(generatorServices.EntityContexts);
-            FlushCandidatesRegistry = new CompleteFlushCandidatesRegistry(
-                generatorServices, ProgressState);
-            NextNodeFinder = new CompleteNextNodeFinder(
-                generatorServices, FlushCandidatesRegistry, ProgressState);
-            RequiredQueueBuilder = new CompleteRequiredQueueBuilder(
-                generatorServices, NextNodeFinder);
+            GeneratorServices = generatorSetup.GetGeneratorServices();
+            EntityContexts = GeneratorServices.EntityContexts;
 
-            Supervisor.Setup(generatorServices);
+            Supervisor = supervisor;
+            ProgressState = supervisor.ProgressState;
+            FlushCandidatesRegistry = supervisor.FlushCandidatesRegistry;
+            NextNodeFinder = supervisor.NextNodeFinder;
+            RequiredQueueBuilder = supervisor.RequiredQueueBuilder;
         }
 
         public void SetEntityRequestCapacity(int capacity)
@@ -107,6 +107,15 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             Dictionary<Type, IEntityDescription> dictDescriptions = entityDescriptions.ToDictionary(x => x.Type, x => x);
             var provider = new CompleteSupervisorProvider(dictDescriptions);
             return (CompleteSupervisor)provider.Supervisor;
+        }
+
+        public static GeneratorSetup GetMixedRequiredOrderGeneratorSetup()
+        {
+            Dictionary<Type, IEntityDescription> mixedOrderEntities = EntityDescriptionProvider.GetMixedRequiredOrderEntities(100);
+            
+            var provider = new CompleteSupervisorProvider(mixedOrderEntities);
+            provider.GeneratorServices.Defaults.PersistentStorages.Add(new InMemoryStorage());
+            return provider.GeneratorSetup;
         }
     }
 }

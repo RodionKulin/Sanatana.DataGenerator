@@ -23,8 +23,12 @@ namespace Sanatana.DataGenerator.EntityFramework
         {
         }
 
+        public virtual void Setup()
+        {
+        }
 
-        //methods
+
+        //IPersistentStorage methods
         public virtual async Task Insert<TEntity>(List<TEntity> entities)
             where TEntity : class
         {
@@ -40,7 +44,7 @@ namespace Sanatana.DataGenerator.EntityFramework
         }
 
 
-        //selectors
+        //IPersistentStorageSelector methods
         public virtual List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter,
             Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
             where TEntity : class
@@ -73,6 +77,12 @@ namespace Sanatana.DataGenerator.EntityFramework
                     .LongCount();
                 return count;
             }
+        }
+
+
+        //IDisposable
+        public virtual void Dispose()
+        {
         }
     }
 }

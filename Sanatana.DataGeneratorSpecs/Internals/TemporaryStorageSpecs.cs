@@ -17,7 +17,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
     {
         [TestMethod]
         [ExpectedException(typeof(AggregateException))]
-        public void FlushToPersistent_WhenStorageThrows_ExceptionIsPropagated()
+        public void FlushToPersistent_WhenStorageThrows_ThenExceptionIsPropagated()
         {
             //Arrange
             var generatorSetup = new GeneratorSetup();
@@ -36,7 +36,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
         }
 
 
-        //Helper classes
+        //helper classes
         class ThrowingStorage : IPersistentStorage
         {
             public async Task Insert<TEntity>(List<TEntity> entities) 
@@ -46,6 +46,8 @@ namespace Sanatana.DataGeneratorSpecs.Internals
             }
 
             public void Dispose(){}
+
+            public void Setup(){}
         }
     }
 }

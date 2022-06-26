@@ -6,7 +6,7 @@ using System.Linq;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.SpreadStrategies;
-using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.Commands;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;

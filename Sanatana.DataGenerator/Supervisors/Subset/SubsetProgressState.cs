@@ -13,6 +13,7 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
         //fields
         protected List<Type> _entitiesSubset;
 
+
         //init
         public SubsetProgressState(List<Type> entitiesSubset, Dictionary<Type, EntityContext> entityContexts)
             : base(entityContexts)

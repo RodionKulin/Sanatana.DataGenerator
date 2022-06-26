@@ -79,7 +79,7 @@ namespace Sanatana.DataGenerator.Entities
                 Required = new List<RequiredEntity>(Required),
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
-                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
                 TotalCountProvider = TotalCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,

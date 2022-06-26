@@ -66,7 +66,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         protected virtual void ThrowNoNextGeneratorFound(IProgressState progressState)
         {
             string[] completedNames = progressState.CompletedEntityTypes
-                .Select(x => $"[{x.Name}]")
+                .Select(x => $"[{x.FullName}]")
                 .ToArray();
             string[] notCompletedNames = progressState.NotCompletedEntities
                 .Select(x => $"[{x.Type.FullName}:{x.EntityProgress.TargetCount - x.EntityProgress.CurrentCount}]")
@@ -86,6 +86,10 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         /// <returns></returns>
         protected virtual EntityContext FindNextLeaf()
         {
+            //There should always be at least one entity with no Required entities,
+            //otherwise it would have a cycle in dependencies.
+            //There is a validation that checks, that no cycle exist before starting generation.
+
             EntityContext leafNode = _progressState.NotCompletedEntities
                 .Where(x => x.ChildEntities
                     .Select(req => req.Type)

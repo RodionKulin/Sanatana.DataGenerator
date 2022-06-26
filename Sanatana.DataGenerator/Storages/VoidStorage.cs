@@ -15,7 +15,12 @@ namespace Sanatana.DataGenerator.Storages
         public virtual Task Insert<TEntity>(List<TEntity> entities)
             where TEntity : class
         {
-            return Task.FromResult(0);
+            
+            return Task.CompletedTask;
+        }
+
+        public virtual void Setup()
+        {
         }
 
         public virtual void Dispose()

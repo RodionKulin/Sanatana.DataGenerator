@@ -19,7 +19,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public List<IEntityDescription> ParentEntities { get; set; }
 
 
-        //Factory
+        //init
         public static class Factory
         {
             public static EntityContext Create(Dictionary<Type, IEntityDescription> allDescriptions, IEntityDescription description)

@@ -147,7 +147,7 @@ namespace Sanatana.DataGenerator.Generators
                 .Any(x => x == true);
             if (hasNotSupportedInnerTypes)
             {
-                string notSupportedJoined = string.Join(", ", notSupportedInnerTypes.Select(x => x.Name));
+                string notSupportedJoined = string.Join(", ", notSupportedInnerTypes.Select(x => x.FullName));
                 throw new NotSupportedException($"newInstancesGenerator should produce new instances and should not be assignable from {notSupportedJoined}");
             }
 

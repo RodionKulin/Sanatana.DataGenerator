@@ -10,10 +10,10 @@ namespace Sanatana.DataGeneratorSpecs.Internals.Collections
     public class ReverseOrderedSetSpecs
     {
         [TestMethod]
-        public void ReverseOrderedSet_WhenIterated_ReturnsReverseOrder()
+        public void ReverseOrderedSet_WhenIterated_ThenReturnsReverseOrder()
         {
             //Arrange
-            ReverseOrderedSet<int> set = new ReverseOrderedSet<int>();
+            var set = new ReverseOrderedSet<int>();
             set.Add(1);
             set.Add(2);
             set.Add(3);

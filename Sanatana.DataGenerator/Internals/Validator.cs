@@ -79,8 +79,9 @@ namespace Sanatana.DataGenerator.Internals
                     throw new ArgumentNullException(defName, msg);
                 }
 
-                List<IPersistentStorage> persistentStorages = description.PersistentStorages
-                    ?? _generatorServices.Defaults.PersistentStorages;
+                List<IPersistentStorage> persistentStorages = description.PersistentStorages == null || description.PersistentStorages.Count == 0
+                    ? _generatorServices.Defaults.PersistentStorages
+                    : description.PersistentStorages;
                 if (persistentStorages == null || persistentStorages.Count == 0)
                 {
                     string defName = nameof(_generatorServices.Defaults.PersistentStorages);

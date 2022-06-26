@@ -16,7 +16,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
     {
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public void CheckGeneratorSetupComplete_WhenNotComplete_ThrowsException()
+        public void CheckGeneratorSetupComplete_WhenNotComplete_ThenThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();
@@ -31,7 +31,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
         }
 
         [TestMethod]
-        public void CheckGeneratorSetupComplete_WhenComplete_NotThrowsException()
+        public void CheckGeneratorSetupComplete_WhenComplete_ThenNotThrowsException()
         {
             //Arrange
             var generatorSetup = new GeneratorSetup()
@@ -50,7 +50,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
 
         [TestMethod]
         [ExpectedException(typeof(NotSupportedException))]
-        public void CheckCircularDependencies_WhenHasCircleDependencies_ThrowsException()
+        public void CheckCircularDependencies_WhenHasCircleDependencies_ThenThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();
@@ -71,7 +71,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
         }
 
         [TestMethod]
-        public void CheckCircularDependencies_WhenNoCircleDependencies_NotThrowsException()
+        public void CheckCircularDependencies_WhenNoCircleDependencies_ThenNotThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();

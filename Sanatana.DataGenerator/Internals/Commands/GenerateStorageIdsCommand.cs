@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Commands
+namespace Sanatana.DataGenerator.Internals.Commands
 {
     /// <summary>
     /// Insert entities to Persistent storage to get generated ids and keep in Temporary storage

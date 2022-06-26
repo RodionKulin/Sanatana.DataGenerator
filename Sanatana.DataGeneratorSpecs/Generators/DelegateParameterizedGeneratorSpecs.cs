@@ -12,7 +12,7 @@ namespace Sanatana.DataGeneratorSpecs.Generators
     public class DelegateParameterizedGeneratorSpecs
     {
         [TestMethod]
-        public void Generate_WhenParametersOutOfOrder_ReturnsEntity()
+        public void Generate_WhenParametersOutOfOrder_ThenReturnsEntity()
         {
             //Arrange
             var t = DelegateParameterizedGenerator<Comment>.Factory.Create(

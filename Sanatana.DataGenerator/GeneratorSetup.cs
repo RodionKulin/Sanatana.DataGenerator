@@ -7,11 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.Commands;
 using Sanatana.DataGenerator.Internals.Reflection;
 using Sanatana.DataGenerator.Internals.Debugging;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.Internals.SubsetGeneration;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
@@ -28,6 +29,7 @@ namespace Sanatana.DataGenerator
         protected ReflectionInvoker _reflectionInvoker;
         protected CommandsHistory _commandsHistory;
         protected ProgressEventTrigger _progress;
+        protected GeneratorServices _generatorServices;
         /// <summary>
         /// All entity types configured that will be used by OrderProvider to pick generation order.
         /// </summary>
@@ -80,7 +82,7 @@ namespace Sanatana.DataGenerator
         }
 
 
-        //Register entity
+        #region Register entity
         /// <summary>
         /// Add new IEntityDescription.
         /// </summary>
@@ -131,7 +133,7 @@ namespace Sanatana.DataGenerator
                 .ToList();
             if (duplicateEntityTypes.Count > 0)
             {
-                string duplicateTypesJoined = string.Join(",", duplicateEntityTypes.Select(x => x.Name));
+                string duplicateTypesJoined = string.Join(",", duplicateEntityTypes.Select(x => x.FullName));
                 throw new ArgumentException($"Entity type(s) {duplicateTypesJoined} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
             }
 
@@ -226,12 +228,13 @@ namespace Sanatana.DataGenerator
                 .ToArray();
             newEntityDescriptions = entityDescriptionSetup(newEntityDescriptions);
 
-            Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
+            Dictionary<Type, IEntityDescription> allEntityDescriptions = newEntityDescriptions.ToDictionary(x => x.Type, x => x);
             return Clone(entityDescriptions: allEntityDescriptions);
         }
+        #endregion
 
 
-        //Configure services
+        #region Configure services
         /// <summary>
         /// Configure existing DefaultSettings or provide new.
         /// Default settings used for entity generation if not specified entity specific settings.
@@ -314,11 +317,13 @@ namespace Sanatana.DataGenerator
             temporaryStorage.MaxTasksRunning = maxTasksRunning;
             return Clone(temporaryStorage: temporaryStorage);
         }
+        #endregion
 
 
-        //Generation start
+        #region Generation start
         public virtual void Generate()
         {
+            _generatorServices = null;
             GeneratorServices generatorServices = GetGeneratorServices();
 
             Validate(generatorServices);
@@ -330,13 +335,14 @@ namespace Sanatana.DataGenerator
 
         internal GeneratorServices GetGeneratorServices()
         {
-            return new GeneratorServices()
+            _generatorServices = _generatorServices ?? new GeneratorServices()
             {
                 TemporaryStorage = _temporaryStorage,
                 Defaults = _defaults,
                 EntityDescriptions = _entityDescriptions,
                 Supervisor = _supervisor
             };
+            return _generatorServices;
         }
 
         protected virtual void Validate(GeneratorServices generatorServices)
@@ -350,10 +356,12 @@ namespace Sanatana.DataGenerator
             _progress.Setup(_supervisor);
             _progress.Clear();
             _commandsHistory.Clear();
+            _temporaryStorage.Setup();
 
-            generatorServices.SetupEntityContexts(_entityDescriptions);
+            generatorServices.SetupEntityContexts();
             generatorServices.SetupSpreadStrategies();
             generatorServices.SetupTargetCount();
+            generatorServices.SetupPersistentStorages();
 
             _supervisor.Setup(generatorServices);
         }
@@ -370,16 +378,52 @@ namespace Sanatana.DataGenerator
             _temporaryStorage.WaitAllTasks();
             _progress.UpdateProgressInt(forceUpdate: true);
         }
+        #endregion
 
 
         /// <summary>
-        /// Convert to SubsetGeneratorSetup that has methods to generating subset portion of all entities configured.
+        /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
+        /// Will generate only entity types provided as parameters and their required entities.
         /// </summary>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetup ToSubsetSetup()
+        public virtual SubsetGeneratorSetupMany ToSubsetSetup(List<Type> targetEntities)
         {
-            return new SubsetGeneratorSetup(this);
+            return new SubsetGeneratorSetupMany(this, targetEntities);
         }
 
+        /// <summary>
+        /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
+        /// Will generate only entity types provided as parameters and their required entities.
+        /// </summary>
+        /// <param name="targetEntities"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual SubsetGeneratorSetupMany ToSubsetSetup(params Type[] targetEntities)
+        {
+            targetEntities = targetEntities ?? throw new ArgumentNullException(nameof(targetEntities));
+            return new SubsetGeneratorSetupMany(this, targetEntities.ToList());
+        }
+
+        /// <summary>
+        /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
+        /// Will generate only entity type provided as parameter and it's required entities.
+        /// </summary>
+        /// <param name="targetEntity"></param>
+        /// <returns></returns>
+        public virtual SubsetGeneratorSetupSingle ToSubsetSetup(Type targetEntity)
+        {
+            return new SubsetGeneratorSetupSingle(this, targetEntity);
+        }
+
+        /// <summary>
+        /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
+        /// Will generate only entity type provided as parameter and it's required entities.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        public virtual SubsetGeneratorSetupSingle<TEntity> ToSubsetSetup<TEntity>()
+        {
+            return new SubsetGeneratorSetupSingle<TEntity>(this);
+        }
     }
 }

@@ -19,7 +19,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.Reflection
         [DataRow(10, 10, 10)]
         [DataRow(10, 20, 10)]
         [DataRow(0, 20, 0)]
-        public void Take_ReturnsExpectedLengthList(int startingListCount, int takeAmount, int expectedCount)
+        public void Take_WhenCalledWithVariousInputs_ThenReturnsExpectedLengthList(int startingListCount, int takeAmount, int expectedCount)
         {
             //Arrange
             var target = new ListOperations();
@@ -42,7 +42,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.Reflection
         [DataRow(10, 10, 0, 0)]
         [DataRow(10, 20, 0, 0)]
         [DataRow(0, 20, 0, 0)]
-        public void Skip_ReturnsExpectedLengthList(int startingListCount, int skipAmount, 
+        public void Skip_WhenCalledWithVariousInputs_ThenReturnsExpectedLengthList(int startingListCount, int skipAmount, 
             int expectedCount, int expectedStartsFrom)
         {
             //Arrange

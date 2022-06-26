@@ -1,4 +1,4 @@
-﻿using Sanatana.DataGenerator.Commands;
+﻿using Sanatana.DataGenerator.Internals.Commands;
 using System;
 using System.Collections.Generic;
 using System.Linq;

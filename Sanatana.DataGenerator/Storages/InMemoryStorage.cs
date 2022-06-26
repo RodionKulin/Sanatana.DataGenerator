@@ -19,7 +19,12 @@ namespace Sanatana.DataGenerator.Storages
         {
             _storages = new ConcurrentDictionary<Type, ConcurrentBag<object>>();
         }
-        
+
+        public virtual void Setup()
+        {
+            _storages.Clear();
+        }
+
 
         //methods
         public virtual Task Insert<TEntity>(List<TEntity> instances)
@@ -31,7 +36,7 @@ namespace Sanatana.DataGenerator.Storages
             {
                 storage.Add(instance);
             }
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public virtual TEntity[] Select<TEntity>()
@@ -45,6 +50,8 @@ namespace Sanatana.DataGenerator.Storages
             return _storages[entityType].ToArray();
         }
 
+
+        //IDisposable
         public virtual void Dispose()
         {
         }

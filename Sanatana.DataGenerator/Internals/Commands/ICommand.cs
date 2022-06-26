@@ -1,4 +1,4 @@
-﻿namespace Sanatana.DataGenerator.Commands
+﻿namespace Sanatana.DataGenerator.Internals.Commands
 {
     public interface ICommand
     {
