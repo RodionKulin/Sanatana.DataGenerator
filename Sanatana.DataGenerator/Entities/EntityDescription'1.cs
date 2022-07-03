@@ -26,7 +26,7 @@ namespace Sanatana.DataGenerator.Entities
     {
         #region Properties
         /// <summary>
-        /// Type of entity to generate
+        /// Type of entity to generate.
         /// </summary>
         public Type Type
         {
@@ -37,52 +37,60 @@ namespace Sanatana.DataGenerator.Entities
         }
         /// <summary>
         /// Entities that are needed for generator as foreign keys or other type of dependency.
+        /// Required entity intstances are generated first, then will be passed as parameters to generator.
         /// </summary>
         public List<RequiredEntity> Required { get; set; }
         /// <summary>
         /// Entity instances generator. Can return instances one by one or in small batches. 
         /// Usually better to return single instance not to store extra instances in memory.
-        /// Be default will use DefaultGenerator from GeneratorSetup.
+        /// If not specified will use Generator from DefaultSettings.
         /// </summary>
         public IGenerator Generator { get; set; }
         /// <summary>
         /// List of methods to make adjustments to entity instance after generation.
-        /// Be default will use DefaultModifiers from GeneratorSetup.
+        /// If not specified will use Modifiers from DefaultSettings.
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
-        /// Database storages for generated entities.
-        /// Be default will use DefaultPersistentStorages from GeneratorSetup.
+        /// Database storages for generated entity instances.
+        /// If not specified will use PersistentStorages from DefaultSettings.
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
         /// Provider of total number of entity instances that need to be generated.
-        /// Be default will use DefaultTotalCountProvider from GeneratorSetup.
+        /// If not specified will use TotalCountProvider from DefaultSettings.
         /// </summary>
         public ITotalCountProvider TotalCountProvider { get; set; }
         /// <summary>
-        /// Checker of temporary storage if it is time to flush entities to database.
-        /// Be default will use DefaultFlushStrategy from GeneratorSetup.
+        /// Checker of temporary storage if it is time to flush entity instances to persistent storage.
+        /// If not specified will use FlushStrategy from DefaultSettings.
         /// </summary>
         public IFlushStrategy FlushStrategy { get; set; }
         /// <summary>
         /// Provider of number of entity instances that can be inserted with next request to persistent storage.
-        /// Be default will use DefaultRequestCapacityProvider from GeneratorSetup.
+        /// If not specified will use RequestCapacityProvider from DefaultSettings.
         /// </summary>
         public IRequestCapacityProvider RequestCapacityProvider { get; set; }
         /// <summary>
         /// Checker of entity instances to be inserted into database. 
         /// Excludes unwanted instances, like the ones that already exist in database for EnsureExistGenerator.
-        /// By default is not used.
+        /// If not specified is not used.
         /// </summary>
         public IStorageInsertGuard StorageInsertGuard { get; set; }
         /// <summary>
-        /// Get database generated columns after inserting entities first (for example Id).
-        /// Only after receiving such columns pass entity instances as required for generation.
-        /// Also makes insert requests to persistent storage sync for this entity.
+        /// Get database generated columns after inserting entities instances to persistent storage. For example Id.
+        /// Only after receiving such columns pass entity instances as required to generator.
+        /// Also makes insert requests to persistent storage sync for this entity. Multiple parallel inserts wont be possible.
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }
+        /// <summary>
+        /// Selector from persistent storage, that will provide existing instances.
+        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// If not specified will use PersistentStorageSelector from DefaultSettings.
+        /// </summary>
+        public IPersistentStorageSelector PersistentStorageSelector { get; set; }
+
         #endregion
 
 
@@ -94,7 +102,7 @@ namespace Sanatana.DataGenerator.Entities
             PersistentStorages = new List<IPersistentStorage>();
         }
 
-        public IEntityDescription Clone()
+        public virtual IEntityDescription Clone()
         {
             return new EntityDescription<TEntity>
             {
@@ -106,7 +114,8 @@ namespace Sanatana.DataGenerator.Entities
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
                 StorageInsertGuard = StorageInsertGuard,
-                InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse
+                InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse,
+                PersistentStorageSelector = PersistentStorageSelector
             };
         }
 
@@ -379,6 +388,20 @@ namespace Sanatana.DataGenerator.Entities
             InsertToPersistentStorageBeforeUse = insertToPersistentStorageBeforeUse;
             return this;
         }
+
+        /// <summary>
+        /// Set selector from persistent storage, that will provide existing instances.
+        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// If not specified will use PersistentStorageSelector from DefaultSettings.
+        /// </summary>
+        /// <param name="persistentStorageSelector"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetPersistentStorageSelector(
+            IPersistentStorageSelector persistentStorageSelector)
+        {
+            PersistentStorageSelector = persistentStorageSelector;
+            return this;
+        }
         #endregion
 
 
@@ -392,9 +415,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetReuseExistingGenerator<TOrderByKey>(ReuseExistingGenerator<TEntity, TOrderByKey> generator)
         {
-            generator = generator ?? throw new ArgumentNullException(nameof(generator));
-            generator.ValidateSetup();
-            Generator = generator;
+            Generator = generator ?? throw new ArgumentNullException(nameof(generator));
 
             PersistentStorages.Add(new VoidStorage());
 
@@ -408,41 +429,95 @@ namespace Sanatana.DataGenerator.Entities
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
         /// Will set CountExistingTotalCountProvider as TotalCountProvider to select all instances.
         /// </summary>
-        /// <param name="storageSelector">Persistent storage that will provide existing entity instances.</param>
         /// <param name="filter">Optional filter expression to select existing entity instances from persistent storage. By default will include all instances.</param>
         /// <param name="orderBy">Optional OrderBy expression to select existing entity instances with expected order. By default will select unordered instances.</param>
+        /// <param name="isAscOrder"></param>
         /// <returns></returns>
         /// <exception cref="NullReferenceException"></exception>
         public virtual EntityDescription<TEntity> SetReuseExistingGeneratorForAll<TOrderByKey>(
-            IPersistentStorageSelector storageSelector,
             Expression<Func<TEntity, bool>> filter = null,
-            Expression<Func<TEntity, TOrderByKey>> orderBy = null)
+            Expression<Func<TEntity, TOrderByKey>> orderBy = null, bool isAscOrder = false)
         {
             if (filter == null)
             {
                 filter = (entity) => true;
             }
 
-            var generator = new ReuseExistingGenerator<TEntity, TOrderByKey>(storageSelector)
+            var generator = new ReuseExistingGenerator<TEntity, TOrderByKey>()
                 .SetBatchSizeMax()
                 .SetFilter(filter);
             if(orderBy != null)
             {
-                generator.SetOrderBy(orderBy);
+                generator.SetOrderBy(orderBy, isAscOrder);
             }
 
-            generator.ValidateSetup();
             Generator = generator;
 
             PersistentStorages.Add(new VoidStorage());
-            TotalCountProvider = new CountExistingTotalCountProvider<TEntity>(storageSelector, filter);
+            TotalCountProvider = new CountExistingTotalCountProvider<TEntity>(filter);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Generator that inserts instances only if they dont exist in persistent storage in ranges
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey"></typeparam>
+        /// <param name="generator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual EntityDescription<TEntity> SetEnsureExistRangeGenerator<TOrderByKey>(
+            EnsureExistRangeGenerator<TEntity, TOrderByKey> generator)
+        {
+            generator = generator ?? throw new ArgumentNullException(nameof(generator));
+
+            Generator = generator;
+            FlushStrategy = generator;
+            StorageInsertGuard = generator;
 
             return this;
         }
 
         /// <summary>
         /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
-        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding existing instances. It is required to plan number of rows inserted to persistent storage.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="idSelector"></param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistRangeGenerator<TOrderByKey, T1>(
+            Func<GeneratorContext, T1, TEntity> newInstanceGenerateFunc, Func<TEntity, long> idSelector,
+            Func<EnsureExistRangeGenerator<TEntity, TOrderByKey>, EnsureExistRangeGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistRangeGenerator<TEntity, TOrderByKey>(newInstanceGenerator, idSelector);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistRangeGenerator(ensureExistGenerator);
+        }
+
+
+        #endregion
+
+
+        #region Generator that inserts instances only if they dont exist in persistent storage
+
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
         /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
         /// </summary>
         /// <typeparam name="TOrderByKey"></typeparam>
@@ -460,6 +535,479 @@ namespace Sanatana.DataGenerator.Entities
 
             return this;
         }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will create new TEntity instances.</param>
+        
+        /// <param name="generatorSetupFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey>(
+            Func<GeneratorContext, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateGenerator<TEntity> newInstanceGenerator = 
+                DelegateGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1>(
+            Func<GeneratorContext, T1, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2>(
+            Func<GeneratorContext, T1, T2, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator = 
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3>(
+            Func<GeneratorContext, T1, T2, T3, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4>(
+            Func<GeneratorContext, T1, T2, T3, T4, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <typeparam name="T15"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
         #endregion
 
 
@@ -485,21 +1033,19 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         /// <param name="generateFunc"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetGenerator(Func<GeneratorContext, TEntity> generateFunc)
+        public virtual EntityDescription<TEntity> SetGenerator(
+            Func<GeneratorContext, TEntity> generateFunc)
         {
             if (generateFunc == null)
             {
                 throw new ArgumentNullException($"Argument [{nameof(generateFunc)}] of {nameof(SetGenerator)} can not be null.");
             }
-
             Generator = DelegateGenerator<TEntity>.Factory.Create(generateFunc);
             return this;
         }
-
-        
-
+               
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -516,7 +1062,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -534,7 +1080,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -553,7 +1099,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -573,7 +1119,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -594,7 +1140,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -616,7 +1162,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -639,7 +1185,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -663,7 +1209,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -688,7 +1234,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -714,7 +1260,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -741,7 +1287,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -769,7 +1315,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -798,7 +1344,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -828,7 +1374,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -873,7 +1419,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -889,7 +1435,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -907,7 +1453,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -926,7 +1472,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -946,7 +1492,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -967,7 +1513,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -989,7 +1535,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1012,7 +1558,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1036,7 +1582,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1061,7 +1607,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1087,7 +1633,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1114,7 +1660,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1142,7 +1688,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1171,7 +1717,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1201,7 +1747,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1842,6 +2388,17 @@ namespace Sanatana.DataGenerator.Entities
         {
             Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
 
+            return this;
+        }
+
+
+        /// <summary>
+        /// Remove all Modifiers.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemoveModifiers()
+        {
+            Modifiers.Clear();
             return this;
         }
 

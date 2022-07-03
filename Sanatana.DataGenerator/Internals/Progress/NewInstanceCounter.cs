@@ -29,9 +29,9 @@ namespace Sanatana.DataGenerator.Internals.Progress
             {
                 if (!exists[i])
                 {
-                    //Entity context.CurrentCount is incremented after generation, so on first entity instance if will be 0.
-                    //Exists i values are 0-starting.
-                    //Convert it this 0-starting count to 1-starting count.
+                    //Entity context.CurrentCount is incremented after generation, so on first entity instance it will be 0.
+                    //"exists" var i value is 0-starting.
+                    //Convert this 0-starting count to 1-starting count.
                     _newInstancesCountPointsInTime.Add(context.CurrentCount + i + 1);
                 }
             }

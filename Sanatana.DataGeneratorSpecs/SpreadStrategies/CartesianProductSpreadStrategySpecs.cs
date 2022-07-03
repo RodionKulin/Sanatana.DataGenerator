@@ -31,7 +31,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             });
 
             //Act
-            long actual = target.GetTargetCount();
+            long actual = target.GetTargetCount(null, null);
 
             //Assert
             Assert.AreEqual(expectedCombinationsCount, actual);
@@ -46,7 +46,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
             //Act
-            long actual = target.GetTargetCount();
+            long actual = target.GetTargetCount(null, null);
 
             //Assert
             Assert.AreEqual(0, actual);
@@ -65,7 +65,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
             //Act
-            long expectedCombinationsCount = target.GetTargetCount();
+            long expectedCombinationsCount = target.GetTargetCount(null, null);
             List<long[]> resultingCombinations = InvokeGetParentIndex(target,
                 parentEntities.Keys.ToList(), expectedCombinationsCount);
 
@@ -91,7 +91,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            long expectedDistinctCount = target.GetTargetCount();
+            long expectedDistinctCount = target.GetTargetCount(null, null);
             int numberOfRepeats = 2;
             long expectedCombinationsCount = expectedDistinctCount * numberOfRepeats;
 
@@ -130,7 +130,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             int nextIterationIncrement = 5;
 
             //Act
-            long expectedCombinationsCount = target.GetTargetCount();
+            long expectedCombinationsCount = target.GetTargetCount(null, null);
             List<long[]> actualParentsCount = InvokeGetNextIterationParentsCount(target,
                 parentEntities.Keys.ToList(), expectedCombinationsCount, nextIterationIncrement);
             List<long[]> actualParentIndex = InvokeGetParentIndex(target,

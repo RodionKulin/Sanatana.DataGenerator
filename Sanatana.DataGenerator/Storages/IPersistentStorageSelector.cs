@@ -9,7 +9,7 @@ namespace Sanatana.DataGenerator.Storages
     public interface IPersistentStorageSelector
     {
         List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter, 
-            Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
+            Expression<Func<TEntity, TOrderByKey>> orderBy, bool isAscOrder, int skip, int take)
             where TEntity : class;
 
         long Count<TEntity>(Expression<Func<TEntity, bool>> filter)

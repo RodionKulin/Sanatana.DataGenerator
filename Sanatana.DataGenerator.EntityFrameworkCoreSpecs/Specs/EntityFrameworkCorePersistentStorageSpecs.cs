@@ -4,13 +4,9 @@ using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Interfaces;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples.Entities;
 using SpecsFor.StructureMap;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using SpecsFor.Core.ShouldExtensions;
-using StructureMap;
-using Microsoft.EntityFrameworkCore;
 using FluentAssertions;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
@@ -19,7 +15,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
     {
         [TestFixture]
         public class when_inserting_entities_to_storage : SpecsFor<EntityFrameworkCorePersistentStorage>
-            , INeedSampleDatabase
+            , INeedSampleDatabase, INeedDatabaseCleared
         {
             private string _markerString;
             private List<Comment> _insertedComments;

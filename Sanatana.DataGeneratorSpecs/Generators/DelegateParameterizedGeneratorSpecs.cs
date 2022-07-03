@@ -24,8 +24,6 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                         CommentText = "text"
                     };
                 });
-
-            //Act
             var generatorContext = new GeneratorContext()
             {
                 RequiredEntities = new Dictionary<Type, object>
@@ -34,6 +32,8 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                     { typeof(Category), new Category() },
                 }
             };
+
+            //Act
             List<Comment> comment = (List<Comment>)t.Generate(generatorContext);
             List<Comment> comment2 = (List<Comment>)t.Generate(generatorContext);
 

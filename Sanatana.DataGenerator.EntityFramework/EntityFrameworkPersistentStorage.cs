@@ -1,21 +1,18 @@
-﻿using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.Storages;
-using Sanatana.EntityFramework.Batch.Commands;
+﻿using Sanatana.DataGenerator.Storages;
 using Sanatana.EntityFramework.Batch.Commands.Merge;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Sanatana.EntityFramework.Batch;
 using Sanatana.EntityFramework.Batch.ColumnMapping;
 using System.Linq.Expressions;
 
 namespace Sanatana.DataGenerator.EntityFramework
 {
-    public class EntityFrameworkPersistentStorage : EntityFrameworkRequestCapacityProvider, IPersistentStorage, IPersistentStorageSelector
+    public class EntityFrameworkPersistentStorage : EntityFrameworkRequestCapacityProvider, 
+        IPersistentStorage, IPersistentStorageSelector
     {
         //init
         public EntityFrameworkPersistentStorage(Func<DbContext> dbContextFactory)
@@ -54,7 +51,7 @@ namespace Sanatana.DataGenerator.EntityFramework
 
         //IPersistentStorageSelector methods
         public virtual List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter,
-            Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
+            Expression<Func<TEntity, TOrderByKey>> orderBy, bool isAsc, int skip, int take)
             where TEntity : class
         {
             using (DbContext dbContext = _dbContextFactory())
@@ -64,7 +61,9 @@ namespace Sanatana.DataGenerator.EntityFramework
 
                 if(orderBy != null)
                 {
-                    query = query.OrderBy(orderBy);
+                    query = isAsc
+                        ? query.OrderBy(orderBy)
+                        : query.OrderByDescending(orderBy);
                 }
 
                 List<TEntity> entities = query

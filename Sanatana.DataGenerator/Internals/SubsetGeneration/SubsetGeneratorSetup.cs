@@ -32,13 +32,18 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             _subsetSettings.Setup(generatorSetup.GetGeneratorServices());
         }
 
+        /// <summary>
+        /// Convert back to GeneratorSetup to use it's configuration methods.
+        /// And restore previous Supervisor with SetSupervisor method.
+        /// </summary>
+        /// <returns></returns>
         public virtual GeneratorSetup ToFullGeneratorSetup()
         {
             return _generatorSetup.SetSupervisor(_previousSupervisor);
         }
 
 
-        //setup methods
+        #region Configure services
         public virtual SubsetGeneratorSetup SetTargetCountSingle(EntitiesSelection entitiesSelection)
         {
             return SetTargetCount(entitiesSelection, 1);
@@ -122,6 +127,47 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             });
             return this;
         }
+        #endregion
 
+
+        #region Modify entity
+        /// <summary>
+        /// Get existing EntityDescription&lt;TEntity&gt; to modify.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="TypeAccessException"></exception>
+        public virtual SubsetGeneratorSetup ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
+            where TEntity : class
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity<TEntity>(entityDescriptionSetup);
+            return this;
+        }
+
+        /// <summary>
+        /// Get existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual SubsetGeneratorSetup ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity(entityType, entityDescriptionSetup);
+            return this;
+        }
+
+        /// <summary>
+        /// Get all existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual SubsetGeneratorSetup ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
+            return this;
+        }
+        #endregion
     }
 }

@@ -31,7 +31,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         {
             //1. This method prepares combination placements for all parents of child entity.
             //2. Setup can be called multiple times for each parent entity.
-            //3. Should be called before GetTargetCount.
+            //3. Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITotalCountProvider.GetTargetCount based on parent entities TotalCount.
 
             _parentEntities = childEntity.Description.Required
                 .Select(x => allEntities[x.Type])
@@ -182,6 +182,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         //Abstract methods to implement combinatorics
         protected abstract IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths);
 
-        public abstract long GetTargetCount();
+        public abstract long GetTargetCount(IEntityDescription description, DefaultSettings defaults);
     }
 }

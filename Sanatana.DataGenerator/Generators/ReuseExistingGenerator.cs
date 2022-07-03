@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Sanatana.DataGenerator.TotalCountProviders;
 using System.Linq.Expressions;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -21,29 +22,21 @@ namespace Sanatana.DataGenerator.Generators
     public class ReuseExistingGenerator<TEntity, TOrderByKey> : IGenerator
         where TEntity : class
     {
-        protected IPersistentStorageSelector _persistentStorageSelector;
-        protected IList _nextEntitiesBatch;
         protected int _storageSelectorBatchSize = 1000;
         protected Expression<Func<TEntity, bool>> _storageSelectorFilter = (entity) => true;
         protected Expression<Func<TEntity, TOrderByKey>> _storageSelectorOrderBy = null;
-
-
-        //init
-        public ReuseExistingGenerator(IPersistentStorageSelector persistentStorageSelector)
-        {
-            _persistentStorageSelector = persistentStorageSelector ?? throw new ArgumentNullException(nameof(persistentStorageSelector));
-        }
+        protected bool _isAscOrder;
 
 
         //setup methods
         /// <summary>
-        /// Set batch size of selected entity instances from persistent storage.
+        /// Set batch size of entity instances to select from persistent storage.
         /// By default will select 1000 instances.
         /// </summary>
         /// <param name="storageSelectorBatchSize"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public virtual ReuseExistingGenerator<TEntity, TOrderByKey> SetBatchSize(int storageSelectorBatchSize)
+        public virtual ReuseExistingGenerator<TEntity, TOrderByKey> SetBatchSize(int storageSelectorBatchSize = 1000)
         {
             if(storageSelectorBatchSize < 1)
             {
@@ -86,46 +79,25 @@ namespace Sanatana.DataGenerator.Generators
         /// By default will select unordered instances.
         /// </summary>
         /// <param name="storageSelectorOrderBy"></param>
+        /// <param name="isAscOrder"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public virtual ReuseExistingGenerator<TEntity, TOrderByKey> SetOrderBy(
-            Expression<Func<TEntity, TOrderByKey>> storageSelectorOrderBy)
+            Expression<Func<TEntity, TOrderByKey>> storageSelectorOrderBy, bool isAscOrder)
         {
             if (storageSelectorOrderBy == null)
             {
                 throw new ArgumentOutOfRangeException($"Parameter {nameof(storageSelectorOrderBy)} can not be null");
             }
             _storageSelectorOrderBy = storageSelectorOrderBy;
-            return this;
-        }
-
-        /// <summary>
-        /// Set persistent storage that will provide existing entity instances.
-        /// </summary>
-        /// <param name="persistentStorageSelector"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public virtual ReuseExistingGenerator<TEntity, TOrderByKey> SetPersistentStorage(IPersistentStorageSelector persistentStorageSelector)
-        {
-            if (persistentStorageSelector == null)
-            {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(persistentStorageSelector)} can not be null");
-            }
-            _persistentStorageSelector = persistentStorageSelector;
+            _isAscOrder = isAscOrder;
             return this;
         }
 
 
-        //validation
-        public virtual void ValidateSetup()
-        {
-            if (_persistentStorageSelector == null)
-            {
-                throw new ArgumentOutOfRangeException($"Parameter {nameof(_persistentStorageSelector)} can not be null. To set it use method {nameof(SetPersistentStorage)}.");
-            }
-        }
-        
-        public virtual void ValidateEntitySettings(IEntityDescription description)
+
+        //validation        
+        public virtual void ValidateEntitySettings(IEntityDescription description, DefaultSettings defaults)
         {
             string generatorName = $"Generator of type {nameof(ReuseExistingGenerator<TEntity, TOrderByKey>)} for entity {description.Type.FullName}";
 
@@ -137,17 +109,28 @@ namespace Sanatana.DataGenerator.Generators
                 throw new NotSupportedException($"{generatorName} does not support {nameof(description.Required)} list, but provided {requiredTypes}");
             }
 
-            long targetCount = description.TotalCountProvider.GetTargetCount();
-            long storageCount = _persistentStorageSelector.Count(_storageSelectorFilter);
-            if(targetCount > storageCount)
+        }
+
+        public virtual void ValidateTargetCount(IEntityDescription description, DefaultSettings defaults)
+        {
+            //should invoke this validation after GeneratorServices.SetupSpreadStrategy() to support CombinatoricsSreadStrategy
+
+            string generatorName = $"Generator of type {nameof(ReuseExistingGenerator<TEntity, TOrderByKey>)} for entity {description.Type.FullName}";
+
+            IPersistentStorageSelector persistentStorageSelector = defaults.GetPersistentStorageSelector(description);
+            long targetCount = description.TotalCountProvider.GetTargetCount(description, defaults);
+            long storageCount = persistentStorageSelector.Count(_storageSelectorFilter);
+            if (targetCount > storageCount)
             {
                 throw new NotSupportedException($"{generatorName} returned not supported value from {nameof(description.TotalCountProvider.GetTargetCount)} {targetCount} that is higher, then number of selectable instances in persistent storage {storageCount}. " +
-                    $"Possible solutions: 1. Make sure that same {nameof(_storageSelectorFilter)} is provided. " +
-                    $"2. Make sure that persistent storage is not changing during generation. " +
-                    $"3. Use {nameof(CountExistingTotalCountProvider<TEntity>)} to provide total count.");
+                    $"Possible solutions: " +
+                    $"1. Make sure that persistent storage rows count is not changed during generation. " +
+                    $"2. Use {nameof(CountExistingTotalCountProvider<TEntity>)} to provide total count." +
+                    $"3. Make sure that same {nameof(_storageSelectorFilter)} is provided to {nameof(description.TotalCountProvider)} and {typeof(ReuseExistingGenerator<,>).Name}. "
+                );
             }
 
-            if(targetCount > int.MaxValue)
+            if (targetCount > int.MaxValue)
             {
                 throw new NotSupportedException($"{generatorName} does not support {nameof(description.TotalCountProvider.GetTargetCount)} value of {targetCount} that is higher then int.MaxValue to support Skip and Take System.Linq parameters that expect int value.");
             }
@@ -157,15 +140,12 @@ namespace Sanatana.DataGenerator.Generators
         //generation
         public virtual IList Generate(GeneratorContext context)
         {
-            if (_nextEntitiesBatch == null)
-            {
-                int skipNumber = (int)context.CurrentCount; //when invoking Generate method first time, it is 0
-                long nextCount = context.TargetCount - context.CurrentCount;
-                int takeNumber = Math.Min(_storageSelectorBatchSize, (int)nextCount);
-                _nextEntitiesBatch = _persistentStorageSelector.Select(_storageSelectorFilter, _storageSelectorOrderBy, skipNumber, takeNumber);
-            }
+            int skipNumber = (int)context.CurrentCount; //when invoking Generate method first time, it is 0
+            long nextCount = context.TargetCount - context.CurrentCount;
+            int takeNumber = Math.Min(_storageSelectorBatchSize, (int)nextCount);
 
-            return _nextEntitiesBatch;
+            IPersistentStorageSelector persistentStorageSelector = context.Defaults.GetPersistentStorageSelector(context.Description);
+            return persistentStorageSelector.Select(_storageSelectorFilter, _storageSelectorOrderBy, _isAscOrder, skipNumber, takeNumber);
         }
     }
 }

@@ -46,7 +46,7 @@ namespace Sanatana.DataGenerator.EntityFramework
 
         //IPersistentStorageSelector methods
         public virtual List<TEntity> Select<TEntity, TOrderByKey>(Expression<Func<TEntity, bool>> filter,
-            Expression<Func<TEntity, TOrderByKey>> orderBy, int skip, int take)
+            Expression<Func<TEntity, TOrderByKey>> orderBy, bool isAscOrder, int skip, int take)
             where TEntity : class
         {
             using (DbContext dbContext = _dbContextFactory())
@@ -56,7 +56,9 @@ namespace Sanatana.DataGenerator.EntityFramework
 
                 if (orderBy != null)
                 {
-                    query = query.OrderBy(orderBy);
+                    query = isAscOrder
+                        ? query.OrderBy(orderBy)
+                        : query.OrderByDescending(orderBy);
                 }
 
                 List<TEntity> entities = query

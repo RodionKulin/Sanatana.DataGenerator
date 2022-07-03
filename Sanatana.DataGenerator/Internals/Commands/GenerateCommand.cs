@@ -50,6 +50,7 @@ namespace Sanatana.DataGenerator.Internals.Commands
                 TargetCount = EntityContext.EntityProgress.TargetCount,
                 CurrentCount = EntityContext.EntityProgress.CurrentCount,
                 RequiredEntities = GetRequiredEntities(),
+                Defaults = _generatorServices.Defaults,
             };
 
             IList instances = generator.Generate(context);

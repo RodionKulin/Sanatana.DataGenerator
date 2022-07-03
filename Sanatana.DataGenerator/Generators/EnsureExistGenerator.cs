@@ -9,6 +9,8 @@ using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.Internals.Extensions;
+using Sanatana.DataGenerator.Comparers;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -20,30 +22,28 @@ namespace Sanatana.DataGenerator.Generators
     public class EnsureExistGenerator<TEntity, TOrderByKey> : IGenerator, IStorageInsertGuard, IFlushStrategy
         where TEntity : class
     {
-        //fields
+        //config fields
         protected IGenerator _newInstancesGenerator;
         protected IEqualityComparer<TEntity> _comparer;
-        protected IPersistentStorageSelector _persistentStorageSelector;
         protected Expression<Func<TEntity, bool>> _storageSelectorFilter = (entity) => true;
         protected Expression<Func<TEntity, TOrderByKey>> _storageSelectorOrderBy = null;
+        protected bool _isAscOrder;
+        protected int _maxSelectableInstances = 10000;
+
+        //state fields
         protected Dictionary<TEntity, TEntity> _existingInstancesCache;
         protected NewInstanceCounter _newInstanceCounter;
-        protected int _maxInstancesInTempStorage = 10000;
-
 
 
         //init
-        public EnsureExistGenerator(IPersistentStorageSelector persistentStorageSelector, 
-            IGenerator newInstancesGenerator, IEqualityComparer<TEntity> comparer)
+        public EnsureExistGenerator(IGenerator newInstancesGenerator)
         {
-            _persistentStorageSelector = persistentStorageSelector ?? throw new ArgumentNullException(nameof(persistentStorageSelector));
             _newInstancesGenerator = newInstancesGenerator ?? throw new ArgumentNullException(nameof(newInstancesGenerator));
-            _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
             _newInstanceCounter = new NewInstanceCounter();
         }
 
 
-        //setup
+        //configure methods
         /// <summary>
         /// Set optional filter expression to select existing entity instances from persistent storage.
         /// By default will include all instances.
@@ -67,20 +67,77 @@ namespace Sanatana.DataGenerator.Generators
         /// By default will select unordered instances.
         /// </summary>
         /// <param name="storageSelectorOrderBy"></param>
+        /// <param name="isAscOrder"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetOrderBy(
-            Expression<Func<TEntity, TOrderByKey>> storageSelectorOrderBy)
+            Expression<Func<TEntity, TOrderByKey>> storageSelectorOrderBy, bool isAscOrder = true)
         {
             if (storageSelectorOrderBy == null)
             {
                 throw new ArgumentNullException(nameof(storageSelectorOrderBy));
             }
             _storageSelectorOrderBy = storageSelectorOrderBy;
+            _isAscOrder = isAscOrder;
             return this;
         }
 
-    
+        /// <summary>
+        /// Set comparer, that will be used to find existing entity instances in persistent storage.
+        /// </summary>
+        /// <param name="comparer"></param>
+        /// <returns></returns>
+        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetComparer(
+            IEqualityComparer<TEntity> comparer)
+        {
+            _comparer = comparer;
+            return this;
+        }
+
+        /// <summary>
+        /// Set comparer by key, that will be used to find existing entity instances in persistent storage.
+        /// </summary>
+        /// <typeparam name="TCompareKey"></typeparam>
+        /// <param name="keyExtractor"></param>
+        /// <returns></returns>
+        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetComparer<TCompareKey>(
+            Func <TEntity, TCompareKey> keyExtractor)
+        {
+            _comparer = new KeyEqualityComparer<TEntity, TCompareKey>(keyExtractor);
+            return this;
+        }
+
+        /// <summary>
+        /// Set comparer by key, that will be used to find existing entity instances in persistent storage.
+        /// Will use StrictKeyEqualityComparer that is slightly more performant than KeyEqualityComparer, because will not use unboxing to compare keys.
+        /// </summary>
+        /// <typeparam name="TCompareKey"></typeparam>
+        /// <param name="keyExtractor"></param>
+        /// <returns></returns>
+        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetComparerEquatable<TCompareKey>(
+            Func<TEntity, TCompareKey> keyExtractor)
+            where TCompareKey : IEquatable<TCompareKey>
+        {
+            _comparer = new StrictKeyEqualityComparer<TEntity, TCompareKey>(keyExtractor);
+            return this;
+        }
+
+        /// <summary>
+        /// Set max number of instances that can be selected from persistent storage.
+        /// There will be only single request to select all instances after filtering.
+        /// If number of instances will be higher, then maxSelectableInstances, then will throw an error.
+        /// This is a measure to prevent selecting too large datasets into inmemory cache.
+        /// By default the limit is 10000 instances after filtering.
+        /// </summary>
+        /// <param name="maxSelectableInstances"></param>
+        /// <returns></returns>
+        public virtual EnsureExistGenerator<TEntity, TOrderByKey> SetMaxSelectableInstances(
+           int maxSelectableInstances = 10000)
+        {
+            _maxSelectableInstances = maxSelectableInstances;
+            return this;
+        }
+
 
         //generation
         public virtual IList Generate(GeneratorContext context)
@@ -94,9 +151,13 @@ namespace Sanatana.DataGenerator.Generators
         {
             if (_existingInstancesCache == null)
             {
-                var storageInstances = _persistentStorageSelector.Select(
-                    _storageSelectorFilter, _storageSelectorOrderBy, 0, int.MaxValue);
-                _existingInstancesCache = storageInstances.ToDictionary(x => x, _comparer);
+                IPersistentStorageSelector persistentStorageSelector = context.Defaults.GetPersistentStorageSelector(context.Description);
+                List<TEntity> storageInstances = persistentStorageSelector.Select(
+                    _storageSelectorFilter, _storageSelectorOrderBy, _isAscOrder, 0, int.MaxValue);
+
+                IEqualityComparer<TEntity> comparer = _comparer 
+                    ?? context.Defaults.GetDefaultEqualityComparer<TEntity>(context.Description);
+                _existingInstancesCache = storageInstances.ToDictionary(x => x, comparer);
             }
 
             return _existingInstancesCache;
@@ -121,18 +182,25 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
         {
             //check generic type of _newInstancesGenerator Generator
             Type newGenType = _newInstancesGenerator.GetType();
-            if (typeof(DelegateParameterizedGenerator<>).IsAssignableFrom(newGenType))
+            if (typeof(DelegateParameterizedGenerator<>).IsGenericTypeOf(newGenType))
             {
-                //not a perfect solution to check only first generic argument, better check all
+                //not a perfect solution, better to check all generic arguments
                 Type[] typeArguments = newGenType.GetGenericArguments();
                 if(typeof(TEntity) != typeArguments[0])
                 {
                     throw new NotSupportedException($"newInstancesGenerator with generic argument {typeArguments[0].FullName} should produce same entity type {typeof(TEntity).FullName}");
                 }
+            }
+
+            //validate that comparer is set
+            if(_comparer == null)
+            {
+                //this method throws exception if comparer not set
+                defaults.GetDefaultEqualityComparer<TEntity>(entity);
             }
 
             //_newInstancesGenerator Generator should only generate new instances. Other scenarios may be supported, but not tested yet.
@@ -152,13 +220,14 @@ namespace Sanatana.DataGenerator.Generators
             }
 
             //check count of instances in PersistentStorage to prevent selecting to large number
-            long storageCount = _persistentStorageSelector.Count(_storageSelectorFilter);
+            IPersistentStorageSelector persistentStorageSelector = defaults.GetPersistentStorageSelector(entity);
+            long storageCount = persistentStorageSelector.Count(_storageSelectorFilter);
             int maxCacheSize = 100000;
             if (storageCount > maxCacheSize)
             {
                 throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {maxCacheSize} instances. " +
                     $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
-                    $"Optionally can override {nameof(ValidateEntitySettings)} method to disable this check.");
+                    $"Optionally can increase this cap in {nameof(SetMaxSelectableInstances)} method.");
             }
         }
 
@@ -187,12 +256,17 @@ namespace Sanatana.DataGenerator.Generators
             EntityProgress progress = entityContext.EntityProgress;
             bool isFlushRequired = progress.CheckIsNewFlushRequired(flushRange);
 
-            //clear cache after it is used in flush
             if (isFlushRequired)
             {
-                //Improving memory usage here by removing previous history records.
-                //But should not call this CheckIsFlushRequired method again untill actually will flush instances for this entity.
-                _newInstanceCounter.RemoveHistoryRecords(flushRange.PreviousRangeFlushedCount);
+                //Improving memory usage here by removing previous history records, already flushed.
+                long[] previousRangesEnd = entityContext.EntityProgress.FlushRanges
+                    .Select(x => x.PreviousRangeFlushedCount)
+                    .ToArray();
+                if(previousRangesEnd.Length > 0)
+                {  
+                    long lowestRangeBound = previousRangesEnd.Min();
+                    _newInstanceCounter.RemoveHistoryRecords(lowestRangeBound);
+                }
             }
 
             return isFlushRequired;
@@ -203,12 +277,13 @@ namespace Sanatana.DataGenerator.Generators
             long newInstanceCount = _newInstanceCounter.GetNewInstanceCount(flushRange.PreviousRangeFlushedCount);
             bool isNewInstanceCountExceeded = newInstanceCount >= requestCapacity;
 
-            //1. Compare to _maxInstancesInTempStorage capacity
+            //1. Compare to requestCapacity
+            //Check if new instances generated count is enough for full capacity insert request.
+            //2. Compare to _maxSelectableInstances capacity
             //Total instances count, including new and existing instances.
             //Even if it is not enough new instances to make full capacity insert, then still perform insert to get rid of existing instances in TempStorage.
-            //2. Compare to requestCapacity
-            //Check if new instances generated count is enough for full capacity insert request.
-            flushRange.UpdateCapacity(isNewInstanceCountExceeded ? requestCapacity : _maxInstancesInTempStorage);
+
+            flushRange.UpdateCapacity(isNewInstanceCountExceeded ? requestCapacity : _maxSelectableInstances);
         }
 
     }

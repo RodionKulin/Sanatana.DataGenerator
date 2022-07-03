@@ -32,5 +32,10 @@ namespace Sanatana.DataGenerator
         /// Entity instances that will be passed as arguments to generator.
         /// </summary>
         public Dictionary<Type, object> RequiredEntities { get; set; }
+        /// <summary>
+        /// Default settings used for entity generation if not specified entity specific settings.
+        /// </summary>
+        public DefaultSettings Defaults { get; set; }
+
     }
 }

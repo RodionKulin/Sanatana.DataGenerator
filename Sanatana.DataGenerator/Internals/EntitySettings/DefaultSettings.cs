@@ -2,14 +2,13 @@
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Storages;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.TotalCountProviders;
 using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Comparers;
 
 namespace Sanatana.DataGenerator.Internals.EntitySettings
 {
@@ -18,7 +17,6 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
     /// </summary>
     public class DefaultSettings
     {
-
         /// <summary>
         /// Default entities generator. 
         /// Will be used for entity types that does not have a Generator specified.
@@ -26,8 +24,9 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// </summary>
         public IGenerator Generator { get; set; }
         /// <summary>
-        /// Default modifiers to make adjustments to entity after generation.
+        /// Default modifiers to make adjustments to entity instance after generation.
         /// Will be used for entity types that does not have Modifers specified.
+        /// By default is not set.
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
@@ -45,20 +44,34 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// <summary>
         /// Default strategy to trigger entity persistent storage writes.
         /// Will be used for entity types that does not have a FlushStrategy specified.
+        /// By default using DefaultFlushStrategy.
         /// </summary>
         public IFlushStrategy FlushStrategy { get; set; }
         /// <summary>
         /// Default IRequestCapacityProvider that returns number of entity instances that can be inserted per single request to persistent storage.
         /// Will be used for entity types that does not have a IRequestCapacityProvider specified.
-        /// StrictRequestCapacityProvider with a limit of 100 is set by default.
+        /// By default using StrictRequestCapacityProvider with a limit of 100.
         /// </summary>
         public IRequestCapacityProvider RequestCapacityProvider { get; set; }
         /// <summary>
-        /// Default strategy to reuse same parent entity instances among multiple child entity instances.
+        /// Default spread strategy to reuse same required entity instances among multiple child entity instances.
         /// Will be used for Required entity types that does not have a SpreadStrategy specified.
-        /// EvenSpreadStrategy is set by default.
+        /// By default using EvenSpreadStrategy.
         /// </summary>
         public ISpreadStrategy SpreadStrategy { get; set; }
+        /// <summary>
+        /// Default selector from persistent storage, that will provide existing instances for EnsureExistGenerator or ReuseExistingGenerator.
+        /// Will be used for entities with generator, that does not have a PersistentStorageSelector specified.
+        /// By default is not set.
+        /// </summary>
+        public IPersistentStorageSelector PersistentStorageSelector { get; set; }
+        /// <summary>
+        /// Default factory that provides IEqualityComparer for entities with EnsureExistGenerator.
+        /// Only required if EnsureExistGenerator is used.
+        /// Will be used for entities with generator, that does not have a IEqualityComparer specified.
+        /// By default is not set.
+        /// </summary>
+        public IEqualityComparerFactory EqualityComparerFactory { get; set; }
 
 
         //init
@@ -70,6 +83,21 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             SpreadStrategy = new EvenSpreadStrategy();
         }
 
+        public virtual DefaultSettings Clone()
+        {
+            return new DefaultSettings()
+            {
+                Generator = Generator,
+                Modifiers = Modifiers == null ? null : new List<IModifier>(Modifiers),
+                TotalCountProvider = TotalCountProvider,
+                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
+                FlushStrategy = FlushStrategy,
+                RequestCapacityProvider = RequestCapacityProvider,
+                SpreadStrategy = SpreadStrategy,
+                PersistentStorageSelector = PersistentStorageSelector,
+                EqualityComparerFactory = EqualityComparerFactory
+            };
+        }
 
 
         //Get entity specific or default service
@@ -97,7 +125,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return this;
         }
 
-        public virtual DefaultSettings ClearPersistentStorages()
+        public virtual DefaultSettings RemovePersistentStorages()
         {
             PersistentStorages.Clear();
             return this;
@@ -121,6 +149,19 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return this;
         }
 
+        public virtual DefaultSettings SetPersistentStorageSelector(IPersistentStorageSelector persistentStorageSelector)
+        {
+            PersistentStorageSelector = persistentStorageSelector;
+            return this;
+        }
+
+        public virtual DefaultSettings SetDefaultEqualityComparer(IEqualityComparerFactory equalityComparerFactory)
+        {
+            EqualityComparerFactory = equalityComparerFactory;
+            return this;
+        }
+
+
 
 
         //Get entity specific or default service
@@ -136,7 +177,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return Generator;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IGenerator)} configured and {nameof(Generator)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IGenerator)} configured and {nameof(Generator)} also not provided.");
         }
 
         public virtual List<IModifier> GetModifiers(IEntityDescription entityDescription)
@@ -166,7 +207,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return TotalCountProvider;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(ITotalCountProvider)} configured and {nameof(TotalCountProvider)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(ITotalCountProvider)} configured and {nameof(TotalCountProvider)} also not provided.");
         }
 
         public virtual List<IPersistentStorage> GetPersistentStorages(IEntityDescription entityDescription)
@@ -181,7 +222,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return PersistentStorages;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IPersistentStorage)} configured and {nameof(PersistentStorages)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IPersistentStorage)} configured and {nameof(PersistentStorages)} also not provided.");
         }
 
         public virtual IFlushStrategy GetFlushStrategy(IEntityDescription entityDescription)
@@ -196,7 +237,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return FlushStrategy;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IFlushStrategy)} configured and {nameof(FlushStrategy)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IFlushStrategy)} configured and {nameof(FlushStrategy)} also not provided.");
         }
 
         public virtual IRequestCapacityProvider GetRequestCapacityProvider(IEntityDescription entityDescription)
@@ -211,7 +252,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return RequestCapacityProvider;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} did not have {nameof(IRequestCapacityProvider)} configured and {nameof(RequestCapacityProvider)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IRequestCapacityProvider)} configured and {nameof(RequestCapacityProvider)} also not provided.");
         }
 
         public virtual ISpreadStrategy GetSpreadStrategy(IEntityDescription entityDescription, RequiredEntity requiredEntity)
@@ -226,23 +267,40 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return SpreadStrategy;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} for required entity {requiredEntity.Type} did not have an {nameof(ISpreadStrategy)} configured and {nameof(SpreadStrategy)} also was not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} for required entity {requiredEntity.Type} does not have an {nameof(ISpreadStrategy)} configured and {nameof(SpreadStrategy)} also not provided.");
         }
 
-
-        //Clone
-        public virtual DefaultSettings Clone()
+        public virtual IPersistentStorageSelector GetPersistentStorageSelector(IEntityDescription entityDescription)
         {
-            return new DefaultSettings()
+            if (entityDescription.PersistentStorageSelector != null)
             {
-                Generator = Generator,
-                Modifiers = Modifiers == null ? null : new List<IModifier>(Modifiers),
-                TotalCountProvider = TotalCountProvider,
-                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
-                FlushStrategy = FlushStrategy,
-                RequestCapacityProvider = RequestCapacityProvider,
-                SpreadStrategy = SpreadStrategy
-            };
+                return entityDescription.PersistentStorageSelector;
+            }
+
+            if (PersistentStorageSelector != null)
+            {
+                return PersistentStorageSelector;
+            }
+
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have a {nameof(IPersistentStorageSelector)} configured and default {nameof(PersistentStorageSelector)} also not provided.");
         }
+
+        public virtual IEqualityComparer<TEntity> GetDefaultEqualityComparer<TEntity>(IEntityDescription entityDescription)
+        {
+            if (EqualityComparerFactory == null)
+            {
+                throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have a {nameof(IEqualityComparer<TEntity>)} configured and default {nameof(EqualityComparerFactory)} also not provided.");
+            }
+
+            IEqualityComparer<TEntity> comparer = EqualityComparerFactory.GetEqualityComparer<TEntity>(entityDescription);
+            if(comparer == null)
+            {
+                throw new NullReferenceException($"Default {nameof(EqualityComparerFactory)} returned null instead of {nameof(IEqualityComparer<TEntity>)} for type {entityDescription.Type.FullName}.");
+            }
+
+            return comparer;
+        }
+
+
     }
 }

@@ -2,6 +2,7 @@
 using Bogus;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Generators;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -53,7 +54,7 @@ namespace Sanatana.DataGenerator.AutoBogus
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
         {
         }
     }

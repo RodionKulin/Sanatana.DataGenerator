@@ -22,6 +22,7 @@ namespace Sanatana.DataGenerator.Entities
         IRequestCapacityProvider RequestCapacityProvider { get; set; }
         IStorageInsertGuard StorageInsertGuard { get; set; }
         bool InsertToPersistentStorageBeforeUse { get; set; }
+        IPersistentStorageSelector PersistentStorageSelector { get; set; }
 
 
         IEntityDescription Clone();

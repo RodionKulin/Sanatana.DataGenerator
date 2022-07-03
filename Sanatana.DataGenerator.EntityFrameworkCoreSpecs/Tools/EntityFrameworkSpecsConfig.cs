@@ -14,5 +14,6 @@ public class EntityFrameworkSpecsConfig : SpecsForConfiguration
     {
         WhenTesting<INeedSampleDatabase>().EnrichWith<SampleDbCreator>();
         WhenTesting<INeedSampleDatabase>().EnrichWith<SampleDbContextProvider>();
+        WhenTesting<INeedDatabaseCleared>().EnrichWith<DbContextCleanerProvider>();
     }
 }

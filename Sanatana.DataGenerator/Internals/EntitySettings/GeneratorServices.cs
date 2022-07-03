@@ -73,7 +73,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 ITotalCountProvider totalCountProvider = Defaults.GetTotalCountProvider(entityCtx.Description);
                 entityCtx.EntityProgress = new EntityProgress
                 {
-                    TargetCount = totalCountProvider.GetTargetCount()
+                    TargetCount = totalCountProvider.GetTargetCount(entityCtx.Description, Defaults)
                 };
             }
         }

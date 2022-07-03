@@ -31,15 +31,14 @@ namespace Sanatana.DataGenerator.Internals
         }
 
 
-
-        public virtual void ValidateOnStart(Dictionary<Type, IEntityDescription> entityDescriptions)
+        public virtual void ValidateOnStart(Dictionary<Type, IEntityDescription> entityDescriptions, GeneratorServices generatorServices)
         {
             CheckGeneratorSetupComplete(entityDescriptions);
             CheckRequiredEntitiesPresent(entityDescriptions);
             CheckCircularDependencies(entityDescriptions);
             CheckGeneratorsParams(entityDescriptions);
             CheckModifiersParams(entityDescriptions);
-            CheckEntitySettingsForGenerators(entityDescriptions);
+            CheckEntitySettingsForGenerators(entityDescriptions, generatorServices);
         }
 
 
@@ -216,7 +215,6 @@ namespace Sanatana.DataGenerator.Internals
         }
 
 
-
         //Prestart checks for Generators and Modifiers
         /// <summary>
         /// Validate that Parameterized Modifiers have the same parameters as list of Required types.
@@ -332,13 +330,14 @@ namespace Sanatana.DataGenerator.Internals
         /// Validate IEntityDescription are supported Generators.
         /// </summary>
         /// <param name="entityDescriptions"></param>
+        /// <param name="generatorServices"></param>
         public virtual void CheckEntitySettingsForGenerators(
-           Dictionary<Type, IEntityDescription> entityDescriptions)
+           Dictionary<Type, IEntityDescription> entityDescriptions, GeneratorServices generatorServices)
         {
             var entitiesWithGenerators = entityDescriptions.Values.Where(x => x.Generator != null);
             foreach (IEntityDescription entity in entitiesWithGenerators)
             {
-                entity.Generator.ValidateEntitySettings(entity);                
+                entity.Generator.ValidateEntitySettings(entity, generatorServices.Defaults);                
             }
         }
 

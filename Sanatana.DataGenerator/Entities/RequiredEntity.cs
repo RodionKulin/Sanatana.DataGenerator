@@ -8,11 +8,11 @@ namespace Sanatana.DataGenerator.Entities
     public class RequiredEntity
     {
         /// <summary>
-        /// Parent required entity type
+        /// Required entity type. Instances of required entity type will be passed to generator as arguments.
         /// </summary>
         public Type Type { get; set; }
         /// <summary>
-        /// Strategy to reuse same parent entities among multiple child entities.
+        /// Strategy to reuse same parent entity instances among multiple child entity instances.
         /// </summary>
         public ISpreadStrategy SpreadStrategy { get; set; }
     }

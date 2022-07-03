@@ -7,9 +7,8 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using System.Collections;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Internals.Commands;
-using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
-using Sanatana.DataGenerator.Internals.Collections;
+using Sanatana.DataGenerator.Internals.Extensions;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {

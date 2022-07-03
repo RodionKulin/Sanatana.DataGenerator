@@ -4,6 +4,7 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -284,7 +285,7 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
         {
         }
     }

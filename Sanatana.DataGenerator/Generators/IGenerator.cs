@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Collections;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -22,7 +23,8 @@ namespace Sanatana.DataGenerator.Generators
         /// <summary>
         /// Validate IGenerator Setup before start.
         /// </summary>
+        /// <param name="defaults"></param>
         /// <param name="entity"></param>
-        void ValidateEntitySettings(IEntityDescription entity);
+        void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults);
     }
 }

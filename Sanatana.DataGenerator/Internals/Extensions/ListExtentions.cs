@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Sanatana.DataGenerator.Internals.Collections
+namespace Sanatana.DataGenerator.Internals.Extensions
 {
     public static class ListExtentions
     {

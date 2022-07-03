@@ -4,13 +4,15 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals;
 using System.Collections;
+using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
     public class CartesianProductSpreadStrategy : CombinatoricsSpreadStrategy
     {
         //methods
-        public override long GetTargetCount()
+        public override long GetTargetCount(IEntityDescription description, DefaultSettings defaults)
         {
             if (!_isSetupCompleted)
             {

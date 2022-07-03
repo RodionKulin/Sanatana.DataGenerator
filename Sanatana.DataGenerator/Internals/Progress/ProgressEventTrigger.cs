@@ -36,6 +36,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
         public virtual void Setup(ISupervisor supervisor)
         {
             _supervisor = supervisor;
+            _lastPercents = 0;
         }
 
 
@@ -92,11 +93,6 @@ namespace Sanatana.DataGenerator.Internals.Progress
         internal void UpdateProgressInt(bool forceUpdate)
         {
             UpdateProgress(forceUpdate);
-        }
-
-        internal void Clear()
-        {
-            _lastPercents = 0;
         }
 
 

@@ -7,6 +7,7 @@ using System.Collections;
 using System.Reflection;
 using System.Linq;
 using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.AutoBogus
 {
@@ -64,7 +65,7 @@ namespace Sanatana.DataGenerator.AutoBogus
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity)
+        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
         {
         }
 

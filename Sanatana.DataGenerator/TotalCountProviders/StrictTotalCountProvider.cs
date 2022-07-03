@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -34,7 +36,7 @@ namespace Sanatana.DataGenerator.TotalCountProviders
         }
 
 
-        public virtual long GetTargetCount()
+        public virtual long GetTargetCount(IEntityDescription description, DefaultSettings defaults)
         {
             return TotalCount;
         }

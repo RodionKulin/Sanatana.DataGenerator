@@ -40,7 +40,6 @@ namespace Sanatana.DataGenerator
         protected TemporaryStorage _temporaryStorage;
 
 
-
         //init
         public GeneratorSetup()
         {
@@ -231,6 +230,7 @@ namespace Sanatana.DataGenerator
             Dictionary<Type, IEntityDescription> allEntityDescriptions = newEntityDescriptions.ToDictionary(x => x.Type, x => x);
             return Clone(entityDescriptions: allEntityDescriptions);
         }
+        
         #endregion
 
 
@@ -320,7 +320,7 @@ namespace Sanatana.DataGenerator
         #endregion
 
 
-        #region Generation start
+        #region Generation
         public virtual void Generate()
         {
             _generatorServices = null;
@@ -348,17 +348,18 @@ namespace Sanatana.DataGenerator
         protected virtual void Validate(GeneratorServices generatorServices)
         {
             var validator = new Validator(generatorServices);
-            validator.ValidateOnStart(_entityDescriptions);
+            validator.ValidateOnStart(_entityDescriptions, generatorServices);
         }
 
         protected virtual void Setup(GeneratorServices generatorServices)
         {
             _progress.Setup(_supervisor);
-            _progress.Clear();
             _commandsHistory.Clear();
             _temporaryStorage.Setup();
 
+            //Should be called first to setup Parent and Child entities for each entity.
             generatorServices.SetupEntityContexts();
+            //Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITotalCountProvider.GetTargetCount based on parent entities TotalCount.
             generatorServices.SetupSpreadStrategies();
             generatorServices.SetupTargetCount();
             generatorServices.SetupPersistentStorages();
@@ -381,6 +382,7 @@ namespace Sanatana.DataGenerator
         #endregion
 
 
+        #region Subset generation
         /// <summary>
         /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
         /// Will generate only entity types provided as parameters and their required entities.
@@ -425,5 +427,6 @@ namespace Sanatana.DataGenerator
         {
             return new SubsetGeneratorSetupSingle<TEntity>(this);
         }
+        #endregion
     }
 }
