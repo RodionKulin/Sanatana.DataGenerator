@@ -13,6 +13,7 @@ using System.Text;
 using System.Linq;
 using FluentAssertions;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Internals.Validators;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 {
@@ -34,6 +35,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                 _markerString = GetType().FullName;
 
                 _generatorSetup = new GeneratorSetup()
+                    .SetValidators(val => val.RemoveValidator<InstancesCountGeneratedValidator>())
                     .SetDefaultSettings(defaults => defaults
                         .SetRequestCapacityProvider(new StrictRequestCapacityProvider(10))
                         .AddPersistentStorage(new EntityFrameworkCorePersistentStorage(() => new SampleDbContext()))

@@ -65,10 +65,12 @@ namespace Sanatana.DataGenerator.AutoBogus
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
         {
         }
 
-        
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
     }
 }

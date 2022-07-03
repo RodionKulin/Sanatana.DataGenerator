@@ -19,7 +19,7 @@ namespace Sanatana.DataGenerator.Generators
         //init
         protected DelegateGenerator(object generateFunc, bool isMultiDelegate)
         {
-            if(generateFunc == null)
+            if (generateFunc == null)
             {
                 throw new ArgumentNullException(nameof(generateFunc));
             }
@@ -47,7 +47,7 @@ namespace Sanatana.DataGenerator.Generators
         //generation
         public virtual IList Generate(GeneratorContext context)
         {
-            if(_generateFunc is Func<GeneratorContext, List<TEntity>>)
+            if (_generateFunc is Func<GeneratorContext, List<TEntity>>)
             {
                 return InvokeMultiResult(context);
             }
@@ -90,8 +90,8 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
-        {
-        }
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults) { }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) { }
     }
 }

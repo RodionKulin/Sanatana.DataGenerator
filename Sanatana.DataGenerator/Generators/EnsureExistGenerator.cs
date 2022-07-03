@@ -182,7 +182,7 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
         {
             //check generic type of _newInstancesGenerator Generator
             Type newGenType = _newInstancesGenerator.GetType();
@@ -230,6 +230,8 @@ namespace Sanatana.DataGenerator.Generators
                     $"Optionally can increase this cap in {nameof(SetMaxSelectableInstances)} method.");
             }
         }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) { }
 
 
         //IStorageInsertGuard methods

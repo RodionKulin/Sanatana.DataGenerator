@@ -97,7 +97,7 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation        
-        public virtual void ValidateEntitySettings(IEntityDescription description, DefaultSettings defaults)
+        public virtual void ValidateBeforeSetup(IEntityDescription description, DefaultSettings defaults)
         {
             string generatorName = $"Generator of type {nameof(ReuseExistingGenerator<TEntity, TOrderByKey>)} for entity {description.Type.FullName}";
 
@@ -111,21 +111,22 @@ namespace Sanatana.DataGenerator.Generators
 
         }
 
-        public virtual void ValidateTargetCount(IEntityDescription description, DefaultSettings defaults)
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
         {
             //should invoke this validation after GeneratorServices.SetupSpreadStrategy() to support CombinatoricsSreadStrategy
 
+            IEntityDescription description = entityContext.Description;
             string generatorName = $"Generator of type {nameof(ReuseExistingGenerator<TEntity, TOrderByKey>)} for entity {description.Type.FullName}";
 
             IPersistentStorageSelector persistentStorageSelector = defaults.GetPersistentStorageSelector(description);
-            long targetCount = description.TotalCountProvider.GetTargetCount(description, defaults);
+            long targetCount = entityContext.EntityProgress.TargetCount;
             long storageCount = persistentStorageSelector.Count(_storageSelectorFilter);
             if (targetCount > storageCount)
             {
                 throw new NotSupportedException($"{generatorName} returned not supported value from {nameof(description.TotalCountProvider.GetTargetCount)} {targetCount} that is higher, then number of selectable instances in persistent storage {storageCount}. " +
                     $"Possible solutions: " +
-                    $"1. Make sure that persistent storage rows count is not changed during generation. " +
-                    $"2. Use {nameof(CountExistingTotalCountProvider<TEntity>)} to provide total count." +
+                    $"1. Make sure that persistent storage rows count is not changed during setup. " +
+                    $"2. Use {nameof(CountExistingTotalCountProvider<TEntity>)} to provide TargetCount matching rows count in persistent storage." +
                     $"3. Make sure that same {nameof(_storageSelectorFilter)} is provided to {nameof(description.TotalCountProvider)} and {typeof(ReuseExistingGenerator<,>).Name}. "
                 );
             }

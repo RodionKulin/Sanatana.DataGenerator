@@ -26,12 +26,6 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
 
 
         //methods
-        public void PublicValidate()
-        {
-            GeneratorServices generatorServices = GetGeneratorServices();
-            base.Validate(generatorServices);
-        }
-
         public void PublicSetup()
         {
             GeneratorServices generatorServices = GetGeneratorServices();

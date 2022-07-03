@@ -2,6 +2,7 @@
 using Sanatana.DataGenerator.Internals.Collections;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.Validators;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.TotalCountProviders;
@@ -31,6 +32,9 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public Dictionary<Type, EntityContext> EntityContexts { get; set; }
 
         public ISupervisor Supervisor { get; set; }
+
+        public ValidatorsSetup Validators { get; set; }
+
 
 
         //methods

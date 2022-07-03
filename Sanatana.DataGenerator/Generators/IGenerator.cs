@@ -20,11 +20,21 @@ namespace Sanatana.DataGenerator.Generators
         /// <param name="context"></param>
         /// <returns></returns>
         IList Generate(GeneratorContext context);
+
         /// <summary>
-        /// Validate IGenerator Setup before start.
+        /// Validate IGenerator Setup before setup.
+        /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
         /// </summary>
         /// <param name="defaults"></param>
         /// <param name="entity"></param>
-        void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults);
+        void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults);
+
+        /// <summary>
+        /// Validate IGenerator Setup after setup.
+        /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
+        /// </summary>
+        /// <param name="entityContext"></param>
+        /// <param name="defaults"></param>
+        void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults);
     }
 }

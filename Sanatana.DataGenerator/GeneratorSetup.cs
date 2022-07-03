@@ -13,6 +13,7 @@ using Sanatana.DataGenerator.Internals.Debugging;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.SubsetGeneration;
+using Sanatana.DataGenerator.Internals.Validators;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
@@ -38,6 +39,7 @@ namespace Sanatana.DataGenerator
         /// Inmemory storage for generated entities to accumulate batches before inserting to persistent storage.
         /// </summary>
         protected TemporaryStorage _temporaryStorage;
+        protected ValidatorsSetup _validators;
 
 
         //init
@@ -51,10 +53,11 @@ namespace Sanatana.DataGenerator
             _defaults = new DefaultSettings();
             _supervisor = new CompleteSupervisor();
             _progress = new ProgressEventTrigger();
+            _validators = new ValidatorsSetup();
         }
 
         public GeneratorSetup(Dictionary<Type, IEntityDescription> entityDescriptions, ISupervisor supervisor,
-            DefaultSettings defaults, ProgressEventTrigger progress, TemporaryStorage temporaryStorage)
+            DefaultSettings defaults, ProgressEventTrigger progress, TemporaryStorage temporaryStorage, ValidatorsSetup validators)
         {
             _reflectionInvoker = new ReflectionInvoker();
             _commandsHistory = new CommandsHistory();
@@ -65,19 +68,21 @@ namespace Sanatana.DataGenerator
             _supervisor = supervisor;
             _progress = progress;
             _temporaryStorage = temporaryStorage;
+            _validators = validators;
         }
 
         protected virtual GeneratorSetup Clone(Dictionary<Type, IEntityDescription> entityDescriptions = null,
             ISupervisor supervisor = null, DefaultSettings defaults = null, ProgressEventTrigger progress = null,
-            TemporaryStorage temporaryStorage = null)
+            TemporaryStorage temporaryStorage = null, ValidatorsSetup validators = null)
         {
             entityDescriptions = entityDescriptions ?? _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
             supervisor = supervisor ?? _supervisor.Clone();
             defaults = defaults ?? _defaults.Clone();
             progress = progress ?? _progress.Clone();
             temporaryStorage = temporaryStorage ?? _temporaryStorage.Clone();
+            validators = validators ?? _validators.Clone();
 
-            return new GeneratorSetup(entityDescriptions, supervisor, defaults, progress, temporaryStorage);
+            return new GeneratorSetup(entityDescriptions, supervisor, defaults, progress, temporaryStorage, validators);
         }
 
 
@@ -257,7 +262,7 @@ namespace Sanatana.DataGenerator
 
         /// <summary>
         /// Configure existing ISupervisor or provide new.
-        /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
+        /// Supervisor produces generation and flush commands. Determines the order in which entity instances are be generated.
         /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
         /// </summary>
         public virtual GeneratorSetup SetSupervisor(Func<ISupervisor, ISupervisor> supervisorSetup)
@@ -317,6 +322,23 @@ namespace Sanatana.DataGenerator
             temporaryStorage.MaxTasksRunning = maxTasksRunning;
             return Clone(temporaryStorage: temporaryStorage);
         }
+
+
+        /// <summary>
+        /// Configure validators by removing default ones or adding new custom validators.
+        /// Validators should implement one of interfaces:
+        /// IBeforeSetupValidator - runs before getting TargetCount and list of parent and child entities, based on Required settings;
+        /// IAfterSetupValidator - runs after getting TargetCount and list of parent and child entities, based on Required settings;
+        /// IGenerateValidator - runs after entity instances were generated;
+        /// IModifyValidator - runs after entity instances were modified.
+        /// </summary>
+        public virtual GeneratorSetup SetValidators(Func<ValidatorsSetup, ValidatorsSetup> validatorsSetup)
+        {
+            ValidatorsSetup validators = _validators.Clone();
+            validatorsSetup.Invoke(validators);
+            return Clone(validators: validators);
+        }
+
         #endregion
 
 
@@ -326,9 +348,11 @@ namespace Sanatana.DataGenerator
             _generatorServices = null;
             GeneratorServices generatorServices = GetGeneratorServices();
 
-            Validate(generatorServices);
+            generatorServices.Validators.ValidateBeforeSetup(generatorServices);
 
             Setup(generatorServices);
+
+            generatorServices.Validators.ValidateAfterSetup(generatorServices);
 
             ExecuteGenerationLoop();
         }
@@ -340,15 +364,10 @@ namespace Sanatana.DataGenerator
                 TemporaryStorage = _temporaryStorage,
                 Defaults = _defaults,
                 EntityDescriptions = _entityDescriptions,
-                Supervisor = _supervisor
+                Supervisor = _supervisor,
+                Validators = _validators,
             };
             return _generatorServices;
-        }
-
-        protected virtual void Validate(GeneratorServices generatorServices)
-        {
-            var validator = new Validator(generatorServices);
-            validator.ValidateOnStart(_entityDescriptions, generatorServices);
         }
 
         protected virtual void Setup(GeneratorServices generatorServices)

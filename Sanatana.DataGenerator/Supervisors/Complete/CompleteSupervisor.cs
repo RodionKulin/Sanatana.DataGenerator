@@ -17,7 +17,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     {
         //fields
         /// <summary>
-        /// Next actions to execute between generate entity actions
+        /// Next commands to execute between generate entity commands
         /// </summary>
         protected ConcurrentQueue<ICommand> _commandsQueue;
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;

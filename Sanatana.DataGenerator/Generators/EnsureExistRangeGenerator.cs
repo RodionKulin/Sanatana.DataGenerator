@@ -130,7 +130,7 @@ namespace Sanatana.DataGenerator.Generators
 
 
         //validation
-        public virtual void ValidateEntitySettings(IEntityDescription entity, DefaultSettings defaults)
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
         {
             //check generic type of _newInstancesGenerator Generator
             Type newGenType = _newInstancesGenerator.GetType();
@@ -168,9 +168,11 @@ namespace Sanatana.DataGenerator.Generators
             {
                 throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {maxCacheSize} instances. " +
                     $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
-                    $"Optionally can override {nameof(ValidateEntitySettings)} method to disable this check.");
+                    $"Optionally can override {nameof(ValidateBeforeSetup)} method to disable this check.");
             }
         }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) { }
 
 
         //IStorageInsertGuard methods

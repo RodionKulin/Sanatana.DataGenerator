@@ -8,6 +8,7 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGenerator.Internals.Validators.BeforeSetup;
 
 namespace Sanatana.DataGeneratorSpecs.Internals
 {
@@ -16,41 +17,41 @@ namespace Sanatana.DataGeneratorSpecs.Internals
     {
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public void CheckGeneratorSetupComplete_WhenNotComplete_ThenThrowsException()
+        public void EntityDescriptionSetupValidator_WhenNotComplete_ThenThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();
             descriptions.Add(new EntityDescription<Post>()
                 .SetRequired(typeof(Category)));
             Dictionary<Type, IEntityDescription> entityDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
+            var generatorSetup = new GeneratorSetup()
+                .RegisterEntity(descriptions);
+            var target = new EntityDescriptionSetupValidator();
 
             //Act
-            var generatorSetup = new GeneratorSetup();
-            var target = new Validator(generatorSetup.GetGeneratorServices());
-            target.CheckGeneratorSetupComplete(entityDescriptions);
+            target.ValidateSetup(generatorSetup.GetGeneratorServices());
         }
 
         [TestMethod]
         public void CheckGeneratorSetupComplete_WhenComplete_ThenNotThrowsException()
         {
             //Arrange
-            var generatorSetup = new GeneratorSetup()
-                .SetDefaultSettings(defaults => defaults.AddPersistentStorage(new InMemoryStorage()));
-
             var descriptions = new List<IEntityDescription>();
             descriptions.Add(new EntityDescription<Post>()
                 .SetTargetCount(5)
                 .SetGenerator(context => null));
-            Dictionary<Type, IEntityDescription> entityDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
+            var generatorSetup = new GeneratorSetup()
+                .SetDefaultSettings(defaults => defaults.AddPersistentStorage(new InMemoryStorage()))
+                .RegisterEntity(descriptions);
+            var target = new EntityDescriptionSetupValidator();
 
             //Act
-            var target = new Validator(generatorSetup.GetGeneratorServices());
-            target.CheckGeneratorSetupComplete(entityDescriptions);
+            target.ValidateSetup(generatorSetup.GetGeneratorServices());
         }
 
         [TestMethod]
         [ExpectedException(typeof(NotSupportedException))]
-        public void CheckCircularDependencies_WhenHasCircleDependencies_ThenThrowsException()
+        public void CircularDependenciesSetupValidator_WhenHasCircleDependencies_ThenThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();
@@ -62,16 +63,16 @@ namespace Sanatana.DataGeneratorSpecs.Internals
                 .SetRequired(typeof(Attachment)));
             descriptions.Add(new EntityDescription<Attachment>()
                 .SetRequired(typeof(Post)));
-            Dictionary<Type, IEntityDescription> entityDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
+            var generatorSetup = new GeneratorSetup()
+                .RegisterEntity(descriptions);
+            var target = new CircularDependenciesSetupValidator();
 
             //Act
-            var generatorSetup = new GeneratorSetup();
-            var target = new Validator(generatorSetup.GetGeneratorServices());
-            target.CheckCircularDependencies(entityDescriptions);
+            target.ValidateSetup(generatorSetup.GetGeneratorServices());
         }
 
         [TestMethod]
-        public void CheckCircularDependencies_WhenNoCircleDependencies_ThenNotThrowsException()
+        public void CircularDependenciesSetupValidator_WhenNoCircleDependencies_ThenNotThrowsException()
         {
             //Arrange
             var descriptions = new List<IEntityDescription>();
@@ -82,12 +83,12 @@ namespace Sanatana.DataGeneratorSpecs.Internals
                 .SetRequired(typeof(Comment)));
             descriptions.Add(new EntityDescription<Attachment>()
                 .SetRequired(typeof(Post)));
-            Dictionary<Type, IEntityDescription> entityDescriptions = descriptions.ToDictionary(x => x.Type, x => x);
+            var generatorSetup = new GeneratorSetup()
+                .RegisterEntity(descriptions);
+            var target = new CircularDependenciesSetupValidator();
 
             //Act
-            var generatorSetup = new GeneratorSetup();
-            var target = new Validator(generatorSetup.GetGeneratorServices());
-            target.CheckCircularDependencies(entityDescriptions);
+            target.ValidateSetup(generatorSetup.GetGeneratorServices());
         }
 
 
