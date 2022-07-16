@@ -26,18 +26,17 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                     .Select(x => x.Type)
                     .ToArray();
                 IGenerator generator = generatorServices.Defaults.GetGenerator(entity);
-                Type generatorInstanceType = generator.GetType();
-                CheckDuplicates(requiredEntitiesTypes, entity, generatorInstanceType);
+                Type generatorType = generator.GetType();
+                CheckDuplicates(requiredEntitiesTypes, entity, generatorType);
 
                 //Compare Required types from IEntityDescription.Required vs IDelegateParameterizedGenerator to make sure it was not changed manually before start.
-                if (!(generator is IDelegateParameterizedGenerator))
+                if (generator is IDelegateParameterizedGenerator)
                 {
-                    continue;
+                    Type[] generatorParams = (generator as IDelegateParameterizedGenerator)
+                       .GetRequiredEntitiesFuncParameters()
+                       .ToArray();
+                    CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorType);
                 }
-                Type[] generatorParams = (generator as IDelegateParameterizedGenerator)
-                    .GetRequiredEntitiesFuncParameters()
-                    .ToArray();
-                CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorInstanceType);
             }
 
             CheckModifiersParams(entityDescriptions, generatorServices);
@@ -72,9 +71,9 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
         /// </summary>
         /// <param name="paramsTypes"></param>
         /// <param name="entity"></param>
-        /// <param name="whereFound"></param>
+        /// <param name="paramsHoldingType"></param>
         /// <exception cref="NotSupportedException"></exception>
-        protected virtual void CheckDuplicates(Type[] paramsTypes, IEntityDescription entity, Type whereFound)
+        protected virtual void CheckDuplicates(Type[] paramsTypes, IEntityDescription entity, Type paramsHoldingType)
         {
             List<string> actualParamsDuplicates = paramsTypes
                 .GroupBy(x => x)
@@ -85,7 +84,7 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
             if (actualParamsDuplicates.Count > 0)
             {
                 string duplicates = string.Join(", ", actualParamsDuplicates);
-                string message = $"Entity {entity.Type.FullName} {whereFound.FullName} contains duplicate parameter(s) with type: {duplicates}.";
+                string message = $"Entity {entity.Type.FullName} {paramsHoldingType.FullName} contains duplicate parameter(s) with type: {duplicates}.";
                 throw new NotSupportedException(message);
             }
         }

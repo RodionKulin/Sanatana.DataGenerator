@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sanatana.DataGenerator.AutoBogus\Sanatana.DataGenerator.AutoBogus.csproj" />
     <ProjectReference Include="..\Sanatana.DataGenerator.EntityFrameworkCore\Sanatana.DataGenerator.EntityFrameworkCore.csproj" />
   </ItemGroup>
 

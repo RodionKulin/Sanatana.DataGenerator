@@ -15,16 +15,16 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         [TestMethod]
         public void Generate_ByDefaultGeneratesEntityWithRandomValues()
         {
-            //setup
+            //Arrange
             var target = new AutoBogusGenerator();
 
-            //invoke
+            //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
             {
                 Description = new EntityDescription<Post>()
             });
 
-            //assert
+            //Assert
             posts.Should().NotBeNull();
             posts.Count.Should().Be(1);
 
@@ -37,27 +37,27 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         [TestMethod]
         public void Generate_OverrideRulesAreAppliedGlobally()
         {
-            //setup
+            //Arrange
             AutoFaker.Configure(builder =>
             {
                 builder.WithOverride(new PostOverride());
             });
             var target = new AutoBogusGenerator();
 
-            //invoke
+            //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
             {
                 Description = new EntityDescription<Post>()
             });
 
-            //assert
+            //Assert
             AssertPostNotEmpty(posts);
         }
 
         [TestMethod]
         public void Generate_OverrideRulesAreAppliedPerType()
         {
-            //setup
+            //Arrange
             var target = new AutoBogusGenerator(AutoFaker.Create(builder =>
             {
                 builder.WithOverride<Post>((ov) =>
@@ -69,43 +69,43 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
                 });
             }));
 
-            //invoke
+            //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
             {
                 Description = new EntityDescription<Post>()
             });
 
-            //assert
+            //Assert
             AssertPostNotEmpty(posts);
         }
 
         [TestMethod]
         public void Generate_OverrideRulesAreAppliedWithRules()
         {
-            //setup
+            //Arrange
             var target = new AutoBogusGenerator<Post>(new AutoFaker<Post>()
                 .RuleFor(x => x.CategoryId, f => 5)
                 .RuleFor(x => x.PostText, f => f.Lorem.Text()));
 
-            //invoke
+            //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
             {
                 Description = new EntityDescription<Post>()
             });
 
-            //assert
+            //Assert
             AssertPostNotEmpty(posts);
         }
 
         [TestMethod]
         public void Generate_DetermenisticContentGeneratedOnSameSeed()
         {
-            //setup
+            //Arrange
             var target = new AutoBogusGenerator<Post>(new AutoFaker<Post>()
                 .RuleFor(x => x.CategoryId, f => 5)
                 .RuleFor(x => x.PostText, f => f.Lorem.Text()));
 
-            //invoke
+            //Act
             List<Post> posts1 = (List<Post>)target.Generate(new GeneratorContext
             {
                 Description = new EntityDescription<Post>(),
@@ -117,7 +117,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
                 CurrentCount = (long)int.MaxValue + 1
             });
 
-            //assert
+            //Assert
             AssertPostNotEmpty(posts1);
             AssertPostNotEmpty(posts2);
 

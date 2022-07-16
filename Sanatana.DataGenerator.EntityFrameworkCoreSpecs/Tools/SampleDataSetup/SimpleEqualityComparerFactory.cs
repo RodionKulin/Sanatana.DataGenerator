@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Providers
+namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.SampleDataSetup
 {
     internal class SimpleEqualityComparerFactory : IEqualityComparerFactory
     {

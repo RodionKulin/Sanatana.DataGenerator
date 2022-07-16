@@ -53,6 +53,7 @@ namespace Sanatana.DataGenerator.Internals.Commands
                 Defaults = _generatorServices.Defaults,
             };
 
+
             IList instances = generator.Generate(context);
             _generatorServices.Validators.ValidateGenerated(instances, description.Type, generator);
 

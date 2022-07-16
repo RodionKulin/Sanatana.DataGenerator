@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals.SubsetGeneration;
 using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
+using Sanatana.DataGenerator.Supervisors.Subset;
 
 namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
 {
@@ -17,7 +18,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
             //Arrange
             SubsetGeneratorSetupMany generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup(typeof(Category), typeof(Comment))
-                .SetStorageInMemory(EntitiesSelection.All, true)
+                .SetInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);
 

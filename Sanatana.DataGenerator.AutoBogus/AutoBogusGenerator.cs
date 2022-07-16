@@ -38,7 +38,6 @@ namespace Sanatana.DataGenerator.AutoBogus
         //generation
         public virtual IList Generate(GeneratorContext context)
         {
-            Type autoFakerType = typeof(IAutoFaker);
             MethodInfo generateMethod = GetGenerateMethod(context.Description.Type);
 
             IList list = (IList)generateMethod.Invoke(_autoFaker, new object[] { 1, null });

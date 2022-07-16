@@ -52,7 +52,7 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                         msg.AppendLine($"Could not resolve type {typeName}. Following required entities not configured or also not resolved: {unresolvedRequiredJoined}.");
                     }
 
-                    throw new DataMisalignedException(msg.ToString());
+                    throw new NotSupportedException(msg.ToString());
                 }
             }
         }

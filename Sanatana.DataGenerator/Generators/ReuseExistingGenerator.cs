@@ -95,7 +95,6 @@ namespace Sanatana.DataGenerator.Generators
         }
 
 
-
         //validation        
         public virtual void ValidateBeforeSetup(IEntityDescription description, DefaultSettings defaults)
         {

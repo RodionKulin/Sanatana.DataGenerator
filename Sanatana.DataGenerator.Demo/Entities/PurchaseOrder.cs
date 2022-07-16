@@ -8,10 +8,15 @@ namespace Sanatana.DataGenerator.Demo.Entities
 {
     public class PurchaseOrder
     {
-        public int PurchaseOrderId { get; set; }
+        public int Id { get; set; }
         public int SupplierId { get; set; }
         public int BuyerId { get; set; }
         public bool Accepted { get; set; }
-        public DateTime RegisteredDate { get; set; }
+        public DateTime RegisteredTime { get; set; }
+
+
+        //navigation properties
+        public Supplier Supplier { get; set; }
+        public Buyer Buyer { get; set; }
     }
 }

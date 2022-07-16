@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.Internals.SubsetGeneration;
 using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
+using Sanatana.DataGenerator.Supervisors.Subset;
 
 namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
 {
@@ -12,33 +13,33 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
     public class SubsetGeneratorSetupSingleGenericSpecs
     {
         [TestMethod]
-        public void GetTarget_WhenInMemoryStorageSet_ThenTargetEntityReturned()
+        public void GetSingleTarget_WhenInMemoryStorageSet_ThenTargetEntityReturned()
         {
             //Arrange
             SubsetGeneratorSetupSingle<Comment> generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup<Comment>()
-                .SetStorageInMemory(EntitiesSelection.All, true)
+                .SetInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All);
 
             //Act
-            object targetComment = generatorSetup.GetTarget();
+            object targetComment = generatorSetup.GetSingleTarget();
 
             //Assert
             targetComment.Should().NotBeNull();
         }
 
         [TestMethod]
-        public void GetTargetMany_WhenInMemoryStorageSet_ThenTargetEntityReturned()
+        public void GetMultipleTargets_WhenInMemoryStorageSet_ThenTargetEntityReturned()
         {
             //Arrange
             SubsetGeneratorSetupSingle<Comment> generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup<Comment>()
-                .SetStorageInMemory(EntitiesSelection.All, true)
+                .SetInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);
 
             //Act
-            object[] targetComments = generatorSetup.GetTargetMany();
+            object[] targetComments = generatorSetup.GetMultipleTargets();
 
             //Assert
             targetComments.Should().NotBeNull()
@@ -51,7 +52,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
             //Arrange
             SubsetGeneratorSetupSingle<Comment> generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup<Comment>()
-                .SetStorageInMemory(EntitiesSelection.All, true)
+                .SetInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);
 

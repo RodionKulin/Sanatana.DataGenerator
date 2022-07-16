@@ -78,6 +78,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public DefaultSettings()
         {
             PersistentStorages = new List<IPersistentStorage>();
+            Modifiers = new List<IModifier>();
             FlushStrategy = new DefaultFlushStrategy();
             RequestCapacityProvider = new StrictRequestCapacityProvider(100);
             SpreadStrategy = new EvenSpreadStrategy();
@@ -107,15 +108,26 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return this;
         }
 
-        public virtual DefaultSettings AddModifiers(IModifier modifier)
+        public virtual DefaultSettings AddModifier(IModifier modifier)
         {
             Modifiers.Add(modifier);
             return this;
         }
 
-        public virtual DefaultSettings SetTotalCountProvider(ITotalCountProvider totalCountProvider)
+        public virtual DefaultSettings SetTargetCount(ITotalCountProvider totalCountProvider)
         {
             TotalCountProvider = totalCountProvider;
+            return this;
+        }
+
+        /// <summary>
+        /// Set total number of entities that need to be generated.
+        /// </summary>
+        /// <param name="count"></param>
+        /// <returns></returns>
+        public virtual DefaultSettings SetTargetCount(long count)
+        {
+            TotalCountProvider = new StrictTotalCountProvider(count);
             return this;
         }
 

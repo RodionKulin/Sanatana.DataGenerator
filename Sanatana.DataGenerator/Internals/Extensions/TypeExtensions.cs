@@ -1,25 +1,42 @@
-﻿using System;
+﻿using Sanatana.DataGenerator.Generators;
+using Sanatana.DataGenerator.Modifiers;
+using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 
 namespace Sanatana.DataGenerator.Internals.Extensions
 {
     public static class TypeExtensions
 	{
-		public static bool IsGenericTypeOf(this Type genericType, Type someType)
+		public static bool IsGenericTypeOf(this Type genericType, Type typeToCheck)
 		{
-			if (someType.IsGenericType
-				&& genericType == someType.GetGenericTypeDefinition())
+			if (typeToCheck.IsGenericType
+				&& genericType == typeToCheck.GetGenericTypeDefinition())
 			{
 				return true;
 			}
 
-			if(someType.BaseType == null)
+			if(typeToCheck.BaseType == null)
             {
 				return false;
             }
 
-			return IsGenericTypeOf(genericType, someType.BaseType);
+			return IsGenericTypeOf(genericType, typeToCheck.BaseType);
+		}
+
+		public static bool IsSameTypeOrSubclass(this Type derived, Type baseType)
+		{
+			return derived == baseType || derived.IsSubclassOf(baseType);
+		}
+
+		public static bool IsNotParameterizedGenerator(this IGenerator generator)
+		{
+			return generator == null || !(generator is IDelegateParameterizedGenerator);
+		}
+
+		public static bool IsNotParameterizedModifiers(this List<IModifier> modifiers)
+		{
+			return modifiers == null || modifiers.All(m => !(m is IDelegateParameterizedModifier));
 		}
 	}
 }

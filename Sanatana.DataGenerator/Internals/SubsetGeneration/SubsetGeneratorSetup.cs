@@ -1,5 +1,5 @@
 ﻿using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.Internals.SubsetGeneration;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Subset;
@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 {
-    public class SubsetGeneratorSetup
+    public abstract class SubsetGeneratorSetup
     {
         //fields
         protected GeneratorSetup _generatorSetup;
@@ -32,6 +32,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             _subsetSettings.Setup(generatorSetup.GetGeneratorServices());
         }
 
+
         /// <summary>
         /// Convert back to GeneratorSetup to use it's configuration methods.
         /// And restore previous Supervisor with SetSupervisor method.
@@ -44,18 +45,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
 
         #region Configure services
-        public virtual SubsetGeneratorSetup SetTargetCountSingle(EntitiesSelection entitiesSelection)
-        {
-            return SetTargetCount(entitiesSelection, 1);
-        }
-
-        public virtual SubsetGeneratorSetup SetTargetCountSingle<TEntity>()
-            where TEntity : class
-        {
-            return SetTargetCount<TEntity>(1);
-        }
-
-        public virtual SubsetGeneratorSetup SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
+        protected virtual void SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
         {
             _generatorSetup = _generatorSetup.ModifyEntity((IEntityDescription[] all) =>
             {
@@ -64,33 +54,18 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
                     .ForEach(description => description.TotalCountProvider = new StrictTotalCountProvider(targetCount));
                 return all;
             });
-            return this;
         }
 
-        public virtual SubsetGeneratorSetup SetTargetCount<TEntity>(long targetCount) 
+        protected virtual void SetTargetCount<TEntity>(long targetCount) 
             where TEntity : class
         {
             _generatorSetup = _generatorSetup.ModifyEntity((EntityDescription<TEntity> description) =>
             {
                 return description.SetTargetCount(targetCount);
             });
-            return this;
         }
 
-        public virtual SubsetGeneratorSetup SetStorageInMemory(EntitiesSelection entitiesSelection, bool removeOtherStorages)
-        {
-            var memoryStorage = new InMemoryStorage();
-            return SetStorage(entitiesSelection, removeOtherStorages, memoryStorage);
-        }
-
-        public virtual SubsetGeneratorSetup SetStorageInMemory<TEntity>(bool removeOtherStorages)
-            where TEntity : class
-        {
-            var memoryStorage = new InMemoryStorage();
-            return SetStorage<TEntity>(removeOtherStorages, memoryStorage);
-        }
-
-        public virtual SubsetGeneratorSetup SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
+        protected virtual void SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
         {
             _generatorSetup = _generatorSetup.ModifyEntity((IEntityDescription[] all) =>
             {
@@ -108,14 +83,14 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
                 }
                 return all;
             });
-            return this;
         }
 
-        public virtual SubsetGeneratorSetup SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
+        protected virtual void SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
             where TEntity : class
         {
             _generatorSetup = _generatorSetup.ModifyEntity((EntityDescription<TEntity> description) =>
-            {if (removeOtherStorages)
+            {
+                if (removeOtherStorages)
                 {
                     description.PersistentStorages.Clear();
                 }
@@ -125,48 +100,79 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
                 }
                 return description;
             });
-            return this;
         }
         #endregion
 
 
-        #region Modify entity
-        /// <summary>
-        /// Get existing EntityDescription&lt;TEntity&gt; to modify.
-        /// </summary>
-        /// <typeparam name="TEntity"></typeparam>
-        /// <returns></returns>
-        /// <exception cref="TypeAccessException"></exception>
-        public virtual SubsetGeneratorSetup ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
-            where TEntity : class
+        #region Generate methods
+        protected virtual object[] GetMultipleTargetsImp()
         {
-            _generatorSetup = _generatorSetup.ModifyEntity<TEntity>(entityDescriptionSetup);
-            return this;
+            //validate
+            GeneratorServices services = _generatorSetup.GetGeneratorServices();
+            Type targetEntityType = _subsetSettings.TargetEntities.First();
+            services.ValidateEntitiesConfigured(targetEntityType);
+
+            //generate
+            _generatorSetup.Generate();
+
+            //get InMemoryStorage
+            IEntityDescription description = services.EntityDescriptions[targetEntityType];
+            InMemoryStorage[] inMemoryStorages = services.Defaults.GetPersistentStorages(description)
+                .OfType<InMemoryStorage>().ToArray();
+            if (inMemoryStorages.Length == 0)
+            {
+                throw new ArgumentException($"Method can only be called when entity has {nameof(InMemoryStorage)} in {nameof(IEntityDescription)}.{nameof(IEntityDescription.PersistentStorages)}.");
+            }
+            InMemoryStorage storage = inMemoryStorages[0];
+
+            //get instance generated
+            object[] instancesGenerated = storage.Select(targetEntityType);
+            if (instancesGenerated.Length == 0)
+            {
+                throw new ArgumentException($"No instances of type {targetEntityType.FullName} were found in {nameof(InMemoryStorage)}.");
+            }
+            return instancesGenerated;
         }
 
-        /// <summary>
-        /// Get existing IEntityDescription to modify.
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <param name="entityDescriptionSetup"></param>
-        /// <returns></returns>
-        /// <exception cref="KeyNotFoundException"></exception>
-        public virtual SubsetGeneratorSetup ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        protected virtual void GenerateImp()
         {
-            _generatorSetup = _generatorSetup.ModifyEntity(entityType, entityDescriptionSetup);
-            return this;
+            //validate
+            GeneratorServices services = _generatorSetup.GetGeneratorServices();
+            Type targetEntityType = _subsetSettings.TargetEntities.First();
+            services.ValidateEntitiesConfigured(targetEntityType);
+
+            //generate
+            _generatorSetup.Generate();
         }
 
-        /// <summary>
-        /// Get all existing IEntityDescription to modify.
-        /// </summary>
-        /// <param name="entityDescriptionSetup"></param>
-        /// <returns></returns>
-        /// <exception cref="KeyNotFoundException"></exception>
-        public virtual SubsetGeneratorSetup ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        protected virtual Dictionary<Type, object[]> GetAllImp()
         {
-            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
-            return this;
+            //validate
+            GeneratorServices services = _generatorSetup.GetGeneratorServices();
+            List<Type> entityTypes = _subsetSettings.TargetAndRequiredEntities;
+            services.ValidateEntitiesConfigured(entityTypes);
+            services.ValidateNoEntityDuplicates(entityTypes);
+
+            //generate
+            _generatorSetup.Generate();
+
+            //get instances from InMemoryStorage
+            var entitiesInstances = new Dictionary<Type, object[]>();
+            foreach (Type entityType in entityTypes)
+            {
+                IEntityDescription description = services.EntityDescriptions[entityType];
+                List<IPersistentStorage> storages = services.Defaults.GetPersistentStorages(description);
+                InMemoryStorage inMemoryStorage = storages.OfType<InMemoryStorage>().FirstOrDefault();
+                if (inMemoryStorage != null)
+                {
+                    //If no InMemoryStorage was added then entity will not be returned.
+                    //It's required to supports inserting entity to db without keeping in memory
+                    object[] entityInstances = inMemoryStorage.Select(entityType);
+                    entitiesInstances.Add(entityType, entityInstances);
+                }
+            }
+
+            return entitiesInstances;
         }
         #endregion
     }

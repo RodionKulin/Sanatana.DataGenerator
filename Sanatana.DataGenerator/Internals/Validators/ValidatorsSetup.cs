@@ -51,16 +51,30 @@ namespace Sanatana.DataGenerator.Internals.Validators
 
 
         //configure methods
-        public virtual ValidatorsSetup AddValidator(IValidator validator)
+        public virtual ValidatorsSetup EnsureAddValidator(IValidator validator)
         {
-            if (!Validators.Contains(validator))
+            validator = validator ?? throw new ArgumentNullException(nameof(validator));
+            if (Validators.All(x => x.GetType() != validator.GetType()))
             {
                 Validators.Add(validator);
             }
             return this;
         }
 
+        public virtual ValidatorsSetup AddValidator(IValidator validator)
+        {
+            Validators.Add(validator ?? throw new ArgumentNullException(nameof(validator)));
+            return this;
+        }
+
+        public virtual IValidator GetValidator<TValidator>()
+            where TValidator : IValidator
+        {
+            return Validators.OfType<TValidator>().FirstOrDefault();
+        }
+
         public virtual ValidatorsSetup RemoveValidator<TValidator>()
+            where TValidator : IValidator
         {
             Validators = Validators.Where(x => x.GetType() != typeof(TValidator)).ToList();
             return this;

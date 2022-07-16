@@ -1,21 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.Internals;
 using Sanatana.EntityFrameworkCore.Batch;
-using Sanatana.EntityFrameworkCore.Batch.Commands.Merge;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
-namespace Sanatana.DataGenerator.EntityFramework
+namespace Sanatana.DataGenerator.EntityFrameworkCore
 {
-    public class EntityFrameworkCoreRequestCapacityProvider : IRequestCapacityProvider
+    public class EfCoreRequestCapacityProvider : IRequestCapacityProvider
     {
         //fields
         protected Func<DbContext> _dbContextFactory;
@@ -23,7 +17,7 @@ namespace Sanatana.DataGenerator.EntityFramework
 
 
         //init
-        public EntityFrameworkCoreRequestCapacityProvider(Func<DbContext> dbContextFactory)
+        public EfCoreRequestCapacityProvider(Func<DbContext> dbContextFactory)
         {
             _dbContextFactory = dbContextFactory;
             _entityMaxCount = new Dictionary<Type, int>();

@@ -9,7 +9,8 @@ namespace Sanatana.DataGenerator.Entities
     public static class EntityDescriptionExtensions
     {
         /// <summary>
-        /// Add EntityFrameworkPersistentStorage and set EF RequestCapacityProvider, that will maximise number of instances inserted per single request.
+        /// Add EntityFrameworkPersistentStorage to store entity instances in SQL.
+        /// And set EF RequestCapacityProvider, that will maximise number of instances inserted per single request.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="entityDescription"></param>

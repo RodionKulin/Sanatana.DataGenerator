@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Internals.SubsetGeneration
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     /// <summary>
     /// Enum value with selection of Entity types that will can be effected by configuration methods in SubsetGeneratorSetup.

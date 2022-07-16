@@ -67,5 +67,14 @@ namespace Sanatana.DataGenerator.Internals.Reflection
             object result = insertMethod.Invoke(storage, new object[] { itemsList });
             return (Task)result;
         }
+
+        public virtual IEntityDescription CreateGenericEntityDescription(Type type)
+        {
+            type = type ?? throw new ArgumentNullException(nameof(type));
+          
+            Type genericEntityDescriptionType = typeof(EntityDescription<>).MakeGenericType(type);
+            object genericEntityDescription = Activator.CreateInstance(genericEntityDescriptionType);
+            return (IEntityDescription)genericEntityDescription;
+        }
     }
 }

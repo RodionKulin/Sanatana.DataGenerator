@@ -19,7 +19,7 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 namespace Sanatana.DataGenerator.Entities
 {
     /// <summary>
-    /// Entity configuration for generation process
+    /// Entity configuration for generation process.
     /// </summary>
     public class EntityDescription<TEntity> : IEntityDescription
             where TEntity : class
@@ -90,7 +90,6 @@ namespace Sanatana.DataGenerator.Entities
         /// If not specified will use PersistentStorageSelector from DefaultSettings.
         /// </summary>
         public IPersistentStorageSelector PersistentStorageSelector { get; set; }
-
         #endregion
 
 
@@ -145,7 +144,8 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Add required entity type that will be generated first and then pasted as parameter to generator.
+        /// Add Required entity type that will be generated first and then passed as parameter to Generator.
+        /// Required entities should also be registered for generation.
         /// </summary>
         /// <param name="requiredType">Type of foreign key entity</param>
         /// <param name="spreadStrategy">Distribution handler that defines how many times same foreign key entity can be reused</param>
@@ -161,28 +161,39 @@ namespace Sanatana.DataGenerator.Entities
             return SetRequired(requiredEntity);
         }
 
-        protected virtual void SetRequiredFromGenerator(Type delegateType)
+        protected virtual void SetRequiredFromGenerator(IDelegateParameterizedGenerator parameterizedGenerator)
         {
-            Type[] genericArgs = delegateType.GetGenericArguments();
-            List<Type> argumentTypes = genericArgs
-                .Skip(1)                        //the first one is GeneratorContext
-                .Take(genericArgs.Length - 2)   //and the last argument is result
-                .ToList();                      //the rest are required entities
-
+            Required.Clear();
+            List<Type> argumentTypes = parameterizedGenerator.GetRequiredEntitiesFuncParameters();
             foreach (Type requiredType in argumentTypes)
             {
-                var requiredEntity = new RequiredEntity
-                {
-                    Type = requiredType
-                };
+                SetRequired(new RequiredEntity(requiredType));
+            }
+        }
 
-                SetRequired(requiredEntity);
+        protected virtual void SetRequiredFromModifier(IDelegateParameterizedModifier parameterizedModifier)
+        {
+            Required.Clear();
+            List<Type> argumentTypes = parameterizedModifier.GetRequiredEntitiesFuncParameters();
+            foreach (Type requiredType in argumentTypes)
+            {
+                SetRequired(new RequiredEntity(requiredType));
             }
         }
 
         /// <summary>
+        /// Remove all Required entity types.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemoveRequired()
+        {
+            Required.Clear();
+            return this;
+        }
+
+        /// <summary>
         /// Set custom SpreadStrategy for Required Entity. 
-        /// Required Entity should already be registered when calling this method.        /// 
+        /// Required Entity should already be registered when calling this method.
         /// </summary>
         /// <param name="requiredType"></param>
         /// <param name="spreadStrategy"></param>
@@ -210,9 +221,9 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set custom SpreadStrategy for all Required Entities. 
-        /// Required Entities should already be registered when calling this method.
-        /// All Required Entities registered after this method call will not be effected and will have default SpreadStrategy value.
+        /// Set custom SpreadStrategy for all Required entities. 
+        /// Required entities should already be registered when calling this method.
+        /// All Required entities registered after this method call will not be effected and will have default SpreadStrategy value.
         /// </summary>
         /// <param name="spreadStrategy"></param>
         /// <returns></returns>
@@ -501,13 +512,12 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistRangeGenerator<TEntity, TOrderByKey>(newInstanceGenerator, idSelector);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
             return SetEnsureExistRangeGenerator(ensureExistGenerator);
         }
-
 
         #endregion
 
@@ -574,7 +584,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -598,7 +608,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator = 
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -623,7 +633,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -649,7 +659,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -676,7 +686,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -704,7 +714,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -733,7 +743,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -763,7 +773,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -794,7 +804,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -826,7 +836,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -859,7 +869,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -893,7 +903,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -928,7 +938,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -964,7 +974,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -1001,7 +1011,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
                 DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
-            SetRequiredFromGenerator(newInstanceGenerateFunc.GetType());
+            SetRequiredFromGenerator(newInstanceGenerator);
 
             var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
             ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
@@ -1054,9 +1064,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1>(
             Func<GeneratorContext, T1, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1072,9 +1082,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2>(
             Func<GeneratorContext, T1, T2, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1091,9 +1101,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3>(
             Func<GeneratorContext, T1, T2, T3, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1111,9 +1121,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4>(
             Func<GeneratorContext, T1, T2, T3, T4, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1132,9 +1142,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1154,9 +1164,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1177,9 +1187,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1201,9 +1211,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1226,9 +1236,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1252,9 +1262,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1279,9 +1289,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1307,9 +1317,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1336,9 +1346,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1366,9 +1376,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1397,9 +1407,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1428,8 +1438,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1>(
             Func<GeneratorContext, T1, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1445,9 +1456,10 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2>(
             Func<GeneratorContext, T1, T2, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
-            SetRequiredFromGenerator(generateFunc.GetType());
 
             return this;
         }
@@ -1464,9 +1476,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3>(
             Func<GeneratorContext, T1, T2, T3, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1484,9 +1496,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4>(
             Func<GeneratorContext, T1, T2, T3, T4, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1505,9 +1517,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1527,9 +1539,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1550,9 +1562,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1574,9 +1586,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1599,9 +1611,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1625,9 +1637,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1652,9 +1664,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1680,9 +1692,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1709,9 +1721,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1739,9 +1751,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1770,9 +1782,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
@@ -1826,7 +1838,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1>(
             Func<GeneratorContext, List<TEntity>, T1, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1841,7 +1855,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2>(
             Func<GeneratorContext, List<TEntity>, T1, T2, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1857,7 +1873,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1874,7 +1892,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1892,7 +1912,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1911,7 +1933,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1931,7 +1955,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1952,7 +1978,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1974,7 +2002,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1997,7 +2027,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2021,7 +2053,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2046,7 +2080,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2072,7 +2108,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2099,7 +2137,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2113,7 +2153,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1>(
             Func<GeneratorContext, List<TEntity>, T1, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2128,7 +2170,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2>(
             Func<GeneratorContext, List<TEntity>, T1, T2, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2144,7 +2188,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2161,7 +2207,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2179,7 +2227,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2198,7 +2248,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2218,7 +2270,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2239,7 +2293,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2261,7 +2317,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2284,7 +2342,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2308,7 +2368,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2333,7 +2395,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2359,7 +2423,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -2386,7 +2452,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }

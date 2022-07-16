@@ -1,6 +1,6 @@
 ﻿using Sanatana.DataGenerator.Entities;
-using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Storages;
+using Sanatana.DataGenerator.Supervisors.Subset;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,90 +17,117 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         }
 
 
-
-        //setup methods
-        public new virtual SubsetGeneratorSetupMany SetTargetCountSingle(EntitiesSelection entitiesSelection)
+        #region Configure services
+        public virtual SubsetGeneratorSetupMany SetTargetCountSingle(EntitiesSelection entitiesSelection)
         {
-            return (SubsetGeneratorSetupMany)base.SetTargetCount(entitiesSelection, 1);
+            base.SetTargetCount(entitiesSelection, 1);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetTargetCountSingle<TEntity>()
+        public virtual SubsetGeneratorSetupMany SetTargetCountSingle<TEntity>()
             where TEntity : class
         {
-            return (SubsetGeneratorSetupMany)base.SetTargetCount<TEntity>(1);
+            base.SetTargetCount<TEntity>(1);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
+        public virtual SubsetGeneratorSetupMany SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
         {
-            return (SubsetGeneratorSetupMany)base.SetTargetCount(entitiesSelection, targetCount);
+            base.SetTargetCount(entitiesSelection, targetCount);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetTargetCount<TEntity>(long targetCount)
+        public virtual SubsetGeneratorSetupMany SetTargetCount<TEntity>(long targetCount)
             where TEntity : class
         {
-            return (SubsetGeneratorSetupMany)base.SetTargetCount<TEntity>(targetCount);
+            base.SetTargetCount<TEntity>(targetCount);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetStorageInMemory(EntitiesSelection entitiesSelection, bool removeOtherStorages)
+        public virtual SubsetGeneratorSetupMany SetInMemoryStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages)
         {
-            return (SubsetGeneratorSetupMany)base.SetStorageInMemory(entitiesSelection, removeOtherStorages);
+            var memoryStorage = new InMemoryStorage();
+            base.SetStorage(entitiesSelection, removeOtherStorages, memoryStorage);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetStorageInMemory<TEntity>(bool removeOtherStorages)
+        public virtual SubsetGeneratorSetupMany SetInMemoryStorage<TEntity>(bool removeOtherStorages)
             where TEntity : class
         {
-            return (SubsetGeneratorSetupMany)base.SetStorageInMemory<TEntity>(removeOtherStorages);
+            var memoryStorage = new InMemoryStorage();
+            base.SetStorage<TEntity>(removeOtherStorages, memoryStorage);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
+        public virtual SubsetGeneratorSetupMany SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
         {
-            return (SubsetGeneratorSetupMany)base.SetStorage(entitiesSelection, removeOtherStorages, storage);
+            base.SetStorage(entitiesSelection, removeOtherStorages, storage);
+            return this;
         }
 
-        public new virtual SubsetGeneratorSetupMany SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
+        public virtual SubsetGeneratorSetupMany SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
             where TEntity : class
         {
-            return (SubsetGeneratorSetupMany)base.SetStorage<TEntity>(removeOtherStorages, storage);
+            base.SetStorage<TEntity>(removeOtherStorages, storage);
+            return this;
+        }
+        #endregion
+
+
+        #region Modify entity
+        /// <summary>
+        /// Get existing EntityDescription&lt;TEntity&gt; to modify.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="TypeAccessException"></exception>
+        public virtual SubsetGeneratorSetupMany ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
+            where TEntity : class
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
+            return this;
         }
 
+        /// <summary>
+        /// Get existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual SubsetGeneratorSetupMany ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity(entityType, entityDescriptionSetup);
+            return this;
+        }
+
+        /// <summary>
+        /// Get all existing IEntityDescription to modify.
+        /// </summary>
+        /// <param name="entityDescriptionSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="KeyNotFoundException"></exception>
+        public virtual SubsetGeneratorSetupMany ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        {
+            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
+            return this;
+        }
+        #endregion
 
 
-        //generate methods
+        #region Generate
         /// <summary>
         /// Generate subset of target entities with their required entities.
         /// Will return generated entity instances for target and required entities.
         /// Entities that did not have InMemoryStorage in PersistentStorages will not be returned.
-        /// Use SetStorageInMemory method to set InMemoryStorage for multiple entities.
+        /// Use SetInMemoryStorage method to set InMemoryStorage for multiple entities.
         /// Use this method if entities inserted to InMemoryStorage. Can optionally also insert to database PersistentStorage.
         /// </summary>
         /// <returns></returns>
         public virtual Dictionary<Type, object[]> GetAll()
         {
-            //validate
-            GeneratorServices services = _generatorSetup.GetGeneratorServices();
-            List<Type> entityTypes = _subsetSettings.TargetAndRequiredEntities;
-            services.ValidateEntitiesConfigured(entityTypes);
-            services.ValidateNoEntityDuplicates(entityTypes);
-
-            //generate
-            _generatorSetup.Generate();
-
-            //get instances from InMemoryStorage
-            var entitiesInstances = new Dictionary<Type, object[]>(); 
-            foreach (Type entityType in entityTypes)
-            {
-                List<IPersistentStorage> storages = services.Defaults.GetPersistentStorages(services.EntityDescriptions[entityType]);
-                InMemoryStorage inMemoryStorage = storages.OfType<InMemoryStorage>().FirstOrDefault();
-                if(inMemoryStorage != null)
-                {
-                    //If no InMemoryStorage was added then entity will not be returned.
-                    //It's required to supports inserting entity to db without keeping in memory
-                    object[] entityInstances = inMemoryStorage.Select(entityType);
-                    entitiesInstances.Add(entityType, entityInstances);
-                }
-            }
-
-            return entitiesInstances;
+            return base.GetAllImp();
         }
+        #endregion
     }
 }

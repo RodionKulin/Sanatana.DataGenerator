@@ -134,7 +134,7 @@ namespace Sanatana.DataGenerator.Generators
         {
             //check generic type of _newInstancesGenerator Generator
             Type newGenType = _newInstancesGenerator.GetType();
-            if (typeof(DelegateParameterizedGenerator<>).IsGenericTypeOf(newGenType))
+            if (_newInstancesGenerator is IDelegateParameterizedGenerator)
             {
                 //not a perfect solution, better to check all generic arguments
                 Type[] typeArguments = newGenType.GetGenericArguments();

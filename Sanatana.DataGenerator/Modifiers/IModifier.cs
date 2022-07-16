@@ -8,6 +8,6 @@ namespace Sanatana.DataGenerator.Modifiers
 {
     public interface IModifier
     {
-        IList Modify(GeneratorContext context, IList entities);
+        IList Modify(GeneratorContext context, IList instances);
     }
 }

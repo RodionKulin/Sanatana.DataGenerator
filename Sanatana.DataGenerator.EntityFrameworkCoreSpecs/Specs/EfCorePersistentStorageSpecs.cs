@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using Sanatana.DataGenerator.EntityFramework;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Interfaces;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples.Entities;
@@ -8,51 +7,53 @@ using System.Collections.Generic;
 using System.Linq;
 using SpecsFor.Core.ShouldExtensions;
 using FluentAssertions;
+using Sanatana.DataGenerator.EntityFrameworkCore;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 {
-    public class EntityFrameworkCorePersistentStorageSpecs
+    public class EfCorePersistentStorageSpecs
     {
         [TestFixture]
-        public class when_inserting_entities_to_storage : SpecsFor<EntityFrameworkCorePersistentStorage>
+        public class when_inserting_entities_to_storage : SpecsFor<EfCorePersistentStorage>
             , INeedSampleDatabase, INeedDatabaseCleared
         {
             private string _markerString;
-            private List<Comment> _insertedComments;
+            private List<Category> _insertedCategories;
             public SampleDbContext SampleDatabase { get; set; }
 
             protected override void When()
             {
                 _markerString = GetType().FullName;
-
-                _insertedComments = new List<Comment>
+                _insertedCategories = new List<Category>
                 {
-                    new Comment()
+                    new Category()
                     {
-                        CommentText = _markerString
+                        MarkerText = _markerString
                     },
-                    new Comment()
+                    new Category()
                     {
-                        CommentText = _markerString
+                        MarkerText = _markerString
                     }
                 };
-                SUT.Insert(_insertedComments).Wait();
+
+                var sut = new EfCorePersistentStorage(() => new SampleDbContext());
+                sut.Insert(_insertedCategories).Wait();
             }
 
             [Test]
             public void then_inserted_instances_are_found_in_database()
             {
-                List<Comment> actualComments = SampleDatabase.Comments
-                    .Where(x => x.CommentText == _markerString)
+                List<Category> actual = SampleDatabase.Categories
+                    .Where(x => x.MarkerText == _markerString)
                     .ToList();
 
-                actualComments.Should().BeEquivalentTo(_insertedComments);
+                actual.Should().BeEquivalentTo(_insertedCategories);
             }
 
             [Test]
             public void then_id_returned_from_database_and_set_on_instances()
             {
-                _insertedComments.Should().OnlyContain(x => x.Id != 0);
+                _insertedCategories.Should().OnlyContain(x => x.Id != 0);
             }
         }
 

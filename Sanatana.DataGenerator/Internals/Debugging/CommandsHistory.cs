@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Serilog;
 using System.IO;
 
 namespace Sanatana.DataGenerator.Internals.Debugging
@@ -12,22 +11,12 @@ namespace Sanatana.DataGenerator.Internals.Debugging
         //Stack shows latest rows inserted as first, which is easier for debugging
         public Stack<string> Logs { get; protected set; }
         protected int _clearHistoryCount;
-        protected ILogger _logger;
-        protected string _logFilePath = "command_logs.log";
-
-
-        //properties
-        public bool IsFileLoggingEnabled { get; set; }
 
 
         //init
         public CommandsHistory()
         {
             Logs = new Stack<string>();
-            _logger = new LoggerConfiguration()
-               .MinimumLevel.Debug()
-               .WriteTo.File(_logFilePath, rollingInterval: RollingInterval.Day)
-               .CreateLogger();
         }
 
 
@@ -42,10 +31,6 @@ namespace Sanatana.DataGenerator.Internals.Debugging
                 _clearHistoryCount++;
             }
 
-            if (IsFileLoggingEnabled)
-            {
-                _logger.Information(logEntry);
-            }
         }
 
         public virtual string Combine()
@@ -56,10 +41,6 @@ namespace Sanatana.DataGenerator.Internals.Debugging
         public virtual void Clear()
         {
             Logs.Clear();
-            if (File.Exists(_logFilePath) && IsFileLoggingEnabled)
-            {
-                File.Delete(_logFilePath);
-            }
         }
     }
 }

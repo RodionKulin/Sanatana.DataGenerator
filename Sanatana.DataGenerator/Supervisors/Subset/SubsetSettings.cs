@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Sanatana.DataGenerator.Internals.SubsetGeneration
+namespace Sanatana.DataGenerator.Supervisors.Subset
 {
     public class SubsetSettings
     {

@@ -17,9 +17,15 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             optionsBuilder.UseSqlServer($@"Data Source=(LocalDb)\MSSQLLocalDB;
-                 AttachDbFilename={basePath}GeneratorEfCoreContext-20190522.mdf;
-                 Initial Catalog=GeneratorEfCoreContext-20190522;
+                 AttachDbFilename={basePath}GeneratorEfCoreContextSpecs.mdf;
+                 Initial Catalog=GeneratorEfCoreContextSpecs;
                  Integrated Security=True");
+        }
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Post>().HasKey(x => x.Id);
         }
     }
 }

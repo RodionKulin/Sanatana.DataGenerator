@@ -186,7 +186,7 @@ namespace Sanatana.DataGenerator.Generators
         {
             //check generic type of _newInstancesGenerator Generator
             Type newGenType = _newInstancesGenerator.GetType();
-            if (typeof(DelegateParameterizedGenerator<>).IsGenericTypeOf(newGenType))
+            if (newGenType is IDelegateParameterizedGenerator)
             {
                 //not a perfect solution, better to check all generic arguments
                 Type[] typeArguments = newGenType.GetGenericArguments();
@@ -222,10 +222,9 @@ namespace Sanatana.DataGenerator.Generators
             //check count of instances in PersistentStorage to prevent selecting to large number
             IPersistentStorageSelector persistentStorageSelector = defaults.GetPersistentStorageSelector(entity);
             long storageCount = persistentStorageSelector.Count(_storageSelectorFilter);
-            int maxCacheSize = 100000;
-            if (storageCount > maxCacheSize)
+            if (storageCount > _maxSelectableInstances)
             {
-                throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {maxCacheSize} instances. " +
+                throw new NotSupportedException($"Number of selectable instances of type {typeof(TEntity)} in persistent storage {storageCount} is larger then max cap of {_maxSelectableInstances} instances to select. " +
                     $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
                     $"Optionally can increase this cap in {nameof(SetMaxSelectableInstances)} method.");
             }

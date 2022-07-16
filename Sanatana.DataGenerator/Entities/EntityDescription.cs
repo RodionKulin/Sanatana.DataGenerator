@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.RequestCapacityProviders;
+using Sanatana.DataGenerator.Internals.Reflection;
 
 namespace Sanatana.DataGenerator.Entities
 {
@@ -79,6 +80,13 @@ namespace Sanatana.DataGenerator.Entities
 
 
         //init
+        public EntityDescription()
+        {
+            Required = new List<RequiredEntity>();
+            Modifiers = new List<IModifier>();
+            PersistentStorages = new List<IPersistentStorage>();
+        }
+
         public virtual IEntityDescription Clone()
         {
             return new EntityDescription
@@ -87,7 +95,7 @@ namespace Sanatana.DataGenerator.Entities
                 Required = new List<RequiredEntity>(Required),
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
-                PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
                 TotalCountProvider = TotalCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
@@ -95,6 +103,29 @@ namespace Sanatana.DataGenerator.Entities
                 InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse,
                 PersistentStorageSelector = PersistentStorageSelector
             };
+        }
+
+        /// <summary>
+        /// Convert to EntityDescription&lt;TEntity&gt;
+        /// </summary>
+        /// <returns></returns>
+        public virtual IEntityDescription ToGenericEntityDescription()
+        {
+            IEntityDescription entityDescription = new ReflectionInvoker().CreateGenericEntityDescription(Type);
+
+            //Type is set as generic parameter
+            entityDescription.Required = new List<RequiredEntity>(Required);
+            entityDescription.Generator = Generator;
+            entityDescription.Modifiers = new List<IModifier>(Modifiers);
+            entityDescription.PersistentStorages = new List<IPersistentStorage>(PersistentStorages);
+            entityDescription.TotalCountProvider = TotalCountProvider;
+            entityDescription.FlushStrategy = FlushStrategy;
+            entityDescription.RequestCapacityProvider = RequestCapacityProvider;
+            entityDescription.StorageInsertGuard = StorageInsertGuard;
+            entityDescription.InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse;
+            entityDescription.PersistentStorageSelector = PersistentStorageSelector;
+
+            return entityDescription;
         }
     }
 }

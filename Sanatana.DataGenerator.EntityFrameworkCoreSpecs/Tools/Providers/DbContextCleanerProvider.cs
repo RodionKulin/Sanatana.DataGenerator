@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Sanatana.DataGenerator.EntityFramework;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Interfaces;
 using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples;
 using SpecsFor.Core;
@@ -17,9 +16,9 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Providers
         public override void SpecInit(INeedDatabaseCleared instance)
         {
             instance.SampleDatabase.Database.ExecuteSqlCommand($@"
-TRUNCATE TABLE [Posts];
-TRUNCATE TABLE [Comments];
-TRUNCATE TABLE [Categories];
+DELETE FROM [Comments];
+DELETE FROM [Posts];
+DELETE FROM [Categories];
 ");
         }
 

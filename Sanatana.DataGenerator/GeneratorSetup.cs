@@ -14,13 +14,14 @@ using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.SubsetGeneration;
 using Sanatana.DataGenerator.Internals.Validators;
+using Sanatana.DataGenerator.Internals.Extensions;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
 namespace Sanatana.DataGenerator
 {
     /// <summary>
-    /// Setup class to register all the entities with their generators and start to generate
+    /// Setup class to register all the entities and settings for generation.
     /// </summary>
     public class GeneratorSetup
     {
@@ -87,8 +88,22 @@ namespace Sanatana.DataGenerator
 
 
         #region Register entity
+
         /// <summary>
         /// Add new IEntityDescription.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual GeneratorSetup RegisterEntity<TEntity>()
+            where TEntity : class
+        {
+            var entityDescription = new EntityDescription<TEntity>();
+            return RegisterEntity(entityDescription);
+        }
+
+        /// <summary>
+        /// Add new IEntityDescription and setup additional IEntityDescription properties.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="entityDescriptionSetup"></param>
@@ -235,11 +250,64 @@ namespace Sanatana.DataGenerator
             Dictionary<Type, IEntityDescription> allEntityDescriptions = newEntityDescriptions.ToDictionary(x => x.Type, x => x);
             return Clone(entityDescriptions: allEntityDescriptions);
         }
-        
+
+        #endregion
+
+
+        #region Select entities
+        /// <summary>
+        /// Check if entity type is already configured.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <returns></returns>
+        public virtual bool ContainsEntity(Type entityType)
+        {
+            return _entityDescriptions.ContainsKey(entityType);
+        }
+
+        /// <summary>
+        /// Get entity types that are already registered in GeneratorSetup.
+        /// </summary>
+        /// <returns></returns>
+        public virtual Type[] GetRegistegedEntityTypes()
+        {
+            return _entityDescriptions.Keys.ToArray();
+        }
+
+        /// <summary>
+        /// Get entity types that are already registered in GeneratorSetup
+        /// and do not include IDelegateParameterizedGenerator as Generator 
+        /// and do not include IDelegateParameterizedModifier among Modifiers.
+        /// Default settings are not considered.
+        /// </summary>
+        /// <returns></returns>
+        public virtual Type[] GetRegistegedNotParameterizedEntityTypes()
+        {
+            return _entityDescriptions
+                .Where(x => x.Value.Generator.IsNotParameterizedGenerator()
+                    && x.Value.Modifiers.IsNotParameterizedModifiers())
+                .Select(x => x.Key)
+                .ToArray();
+        }
         #endregion
 
 
         #region Configure services
+        /// <summary>
+        /// Configure validators by removing default ones or adding new custom validators.
+        /// Validators should implement one of interfaces:
+        /// IBeforeSetupValidator - runs before getting TargetCount and list of parent and child entities, based on Required settings;
+        /// IAfterSetupValidator - runs after getting TargetCount and list of parent and child entities, based on Required settings;
+        /// IGenerateValidator - runs after entity instances were generated;
+        /// IModifyValidator - runs after entity instances were modified.
+        /// </summary>
+        public virtual GeneratorSetup SetValidators(Func<ValidatorsSetup, ValidatorsSetup> validatorsSetup)
+        {
+            ValidatorsSetup validators = _validators.Clone();
+            validatorsSetup.Invoke(validators);
+            return Clone(validators: validators);
+        }
+
         /// <summary>
         /// Configure existing DefaultSettings or provide new.
         /// Default settings used for entity generation if not specified entity specific settings.
@@ -248,15 +316,6 @@ namespace Sanatana.DataGenerator
         {
             DefaultSettings defaults = _defaults.Clone();
             defaultsSetup.Invoke(defaults);
-            return Clone(defaults: defaults);
-        }
-
-        /// <summary>
-        /// Provide new DefaultSettings.
-        /// Default settings used for entity generation if not specified entity specific settings.
-        /// </summary>
-        public virtual GeneratorSetup SetDefaultSettings(DefaultSettings defaults)
-        {
             return Clone(defaults: defaults);
         }
 
@@ -321,22 +380,6 @@ namespace Sanatana.DataGenerator
             TemporaryStorage temporaryStorage = _temporaryStorage.Clone();
             temporaryStorage.MaxTasksRunning = maxTasksRunning;
             return Clone(temporaryStorage: temporaryStorage);
-        }
-
-
-        /// <summary>
-        /// Configure validators by removing default ones or adding new custom validators.
-        /// Validators should implement one of interfaces:
-        /// IBeforeSetupValidator - runs before getting TargetCount and list of parent and child entities, based on Required settings;
-        /// IAfterSetupValidator - runs after getting TargetCount and list of parent and child entities, based on Required settings;
-        /// IGenerateValidator - runs after entity instances were generated;
-        /// IModifyValidator - runs after entity instances were modified.
-        /// </summary>
-        public virtual GeneratorSetup SetValidators(Func<ValidatorsSetup, ValidatorsSetup> validatorsSetup)
-        {
-            ValidatorsSetup validators = _validators.Clone();
-            validatorsSetup.Invoke(validators);
-            return Clone(validators: validators);
         }
 
         #endregion
