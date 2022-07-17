@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.Text;
-using Sanatana.DataGenerator.Internals.Validators.Contracts;
 using Sanatana.DataGenerator.Modifiers;
 
-namespace Sanatana.DataGenerator.Internals.Validators
+namespace Sanatana.DataGenerator.Internals.Validators.AfterModify
 {
     /// <summary>
     /// Validate that number of modified entities is greater than 0 and returned type is List&lt;&gt;

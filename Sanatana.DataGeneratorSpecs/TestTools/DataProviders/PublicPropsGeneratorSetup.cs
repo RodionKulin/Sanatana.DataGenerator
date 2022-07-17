@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
 {
-    internal class PublicPropsGeneratorSetup : GeneratorSetup
+    public class PublicPropsGeneratorSetup : GeneratorSetup
     {
         //props
         public ISupervisor Supervisor 
@@ -32,5 +32,10 @@ namespace Sanatana.DataGeneratorSpecs.TestTools.DataProviders
             base.Setup(generatorServices);
         }
 
+        public GeneratorSetup PublicClone()
+        {
+            return base.Clone();
+        }
     }
+
 }

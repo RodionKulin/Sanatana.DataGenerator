@@ -39,7 +39,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals
             var descriptions = new List<IEntityDescription>();
             descriptions.Add(new EntityDescription<Post>()
                 .SetTargetCount(5)
-                .SetGenerator(context => null));
+                .SetGenerator(context => (Post)null));
             var generatorSetup = new GeneratorSetup()
                 .SetDefaultSettings(defaults => defaults.AddPersistentStorage(new InMemoryStorage()))
                 .RegisterEntity(descriptions);

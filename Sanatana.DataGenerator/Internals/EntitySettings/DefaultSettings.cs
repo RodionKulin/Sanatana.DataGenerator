@@ -189,7 +189,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return Generator;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IGenerator)} configured and {nameof(Generator)} also not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(IModifier)} configured and {nameof(Generator)} also not provided.");
         }
 
         public virtual List<IModifier> GetModifiers(IEntityDescription entityDescription)

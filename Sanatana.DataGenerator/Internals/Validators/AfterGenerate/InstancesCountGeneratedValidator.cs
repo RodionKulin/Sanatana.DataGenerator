@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.Text;
 using Sanatana.DataGenerator.Generators;
-using Sanatana.DataGenerator.Internals.Validators.Contracts;
 
-namespace Sanatana.DataGenerator.Internals.Validators
+namespace Sanatana.DataGenerator.Internals.Validators.AfterGenerate
 {
     /// <summary>
     /// Validate that number of generated entities is greater than 0 and returned type is List&lt;TEntity&gt;

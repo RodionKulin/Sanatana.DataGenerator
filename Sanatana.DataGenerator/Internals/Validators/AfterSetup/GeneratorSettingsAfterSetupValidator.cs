@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Sanatana.DataGenerator.Internals.Validators.Contracts;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
-namespace Sanatana.DataGenerator.Internals.Validators
+namespace Sanatana.DataGenerator.Internals.Validators.AfterSetup
 {
     /// <summary>
     /// Validate that IEntityDescription is supported in Generator and all settings for Generator are present.

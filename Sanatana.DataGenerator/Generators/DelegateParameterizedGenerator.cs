@@ -257,7 +257,7 @@ namespace Sanatana.DataGenerator.Generators
 
             if (!_delegateMapping.ContainsKey(delegateType))
             {
-                List<Type> requiredParametersTypes = GetRequiredEntitiesFuncParameters();
+                List<Type> requiredParametersTypes = GetRequiredEntitiesFuncArguments();
 
                 List<Type> requiredTypes = context.RequiredEntities.Keys.ToList();
                 int[] requiredTypesOrder = requiredTypes
@@ -270,7 +270,7 @@ namespace Sanatana.DataGenerator.Generators
             return _delegateMapping[delegateType].ToArray();
         }
 
-        public virtual List<Type> GetRequiredEntitiesFuncParameters()
+        public virtual List<Type> GetRequiredEntitiesFuncArguments()
         {
             Type delegateType = _generateFunc.GetType();
 

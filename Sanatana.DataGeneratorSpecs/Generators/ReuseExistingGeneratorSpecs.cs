@@ -7,7 +7,7 @@ using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
 using Sanatana.DataGeneratorSpecs.TestTools.Samples;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using FluentAssertions;
 
 namespace Sanatana.DataGeneratorSpecs.Generators
 {
@@ -39,11 +39,11 @@ namespace Sanatana.DataGeneratorSpecs.Generators
             };
 
             //Act
-            List<Comment> comment = (List<Comment>)target.Generate(generatorContext);
+            List<Comment> comments = (List<Comment>)target.Generate(generatorContext);
 
             //Assert 
-            Assert.IsNotNull(comment);
-            Assert.AreEqual(3, comment.Count);
+            comments.Should().NotBeNull()
+                .And.HaveCount(3);
         }
     }
 }

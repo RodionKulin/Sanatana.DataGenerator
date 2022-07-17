@@ -7,9 +7,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Internals.Validators.Contracts
+namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
 {
-    public interface IAfterSetupValidator : IValidator
+    public interface IBeforeSetupValidator : IValidator
     {
         void ValidateSetup(GeneratorServices generatorServices);
     }

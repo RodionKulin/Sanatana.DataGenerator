@@ -37,5 +37,19 @@ namespace Sanatana.DataGenerator
         /// </summary>
         public DefaultSettings Defaults { get; set; }
 
+
+        //methods
+        public virtual GeneratorContext Clone()
+        {
+            return new GeneratorContext
+            {
+                Description = Description,
+                EntityContexts = EntityContexts,
+                TargetCount = TargetCount,
+                CurrentCount = CurrentCount,
+                RequiredEntities = RequiredEntities,
+                Defaults = Defaults
+            };
+        }
     }
 }

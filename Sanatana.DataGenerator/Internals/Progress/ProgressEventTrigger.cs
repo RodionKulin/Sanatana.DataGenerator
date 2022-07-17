@@ -17,7 +17,6 @@ namespace Sanatana.DataGenerator.Internals.Progress
         protected List<Action<decimal>> _eventHandlers;
 
 
-
         //init
         public ProgressEventTrigger()
         {}

@@ -126,7 +126,7 @@ namespace Sanatana.DataGenerator
         /// <exception cref="ArgumentNullException"></exception>
         public virtual GeneratorSetup RegisterEntity(IEntityDescription entityDescription)
         {
-            entityDescription = entityDescription ?? throw new ArgumentNullException($"Provided {nameof(entityDescription)} is null");
+            entityDescription = entityDescription ?? throw new ArgumentNullException(nameof(entityDescription));
             if (_entityDescriptions.ContainsKey(entityDescription.Type))
             {
                 throw new ArgumentException($"Entity type {entityDescription.Type} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
@@ -145,7 +145,7 @@ namespace Sanatana.DataGenerator
         /// <exception cref="ArgumentNullException"></exception>
         public virtual GeneratorSetup RegisterEntity(IEnumerable<IEntityDescription> entityDescriptions)
         {
-            entityDescriptions = entityDescriptions ?? throw new ArgumentNullException($"Provided {nameof(entityDescriptions)} is null");
+            entityDescriptions = entityDescriptions ?? throw new ArgumentNullException(nameof(entityDescriptions));
 
             List<Type> duplicateEntityTypes = _entityDescriptions.Keys
                 .Intersect(entityDescriptions.Select(x => x.Type))
@@ -200,7 +200,7 @@ namespace Sanatana.DataGenerator
             entityDescription = entityDescription.Clone();
             entityDescription = entityDescriptionSetup((EntityDescription<TEntity>)entityDescription);
 
-            entityDescription = entityDescription ?? throw new ArgumentNullException($"Provided {nameof(entityDescription)} is null");
+            entityDescription = entityDescription ?? throw new ArgumentNullException(nameof(entityDescription));
             if (entityDescription.Type != entityType)
             {
                 throw new ArgumentException($"Entity type {entityDescription.Type.FullName} returned from {nameof(ModifyEntity)}. Not allowed to change type of existing entity {entityType.FullName}.");

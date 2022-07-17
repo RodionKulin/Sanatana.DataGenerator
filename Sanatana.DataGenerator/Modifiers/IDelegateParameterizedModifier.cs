@@ -6,6 +6,6 @@ namespace Sanatana.DataGenerator.Modifiers
 {
     public interface IDelegateParameterizedModifier : IModifier
     {
-        List<Type> GetRequiredEntitiesFuncParameters();
+        List<Type> GetRequiredEntitiesFuncArguments();
     }
 }

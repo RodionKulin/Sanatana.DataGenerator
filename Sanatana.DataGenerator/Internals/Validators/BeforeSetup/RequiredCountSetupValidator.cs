@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Sanatana.DataGenerator.Generators;
-using Sanatana.DataGenerator.Internals.Validators.Contracts;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Modifiers;
@@ -18,10 +16,17 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
     {
         public virtual void ValidateSetup(GeneratorServices generatorServices)
         {
+            CheckGeneratorParams(generatorServices);
+            CheckModifierParams(generatorServices);
+        }
+
+        protected virtual void CheckGeneratorParams(GeneratorServices generatorServices)
+        {
             Dictionary<Type, IEntityDescription> entityDescriptions = generatorServices.EntityDescriptions;
+
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
-                //check that no duplicates in Required types
+                //Check that no duplicates in Required types
                 Type[] requiredEntitiesTypes = entity.Required
                     .Select(x => x.Type)
                     .ToArray();
@@ -33,18 +38,17 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                 if (generator is IDelegateParameterizedGenerator)
                 {
                     Type[] generatorParams = (generator as IDelegateParameterizedGenerator)
-                       .GetRequiredEntitiesFuncParameters()
+                       .GetRequiredEntitiesFuncArguments()
                        .ToArray();
                     CompareToRequiredParams(requiredEntitiesTypes, generatorParams, entity, generatorType);
                 }
             }
-
-            CheckModifiersParams(entityDescriptions, generatorServices);
         }
 
-        public virtual void CheckModifiersParams(
-            Dictionary<Type, IEntityDescription> entityDescriptions, GeneratorServices generatorServices)
+        protected virtual void CheckModifierParams(GeneratorServices generatorServices)
         {
+            Dictionary<Type, IEntityDescription> entityDescriptions = generatorServices.EntityDescriptions;
+
             foreach (IEntityDescription entity in entityDescriptions.Values)
             {
                 Type[] requiredEntitiesTypes = entity.Required.Select(x => x.Type).ToArray();
@@ -56,7 +60,7 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                     IModifier modifier = modifiers[i];
                     Type modifierType = modifier.GetType();
                     Type[] modifierParams = (modifier as IDelegateParameterizedModifier)
-                        .GetRequiredEntitiesFuncParameters()
+                        .GetRequiredEntitiesFuncArguments()
                         .ToArray();
 
                     CheckDuplicates(modifierParams, entity, modifierType);
@@ -64,7 +68,6 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                 }
             }
         }
-
 
         /// <summary>
         /// Check that Required types don't have duplicates

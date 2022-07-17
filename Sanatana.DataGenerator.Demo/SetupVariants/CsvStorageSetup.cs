@@ -27,7 +27,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
                 )
                 .RegisterEntity<PurchaseOrder>(entity => entity
                     .SetGenerator<Supplier, Buyer>(GeneratePurchaseOrder)
-                    .AddMultiModifier<Supplier, Buyer>(ModifyPurchaseOrders)
+                    .AddModifier<Supplier, Buyer>(ModifyPurchaseOrders)
                     .AddPersistentStorage(new CsvPersistentStorage("Set-PurchaseOrders.csv"))
                     .SetSpreadStrategy(new CartesianProductSpreadStrategy())
                     .SetTargetCount(10000)
@@ -90,11 +90,10 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
             };
         }
 
-        private static List<PurchaseOrder> ModifyPurchaseOrders(GeneratorContext context,
-           List<PurchaseOrder> purchaseOrders, Supplier supplier, Buyer buyer)
+        private static void ModifyPurchaseOrders(GeneratorContext context,
+           PurchaseOrder purchaseOrder, Supplier supplier, Buyer buyer)
         {
-            purchaseOrders.ForEach(x => x.RegisteredTime = DateTime.Now);
-            return purchaseOrders;
+            purchaseOrder.RegisteredTime = DateTime.Now;
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGenerator.Internals.Validators.Contracts
+namespace Sanatana.DataGenerator.Internals.Validators.AfterModify
 {
     public interface IModifyValidator : IValidator
     {
