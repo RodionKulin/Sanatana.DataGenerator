@@ -136,7 +136,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                 .Select(x => new
                 {
                     Type = x.Type,
-                    Total = x.TotalCountProvider.GetTargetCount(null, null)
+                    Total = x.TargetCountProvider.GetTargetCount(null, null)
                 })
                 .OrderBy(x => x.Type.FullName)
                 .ToDictionary(x => x.Type, x => x.Total);

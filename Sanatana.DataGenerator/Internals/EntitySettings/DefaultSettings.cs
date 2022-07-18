@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Modifiers;
 using Sanatana.DataGenerator.RequestCapacityProviders;
 using Sanatana.DataGenerator.Comparers;
@@ -31,10 +31,10 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
         /// Default provider of total number of entity instances that need to be generated.
-        /// Will be used for entity types that does not have a TotalCountProvider specified.
+        /// Will be used for entity types that does not have a ITargetCountProvider specified.
         /// By default is not set.
         /// </summary>
-        public ITotalCountProvider TotalCountProvider { get; set; }
+        public ITargetCountProvider TargetCountProvider { get; set; }
         /// <summary>
         /// Default persistent storage(s) to store generated entities.
         /// Will be used for entity types that does not have a PersistentStorage specified.
@@ -90,7 +90,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             {
                 Generator = Generator,
                 Modifiers = Modifiers == null ? null : new List<IModifier>(Modifiers),
-                TotalCountProvider = TotalCountProvider,
+                TargetCountProvider = TargetCountProvider,
                 PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
@@ -101,82 +101,158 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         }
 
 
-        //Get entity specific or default service
+        #region Set entity specific or default service
+
+        /// <summary>
+        /// Set default entities generator. 
+        /// Will be used for entity types that does not have a Generator specified.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="generator"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetGenerator(IGenerator generator)
         {
             Generator = generator;
             return this;
         }
 
+        /// <summary>
+        /// Add default modifier to make adjustments to entity instance after generation.
+        /// Will be used for entity types that does not have Modifers specified.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="modifier"></param>
+        /// <returns></returns>
         public virtual DefaultSettings AddModifier(IModifier modifier)
         {
             Modifiers.Add(modifier);
             return this;
         }
 
-        public virtual DefaultSettings SetTargetCount(ITotalCountProvider totalCountProvider)
+        /// <summary>
+        /// Set default provider of total number of entity instances that need to be generated.
+        /// Will be used for entity types that does not have a ITargetCountProvider specified.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="targetCountProvider"></param>
+        /// <returns></returns>
+        public virtual DefaultSettings SetTargetCount(ITargetCountProvider targetCountProvider)
         {
-            TotalCountProvider = totalCountProvider;
+            TargetCountProvider = targetCountProvider;
             return this;
         }
 
         /// <summary>
-        /// Set total number of entities that need to be generated.
+        /// Set default total number of entity instances that need to be generated.
+        /// Will use StrictTargetCountProvider that holds constant total number.
+        /// Will be used for entity types that does not have a ITargetCountProvider specified.
+        /// By default is not set.
         /// </summary>
         /// <param name="count"></param>
         /// <returns></returns>
         public virtual DefaultSettings SetTargetCount(long count)
         {
-            TotalCountProvider = new StrictTotalCountProvider(count);
+            TargetCountProvider = new StrictTargetCountProvider(count);
             return this;
         }
 
+        /// <summary>
+        /// Add default persistent storage to store generated entities.
+        /// Will be used for entity types that does not have a PersistentStorage specified.
+        /// Can use multple persistent storages.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="persistentStorage"></param>
+        /// <returns></returns>
         public virtual DefaultSettings AddPersistentStorage(IPersistentStorage persistentStorage)
         {
             PersistentStorages.Add(persistentStorage);
             return this;
         }
 
+        /// <summary>
+        /// Remove default persistent storage to store generated entities.
+        /// Will be used for entity types that does not have a PersistentStorage specified.
+        /// Can use multple persistent storages.
+        /// By default is not set.
+        /// </summary>
+        /// <returns></returns>
         public virtual DefaultSettings RemovePersistentStorages()
         {
             PersistentStorages.Clear();
             return this;
         }
 
+        /// <summary>
+        /// Set default strategy to trigger entity persistent storage writes.
+        /// Will be used for entity types that does not have a FlushStrategy specified.
+        /// By default using DefaultFlushStrategy.
+        /// </summary>
+        /// <param name="flushStrategy"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetFlushStrategy(IFlushStrategy flushStrategy)
         {
             FlushStrategy = flushStrategy;
             return this;
         }
 
+        /// <summary>
+        /// Set default IRequestCapacityProvider that returns number of entity instances that can be inserted per single request to persistent storage.
+        /// Will be used for entity types that does not have a IRequestCapacityProvider specified.
+        /// By default using StrictRequestCapacityProvider with a limit of 100.
+        /// </summary>
+        /// <param name="requestCapacityProvider"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetRequestCapacityProvider(IRequestCapacityProvider requestCapacityProvider)
         {
             RequestCapacityProvider = requestCapacityProvider;
             return this;
         }
 
+        /// <summary>
+        /// Set default spread strategy to reuse same required entity instances among multiple child entity instances.
+        /// Will be used for Required entity types that does not have a SpreadStrategy specified.
+        /// By default using EvenSpreadStrategy.
+        /// </summary>
+        /// <param name="spreadStrategy"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetSpreadStrategy(ISpreadStrategy spreadStrategy)
         {
             SpreadStrategy = spreadStrategy;
             return this;
         }
 
+        /// <summary>
+        /// Set default selector from persistent storage, that will provide existing instances for EnsureExistGenerator or ReuseExistingGenerator.
+        /// Will be used for entities with generator, that does not have a PersistentStorageSelector specified.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="persistentStorageSelector"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetPersistentStorageSelector(IPersistentStorageSelector persistentStorageSelector)
         {
             PersistentStorageSelector = persistentStorageSelector;
             return this;
         }
 
+        /// <summary>
+        /// Set default factory that provides IEqualityComparer for entities with EnsureExistGenerator.
+        /// Only required if EnsureExistGenerator is used.
+        /// Will be used for entities with generator, that does not have a IEqualityComparer specified.
+        /// By default is not set.
+        /// </summary>
+        /// <param name="equalityComparerFactory"></param>
+        /// <returns></returns>
         public virtual DefaultSettings SetDefaultEqualityComparer(IEqualityComparerFactory equalityComparerFactory)
         {
             EqualityComparerFactory = equalityComparerFactory;
             return this;
         }
 
+        #endregion
 
 
-
-        //Get entity specific or default service
+        #region Get entity specific or default service
         public virtual IGenerator GetGenerator(IEntityDescription entityDescription)
         {
             if (entityDescription.Generator != null)
@@ -207,19 +283,19 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return new List<IModifier>();
         }
 
-        public virtual ITotalCountProvider GetTotalCountProvider(IEntityDescription entityDescription)
+        public virtual ITargetCountProvider GetTargetCountProvider(IEntityDescription entityDescription)
         {
-            if (entityDescription.TotalCountProvider != null)
+            if (entityDescription.TargetCountProvider != null)
             {
-                return entityDescription.TotalCountProvider;
+                return entityDescription.TargetCountProvider;
             }
 
-            if (TotalCountProvider != null)
+            if (TargetCountProvider != null)
             {
-                return TotalCountProvider;
+                return TargetCountProvider;
             }
 
-            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(ITotalCountProvider)} configured and {nameof(TotalCountProvider)} also not provided.");
+            throw new NullReferenceException($"Type {entityDescription.Type.FullName} does not have {nameof(ITargetCountProvider)} configured and {nameof(TargetCountProvider)} also not provided.");
         }
 
         public virtual List<IPersistentStorage> GetPersistentStorages(IEntityDescription entityDescription)
@@ -313,6 +389,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             return comparer;
         }
 
+        #endregion
 
     }
 }

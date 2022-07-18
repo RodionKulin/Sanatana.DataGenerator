@@ -3,7 +3,7 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Subset;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +51,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             {
                 all.SelectEntities(entitiesSelection, _subsetSettings)
                     .ToList()
-                    .ForEach(description => description.TotalCountProvider = new StrictTotalCountProvider(targetCount));
+                    .ForEach(description => description.TargetCountProvider = new StrictTargetCountProvider(targetCount));
                 return all;
             });
         }

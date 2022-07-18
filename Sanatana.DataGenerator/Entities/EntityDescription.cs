@@ -1,7 +1,7 @@
 ﻿using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Modifiers;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
@@ -44,9 +44,9 @@ namespace Sanatana.DataGenerator.Entities
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
         /// Provider of total number of entity instances that need to be generated.
-        /// If not specified will use TotalCountProvider from DefaultSettings.
+        /// If not specified will use TargetCountProvider from DefaultSettings.
         /// </summary>
-        public ITotalCountProvider TotalCountProvider { get; set; }
+        public ITargetCountProvider TargetCountProvider { get; set; }
         /// <summary>
         /// Checker of temporary storage if it is time to flush entity instances to persistent storage.
         /// If not specified will use FlushStrategy from DefaultSettings.
@@ -96,7 +96,7 @@ namespace Sanatana.DataGenerator.Entities
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
                 PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
-                TotalCountProvider = TotalCountProvider,
+                TargetCountProvider = TargetCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
                 StorageInsertGuard = StorageInsertGuard,
@@ -118,7 +118,7 @@ namespace Sanatana.DataGenerator.Entities
             entityDescription.Generator = Generator;
             entityDescription.Modifiers = new List<IModifier>(Modifiers);
             entityDescription.PersistentStorages = new List<IPersistentStorage>(PersistentStorages);
-            entityDescription.TotalCountProvider = TotalCountProvider;
+            entityDescription.TargetCountProvider = TargetCountProvider;
             entityDescription.FlushStrategy = FlushStrategy;
             entityDescription.RequestCapacityProvider = RequestCapacityProvider;
             entityDescription.StorageInsertGuard = StorageInsertGuard;

@@ -53,6 +53,12 @@ namespace Sanatana.DataGenerator.Internals.Validators
 
 
         //configure methods
+        /// <summary>
+        /// Add validator. EnsureAddValidator adds validator if another validator of same type is not added.
+        /// </summary>
+        /// <param name="validator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public virtual ValidatorsSetup EnsureAddValidator(IValidator validator)
         {
             validator = validator ?? throw new ArgumentNullException(nameof(validator));
@@ -63,18 +69,35 @@ namespace Sanatana.DataGenerator.Internals.Validators
             return this;
         }
 
+        /// <summary>
+        /// Add validator. AddValidator allows to add multiple validators of same type.
+        /// </summary>
+        /// <param name="validator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         public virtual ValidatorsSetup AddValidator(IValidator validator)
         {
             Validators.Add(validator ?? throw new ArgumentNullException(nameof(validator)));
             return this;
         }
 
+        /// <summary>
+        /// Get validator from set of default or added validators.
+        /// If validator is not found, then return null.
+        /// </summary>
+        /// <typeparam name="TValidator"></typeparam>
+        /// <returns></returns>
         public virtual IValidator GetValidator<TValidator>()
             where TValidator : IValidator
         {
             return Validators.OfType<TValidator>().FirstOrDefault();
         }
 
+        /// <summary>
+        /// Remove validator.
+        /// </summary>
+        /// <typeparam name="TValidator"></typeparam>
+        /// <returns></returns>
         public virtual ValidatorsSetup RemoveValidator<TValidator>()
             where TValidator : IValidator
         {
@@ -84,24 +107,44 @@ namespace Sanatana.DataGenerator.Internals.Validators
 
 
         //validation methods
+        /// <summary>
+        /// Run IBeforeSetupValidator validators. This method is called internally by GeneratorSetup.
+        /// </summary>
+        /// <param name="generatorServices"></param>
         public virtual void ValidateBeforeSetup(GeneratorServices generatorServices)
         {
             List<IBeforeSetupValidator> validators = Validators.OfType<IBeforeSetupValidator>().ToList();
             validators.ForEach(v => v.ValidateSetup(generatorServices));
         }
 
+        /// <summary>
+        /// Run IAfterSetupValidator validators. This method is called internally by GeneratorSetup.
+        /// </summary>
+        /// <param name="generatorServices"></param>
         public virtual void ValidateAfterSetup(GeneratorServices generatorServices)
         {
             List<IAfterSetupValidator> validators = Validators.OfType<IAfterSetupValidator>().ToList();
             validators.ForEach(v => v.ValidateSetup(generatorServices));
         }
 
+        /// <summary>
+        /// Run IGenerateValidator validators. This method is called internally by GeneratorSetup.
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="entityType"></param>
+        /// <param name="generator"></param>
         public virtual void ValidateGenerated(IList entities, Type entityType, IGenerator generator)
         {
             List<IGenerateValidator> validators = Validators.OfType<IGenerateValidator>().ToList();
             validators.ForEach(v => v.ValidateGenerated(entities, entityType, generator));
         }
 
+        /// <summary>
+        /// Run IModifyValidator validators. This method is called internally by GeneratorSetup.
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <param name="entityType"></param>
+        /// <param name="modifier"></param>
         public virtual void ValidateModified(IList entities, Type entityType, IModifier modifier)
         {
             List<IModifyValidator> validators = Validators.OfType<IModifyValidator>().ToList();

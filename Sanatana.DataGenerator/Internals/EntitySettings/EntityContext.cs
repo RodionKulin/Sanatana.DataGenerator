@@ -12,7 +12,13 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public Type Type { get; set; }
         public IEntityDescription Description { get; set; }
         public EntityProgress EntityProgress { get; set; }
+        /// <summary>
+        /// Entities where this type is Required to generate child.
+        /// </summary>
         public List<IEntityDescription> ChildEntities { get; set; }
+        /// <summary>
+        /// Parent entities are Required to generate this entity type.
+        /// </summary>
         public List<IEntityDescription> ParentEntities { get; set; }
 
 

@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using Sanatana.DataGenerator.Internals;
-using System.Collections;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
@@ -28,9 +25,8 @@ namespace Sanatana.DataGenerator.SpreadStrategies
                 return 0;
             }
 
-            long totalCount = targetCounts
+            return targetCounts
                 .Aggregate((long)1, (targetCount, total) => total * targetCount);
-            return totalCount;
         }
 
         protected override IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths)

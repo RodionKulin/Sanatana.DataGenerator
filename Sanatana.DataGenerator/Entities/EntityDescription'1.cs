@@ -2,19 +2,15 @@
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.TotalCountProviders;
-using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Modifiers;
 using System.Linq.Expressions;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.RequestCapacityProviders;
-using Sanatana.DataGenerator.Internals.Progress;
-using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Entities
 {
@@ -58,9 +54,9 @@ namespace Sanatana.DataGenerator.Entities
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
         /// Provider of total number of entity instances that need to be generated.
-        /// If not specified will use TotalCountProvider from DefaultSettings.
+        /// If not specified will use TargetCountProvider from DefaultSettings.
         /// </summary>
-        public ITotalCountProvider TotalCountProvider { get; set; }
+        public ITargetCountProvider TargetCountProvider { get; set; }
         /// <summary>
         /// Checker of temporary storage if it is time to flush entity instances to persistent storage.
         /// If not specified will use FlushStrategy from DefaultSettings.
@@ -109,7 +105,7 @@ namespace Sanatana.DataGenerator.Entities
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
                 PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
-                TotalCountProvider = TotalCountProvider,
+                TargetCountProvider = TargetCountProvider,
                 FlushStrategy = FlushStrategy,
                 RequestCapacityProvider = RequestCapacityProvider,
                 StorageInsertGuard = StorageInsertGuard,
@@ -263,16 +259,16 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Set total number of entities that need to be generated.
         /// </summary>
-        /// <param name="totalCountProvider"></param>
+        /// <param name="targetCountProvider"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetTargetCount(ITotalCountProvider totalCountProvider)
+        public virtual EntityDescription<TEntity> SetTargetCount(ITargetCountProvider targetCountProvider)
         {
-            if (totalCountProvider == null)
+            if (targetCountProvider == null)
             {
-                throw new ArgumentNullException(nameof(totalCountProvider));
+                throw new ArgumentNullException(nameof(targetCountProvider));
             }
 
-            TotalCountProvider = totalCountProvider;
+            TargetCountProvider = targetCountProvider;
             return this;
         }
 
@@ -283,7 +279,7 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetTargetCount(long count)
         {
-            TotalCountProvider = new StrictTotalCountProvider(count);
+            TargetCountProvider = new StrictTargetCountProvider(count);
             return this;
         }
 
@@ -1242,7 +1238,7 @@ namespace Sanatana.DataGenerator.Entities
         /// Such existing entities can be used to populate foreign key of other entities.
         /// Will set SetBatchSizeMax to select all instances from persistent storage matchign filter.
         /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
-        /// Will set CountExistingTotalCountProvider as TotalCountProvider to select all instances.
+        /// Will set CountExistingTargetCountProvider as TargetCountProvider to select all instances.
         /// </summary>
         /// <param name="filter">Optional filter expression to select existing entity instances from persistent storage. By default will include all instances.</param>
         /// <param name="orderBy">Optional OrderBy expression to select existing entity instances with expected order. By default will select unordered instances.</param>
@@ -1269,7 +1265,7 @@ namespace Sanatana.DataGenerator.Entities
             Generator = generator;
 
             PersistentStorages.Add(new VoidStorage());
-            TotalCountProvider = new CountExistingTotalCountProvider<TEntity>(filter);
+            TargetCountProvider = new CountExistingTargetCountProvider<TEntity>(filter);
 
             return this;
         }

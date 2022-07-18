@@ -2,20 +2,18 @@
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Storages;
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Text;
 
-namespace Sanatana.DataGenerator.TotalCountProviders
+namespace Sanatana.DataGenerator.TargetCountProviders
 {
-    public class CountExistingTotalCountProvider<TEntity> : ITotalCountProvider
+    public class CountExistingTargetCountProvider<TEntity> : ITargetCountProvider
         where TEntity : class
     {
         protected Expression<Func<TEntity, bool>> _filter;
 
 
         //init
-        public CountExistingTotalCountProvider(Expression<Func<TEntity, bool>> filter = null)
+        public CountExistingTargetCountProvider(Expression<Func<TEntity, bool>> filter = null)
         {
             if (filter == null)
             {
@@ -30,9 +28,9 @@ namespace Sanatana.DataGenerator.TotalCountProviders
         {
             //DefaultSettings defaults
             IPersistentStorageSelector _persistentStorageSelector = defaults.GetPersistentStorageSelector(description);
-            long totalCount  = _persistentStorageSelector.Count(_filter);
+            long targetCount  = _persistentStorageSelector.Count(_filter);
 
-            return totalCount;
+            return targetCount;
         }
     }
 }

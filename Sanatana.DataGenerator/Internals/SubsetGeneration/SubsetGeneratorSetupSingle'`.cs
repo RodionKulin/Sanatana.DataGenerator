@@ -17,12 +17,22 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
 
         #region Configure services
+        /// <summary>
+        /// Set TargetCount to 1 for all entities matching entitiesSelection.
+        /// </summary>
+        /// <param name="entitiesSelection"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetTargetCountSingle(EntitiesSelection entitiesSelection)
         {
             base.SetTargetCount(entitiesSelection, 1);
             return this;
         }
-
+        
+        /// <summary>
+        /// Set TargetCount to 1 for entity.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetTargetCountSingle<TEntity>()
             where TEntity : class
         {
@@ -30,12 +40,24 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             return this;
         }
 
+        /// <summary>
+        /// Set TargetCount for all entities matching entitiesSelection.
+        /// </summary>
+        /// <param name="entitiesSelection"></param>
+        /// <param name="targetCount"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
         {
             base.SetTargetCount(entitiesSelection, targetCount);
             return this;
         }
 
+        /// <summary>
+        /// Set TargetCount for entity.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="targetCount"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetTargetCount<TEntity>(long targetCount)
             where TEntity : class
         {
@@ -43,6 +65,13 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             return this;
         }
 
+        /// <summary>
+        /// Set InMemoryStorage as persistent storage for all entities matching entitiesSelection.
+        /// Optionally remove previously added persistent storages.
+        /// </summary>
+        /// <param name="entitiesSelection"></param>
+        /// <param name="removeOtherStorages"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetInMemoryStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages)
         {
             var memoryStorage = new InMemoryStorage();
@@ -50,6 +79,13 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             return this;
         }
 
+        /// <summary>
+        /// Set InMemoryStorage as persistent storage for entity.
+        /// Optionally remove previously added persistent storages.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="removeOtherStorages"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetInMemoryStorage<TEntity>(bool removeOtherStorages)
             where TEntity : class
         {
@@ -58,12 +94,28 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             return this;
         }
 
+        /// <summary>
+        /// Set persistent storage for all entities matching entitiesSelection.
+        /// Optionally remove previously added persistent storages.
+        /// </summary>
+        /// <param name="entitiesSelection"></param>
+        /// <param name="removeOtherStorages"></param>
+        /// <param name="storage"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
         {
             base.SetStorage(entitiesSelection, removeOtherStorages, storage);
             return this;
         }
 
+        /// <summary>
+        /// Set persistent storage for entity.
+        /// Optionally remove previously added persistent storages.
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="removeOtherStorages"></param>
+        /// <param name="storage"></param>
+        /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<T> SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
             where TEntity : class
         {
@@ -158,7 +210,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// Will return generated entity instances for target and required entities.
         /// Entities that did not have InMemoryStorage in PersistentStorages will not be returned.
         /// Use SetInMemoryStorage method to set InMemoryStorage for multiple entities.
-        /// Use this method if entities inserted to InMemoryStorage. Can optionally also insert to database PersistentStorage.
+        /// Use GetAll method if entities inserted to InMemoryStorage. Can optionally also insert to database PersistentStorage.
         /// </summary>
         /// <returns></returns>
         public virtual Dictionary<Type, object[]> GetAll()

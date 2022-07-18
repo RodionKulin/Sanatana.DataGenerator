@@ -20,7 +20,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         [DataRow(50, 10, 5)]
         [DataRow(1, 1, 1)]
         [DataRow(2, 1, 2)]
-        public void GetTotalCount_WhenCalledWithVariousInputs_ThenReturnsExpectedProductsLength(
+        public void GetTargetCount_WhenCalledWithVariousInputs_ThenReturnsExpectedProductsLength(
             int expectedCombinationsCount, int categoriesCount, int postsCount)
         {
             //Arrange
@@ -38,7 +38,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetTotalCount_WhenNoRequiredEntities_ThenReturnsExpectedProductsLength()
+        public void GetTargetCount_WhenNoRequiredEntities_ThenReturnsExpectedProductsLength()
         {
             //Arrange
             var parentCounts = new (Type, int)[0];

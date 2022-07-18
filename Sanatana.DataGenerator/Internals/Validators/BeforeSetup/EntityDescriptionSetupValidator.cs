@@ -7,7 +7,7 @@ using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Storages;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.SpreadStrategies;
 
@@ -31,13 +31,13 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
             {
                 string msgFormat = $"Entity [{description.Type}] not have {{0}} configured and {nameof(generatorServices.Defaults)} {{1}} not provided";
 
-                ITotalCountProvider totalCountProvider = description.TotalCountProvider
-                    ?? generatorServices.Defaults.TotalCountProvider;
-                if (totalCountProvider == null)
+                ITargetCountProvider targetCountProvider = description.TargetCountProvider
+                    ?? generatorServices.Defaults.TargetCountProvider;
+                if (targetCountProvider == null)
                 {
                     string defName = nameof(generatorServices.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
-                        , nameof(description.TotalCountProvider), defName);
+                        , nameof(description.TargetCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 
@@ -46,7 +46,7 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
                 {
                     string defName = nameof(generatorServices.Defaults.FlushStrategy);
                     string msg = string.Format(msgFormat
-                        , nameof(description.TotalCountProvider), defName);
+                        , nameof(description.TargetCountProvider), defName);
                     throw new ArgumentNullException(defName, msg);
                 }
 

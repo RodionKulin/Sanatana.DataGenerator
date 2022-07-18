@@ -6,11 +6,11 @@ using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.EntitySettings;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
-    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy, ITotalCountProvider
+    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy, ITargetCountProvider
     {
         //fields
         protected Dictionary<Type, EntityContext> _parentEntities;
@@ -31,7 +31,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         {
             //1. This method prepares combination placements for all parents of child entity.
             //2. Setup can be called multiple times for each parent entity.
-            //3. Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITotalCountProvider.GetTargetCount based on parent entities TotalCount.
+            //3. Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITargetCountProvider.GetTargetCount based on parent entities TargetCount.
 
             _parentEntities = childEntity.Description.Required
                 .Select(x => allEntities[x.Type])

@@ -86,7 +86,7 @@ namespace Sanatana.DataGenerator.Internals
 
             IList list = _entitiesAwaitingFlush[entityContext.Type];
 
-            long entityReleasedCount = entityContext.EntityProgress.GetReleasedCount();
+            long entityReleasedCount = entityContext.EntityProgress.ReleasedCount;
             int currentIndex = (int)(index - entityReleasedCount);
             if (currentIndex < 0 || currentIndex >= list.Count)
             {
@@ -178,7 +178,7 @@ namespace Sanatana.DataGenerator.Internals
                 throw new KeyNotFoundException($"Entity {entityContext.Type.FullName} does not have any instances in {nameof(TemporaryStorage)}, but {nameof(GenerateStorageIds)} method was called.");
             }
 
-            long entityReleasedCount = entityContext.EntityProgress.GetReleasedCount();
+            long entityReleasedCount = entityContext.EntityProgress.ReleasedCount;
             long numberToSkip = generateIdsRange.PreviousRangeFlushedCount - entityReleasedCount;
             int numberToRemove = generateIdsRange.FlushRequestCapacity;
 

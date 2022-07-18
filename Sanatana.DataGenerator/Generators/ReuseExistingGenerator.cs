@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using System.Linq.Expressions;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 
@@ -122,17 +122,17 @@ namespace Sanatana.DataGenerator.Generators
             long storageCount = persistentStorageSelector.Count(_storageSelectorFilter);
             if (targetCount > storageCount)
             {
-                throw new NotSupportedException($"{generatorName} returned not supported value from {nameof(description.TotalCountProvider.GetTargetCount)} {targetCount} that is higher, then number of selectable instances in persistent storage {storageCount}. " +
+                throw new NotSupportedException($"{generatorName} returned not supported value from {nameof(description.TargetCountProvider.GetTargetCount)} {targetCount} that is higher, then number of selectable instances in persistent storage {storageCount}. " +
                     $"Possible solutions: " +
                     $"1. Make sure that persistent storage rows count is not changed during setup. " +
-                    $"2. Use {nameof(CountExistingTotalCountProvider<TEntity>)} to provide TargetCount matching rows count in persistent storage." +
-                    $"3. Make sure that same {nameof(_storageSelectorFilter)} is provided to {nameof(description.TotalCountProvider)} and {typeof(ReuseExistingGenerator<,>).Name}. "
+                    $"2. Use {nameof(CountExistingTargetCountProvider<TEntity>)} to provide TargetCount matching rows count in persistent storage." +
+                    $"3. Make sure that same {nameof(_storageSelectorFilter)} is provided to {nameof(description.TargetCountProvider)} and {typeof(ReuseExistingGenerator<,>).Name}. "
                 );
             }
 
             if (targetCount > int.MaxValue)
             {
-                throw new NotSupportedException($"{generatorName} does not support {nameof(description.TotalCountProvider.GetTargetCount)} value of {targetCount} that is higher then int.MaxValue to support Skip and Take System.Linq parameters that expect int value.");
+                throw new NotSupportedException($"{generatorName} does not support {nameof(description.TargetCountProvider.GetTargetCount)} value of {targetCount} that is higher then int.MaxValue to support Skip and Take System.Linq parameters that expect int value.");
             }
         }
 

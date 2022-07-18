@@ -33,7 +33,7 @@ namespace Sanatana.DataGenerator
         protected ProgressEventTrigger _progress;
         protected GeneratorServices _generatorServices;
         /// <summary>
-        /// All entity types configured that will be used by OrderProvider to pick generation order.
+        /// All entity types configured that will be used to generate new instances.
         /// </summary>
         protected Dictionary<Type, IEntityDescription> _entityDescriptions;
         /// <summary>
@@ -333,7 +333,7 @@ namespace Sanatana.DataGenerator
 
         /// <summary>
         /// Provide new ISupervisor.
-        /// Producer of generation and flush commands. Determines the order in which entity instances will be generated.
+        /// ISupervisor produces generation and flush commands, determines the order in which entity instances will be generated and inserted to persistent storages.
         /// Default is CompleteSupervisor that will produce commands to generate complete set of entities configured.
         /// </summary>
         public virtual GeneratorSetup SetSupervisor(ISupervisor supervisor)
@@ -421,7 +421,7 @@ namespace Sanatana.DataGenerator
 
             //Should be called first to setup Parent and Child entities for each entity.
             generatorServices.SetupEntityContexts();
-            //Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITotalCountProvider.GetTargetCount based on parent entities TotalCount.
+            //Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITargetCountProvider.GetTargetCount based on parent entities TargetCount.
             generatorServices.SetupSpreadStrategies();
             generatorServices.SetupTargetCount();
             generatorServices.SetupPersistentStorages();

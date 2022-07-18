@@ -13,7 +13,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
     public class AutoBogusGeneratorSpecs
     {
         [TestMethod]
-        public void Generate_ByDefaultGeneratesEntityWithRandomValues()
+        public void Generate_WhenCalledWithDefaults_ThenGeneratesEntityWithRandomValues()
         {
             //Arrange
             var target = new AutoBogusGenerator();
@@ -35,7 +35,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         }
 
         [TestMethod]
-        public void Generate_OverrideRulesAreAppliedGlobally()
+        public void Generate_WhenOverrideRulesAreAppliedGlobally_ThenGeneratesInstanceWithExpectedProps()
         {
             //Arrange
             AutoFaker.Configure(builder =>
@@ -55,7 +55,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         }
 
         [TestMethod]
-        public void Generate_OverrideRulesAreAppliedPerType()
+        public void Generate_WhenOverrideRulesAreAppliedForType_ThenGeneratesInstanceWithExpectedProps()
         {
             //Arrange
             var target = new AutoBogusGenerator(AutoFaker.Create(builder =>
@@ -80,7 +80,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         }
 
         [TestMethod]
-        public void Generate_OverrideRulesAreAppliedWithRules()
+        public void Generate_WhenOverrideRulesAreAppliedWithRules_ThenGeneratesInstanceWithExpectedProps()
         {
             //Arrange
             var target = new AutoBogusGenerator<Post>(new AutoFaker<Post>()
@@ -98,7 +98,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         }
 
         [TestMethod]
-        public void Generate_DetermenisticContentGeneratedOnSameSeed()
+        public void Generate_WhenUsingSameSeed_ThenDetermenisticContentGeneratedOnSameSeed()
         {
             //Arrange
             var target = new AutoBogusGenerator<Post>(new AutoFaker<Post>()

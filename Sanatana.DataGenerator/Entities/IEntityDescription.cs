@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Sanatana.DataGenerator.Strategies;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Modifiers;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.StorageInsertGuards;
 using Sanatana.DataGenerator.RequestCapacityProviders;
@@ -16,7 +16,7 @@ namespace Sanatana.DataGenerator.Entities
         List<RequiredEntity> Required { get; set; }
         IGenerator Generator { get; set; }
         List<IModifier> Modifiers { get; set; }
-        ITotalCountProvider TotalCountProvider { get; set; }
+        ITargetCountProvider TargetCountProvider { get; set; }
         List<IPersistentStorage> PersistentStorages { get; set; }
         IFlushStrategy FlushStrategy { get; set; }
         IRequestCapacityProvider RequestCapacityProvider { get; set; }

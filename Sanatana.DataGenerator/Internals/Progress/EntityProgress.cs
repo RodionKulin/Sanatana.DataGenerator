@@ -2,21 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
 namespace Sanatana.DataGenerator.Internals.Progress
 {
     public class EntityProgress
     {
-        protected long _releasedCount = 0;
-
 
         //properties
-        protected long ReleasedCount
-        {
-            get { return _releasedCount; }
-            set { _releasedCount = value; }
-        }
+        /// <summary>
+        /// Number of instances inserted to persistent storage and not required for generation as Required entity instance.
+        /// </summary>
+        public long ReleasedCount { get; protected set; }
         /// <summary>
         /// Total number of entities that will be created in the end by generator.
         /// </summary>
@@ -93,11 +89,10 @@ namespace Sanatana.DataGenerator.Internals.Progress
             return false;
         }
 
-        public virtual long GetReleasedCount()
-        {
-            return ReleasedCount;
-        }
-
+        /// <summary>
+        /// Internal method to prepare JSON with all info on previously inserted Ranges of instances to persistent storages.
+        /// </summary>
+        /// <returns></returns>
         public virtual string GetRangesDump()
         {
             return JsonConvert.SerializeObject(FlushRanges);

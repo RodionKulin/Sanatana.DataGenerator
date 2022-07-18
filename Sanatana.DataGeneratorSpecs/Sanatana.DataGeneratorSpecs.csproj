@@ -19,8 +19,4 @@
     <ProjectReference Include="..\Sanatana.DataGenerator\Sanatana.DataGenerator.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Entities\" />
-  </ItemGroup>
-
 </Project>

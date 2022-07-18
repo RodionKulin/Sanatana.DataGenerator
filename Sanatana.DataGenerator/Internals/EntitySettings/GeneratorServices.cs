@@ -5,7 +5,7 @@ using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Internals.Validators;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Supervisors.Contracts;
-using Sanatana.DataGenerator.TotalCountProviders;
+using Sanatana.DataGenerator.TargetCountProviders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,15 +29,28 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// </summary>
         public DefaultSettings Defaults { get; set; }
 
+        /// <summary>
+        /// All entity types configured that will be used to generate new instances.
+        /// EntityContext includes information number of instances generated, parent and child relations with other entities.
+        /// </summary>
         public Dictionary<Type, EntityContext> EntityContexts { get; set; }
 
+        /// <summary>
+        /// Producer of generation and flush commands. It determines the order in which entity instances will be generated and inserted to persistent storages.
+        /// </summary>
         public ISupervisor Supervisor { get; set; }
 
+        /// <summary>
+        /// List of validators to run during setup and generation.
+        /// </summary>
         public ValidatorsSetup Validators { get; set; }
 
 
 
         //methods
+        /// <summary>
+        /// Internal method to prepare EntityContexts.
+        /// </summary>
         public virtual void SetupEntityContexts()
         {
             EntityContexts = EntityDescriptions.Values
@@ -45,6 +58,9 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 .ToDictionary(ctx => ctx.Type, ctx => ctx);
         }
 
+        /// <summary>
+        /// Internal method to prepare SpreadStrategies.
+        /// </summary>
         public virtual void SetupSpreadStrategies()
         {
             IEnumerable<EntityContext> entitiesWithRequired = EntityContexts.Values
@@ -60,6 +76,9 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             }
         }
 
+        /// <summary>
+        /// Internal method to prepare TargetCount.
+        /// </summary>
         public virtual void SetupTargetCount()
         {
             //TargetCount for some entities depend from TargetCount of their Required entities.
@@ -74,14 +93,17 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             foreach (Type type in requiredOrderedList)
             {
                 EntityContext entityCtx = EntityContexts[type];
-                ITotalCountProvider totalCountProvider = Defaults.GetTotalCountProvider(entityCtx.Description);
+                ITargetCountProvider targetCountProvider = Defaults.GetTargetCountProvider(entityCtx.Description);
                 entityCtx.EntityProgress = new EntityProgress
                 {
-                    TargetCount = totalCountProvider.GetTargetCount(entityCtx.Description, Defaults)
+                    TargetCount = targetCountProvider.GetTargetCount(entityCtx.Description, Defaults)
                 };
             }
         }
 
+        /// <summary>
+        /// Internal method to prepare PersistentStorages.
+        /// </summary>
         public virtual void SetupPersistentStorages()
         {
             foreach (EntityContext entityCtx in EntityContexts.Values)
@@ -92,6 +114,11 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
 
 
         //validation methods
+        /// <summary>
+        /// Internal method to validate entity type is registered.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <exception cref="ArgumentException"></exception>
         public virtual void ValidateEntitiesConfigured(Type entityType)
         {
             if (!EntityDescriptions.ContainsKey(entityType))
@@ -100,6 +127,11 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             }
         }
 
+        /// <summary>
+        /// Internal method to validate that multiple entity types are registered.
+        /// </summary>
+        /// <param name="entityTypes"></param>
+        /// <exception cref="ArgumentException"></exception>
         public virtual void ValidateEntitiesConfigured(IEnumerable<Type> entityTypes)
         {
             string[] missingTypes = entityTypes
@@ -112,6 +144,11 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             }
         }
 
+        /// <summary>
+        /// Internal method to validate that provided entity types not have duplicates.
+        /// </summary>
+        /// <param name="entityTypes"></param>
+        /// <exception cref="ArgumentException"></exception>
         public virtual void ValidateNoEntityDuplicates(IEnumerable<Type> entityTypes)
         {
             string[] duplicateTypes = entityTypes.GroupBy(type => type)
