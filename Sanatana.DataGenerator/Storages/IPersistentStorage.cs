@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.Storages
 {
-    public interface IPersistentStorage : IDisposable
+    public interface IPersistentStorage
     {
         Task Insert<TEntity>(List<TEntity> instances)
             where TEntity : class;

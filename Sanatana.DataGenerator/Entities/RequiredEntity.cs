@@ -1,7 +1,5 @@
 ﻿using Sanatana.DataGenerator.SpreadStrategies;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Sanatana.DataGenerator.Entities
 {

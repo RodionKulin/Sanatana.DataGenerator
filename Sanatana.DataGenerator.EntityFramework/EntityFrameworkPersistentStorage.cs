@@ -25,11 +25,6 @@ namespace Sanatana.DataGenerator.EntityFramework
         }
 
 
-        //IDisposable
-        public virtual void Dispose()
-        {
-        }
-
         //IPersistentStorage methods
         public virtual async Task Insert<TEntity>(List<TEntity> entities)
             where TEntity : class

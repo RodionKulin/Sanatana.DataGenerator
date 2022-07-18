@@ -50,10 +50,5 @@ namespace Sanatana.DataGenerator.Storages
             return _storages[entityType].ToArray();
         }
 
-
-        //IDisposable
-        public virtual void Dispose()
-        {
-        }
     }
 }

@@ -85,10 +85,5 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore
             }
         }
 
-
-        //IDisposable
-        public virtual void Dispose()
-        {
-        }
     }
 }
