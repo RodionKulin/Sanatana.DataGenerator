@@ -28,10 +28,12 @@ namespace Sanatana.DataGenerator.Internals.Validators
                 new RequiredCountSetupValidator(),
                 new RequiredEntitiesExistSetupValidator(),
                 new InsertToPersistentStorageBeforeUseSetupValidator(),
-                new GeneratorSettingsBeforeSetupValidator(),
+                new GeneratorsBeforeSetupValidator(),
+                new ModifiersBeforeSetupValidator(),
                 
                 //IAfterSetupValidator
-                new GeneratorSettingsAfterSetupValidator(),
+                new GeneratorsAfterSetupValidator(),
+                new ModifiersAfterSetupValidator(),
 
                 //IGenerateValidator
                 new InstancesCountGeneratedValidator(),

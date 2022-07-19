@@ -13,30 +13,28 @@ namespace Sanatana.DataGenerator.Generators
     public class CombineGenerator : IGenerator
     {
         //fields
-        private readonly List<IGenerator> _generators;
-        private ICombineStrategy _combineStrategy;
+        protected List<IGenerator> _generators;
+        protected IGeneratorsCombiner _combineStrategy;
 
 
         //init
-        public CombineGenerator(ICombineStrategy combineStrategy = null)
+        public CombineGenerator(IGeneratorsCombiner combineStrategy = null)
         {
             _generators = new List<IGenerator>();
-            _combineStrategy = combineStrategy ?? new RoundRobinCombineStrategy();
+            _combineStrategy = combineStrategy ?? new RoundRobinGeneratorsCombiner();
         }
 
-        public CombineGenerator(List<IGenerator> generators, ICombineStrategy combineStrategy = null)
+        public CombineGenerator(List<IGenerator> generators, IGeneratorsCombiner combineStrategy = null)
         {
             _generators = generators ?? throw new ArgumentNullException(nameof(generators));
-            _combineStrategy = combineStrategy ?? new RoundRobinCombineStrategy();
+            _combineStrategy = combineStrategy ?? new RoundRobinGeneratorsCombiner();
         }
 
 
         #region IGenerator methods
         public virtual IList Generate(GeneratorContext context)
         {
-            int nextGeneratorIndex = _combineStrategy.GetNext(_generators.Count, context.CurrentCount);
-            IGenerator nextGenerator = _generators[nextGeneratorIndex];
-
+            IGenerator nextGenerator = _combineStrategy.GetNext(_generators, context);
             return nextGenerator.Generate(context);
         }
 
@@ -44,11 +42,11 @@ namespace Sanatana.DataGenerator.Generators
         {
             if(_generators.Count == 0)
             {
-                throw new ArgumentException($"No inner generators were provided in {nameof(CombineGenerator)} for type {entity.Type.FullName}. Expected at least 1 inner generator. {nameof(CombineGenerator)} should use multiple generators in turn to produce entity instances.");
+                throw new ArgumentException($"No inner generators provided in {nameof(CombineGenerator)} for type {entity.Type.FullName}. Expected at least 1 inner generator. {nameof(CombineGenerator)} should use multiple generators in turn to produce entity instances.");
             }
-            if(_combineStrategy == null)
+            if (_combineStrategy == null)
             {
-                throw new ArgumentNullException(nameof(ICombineStrategy));
+                throw new ArgumentNullException(nameof(IGeneratorsCombiner));
             }
 
             foreach (IGenerator generator in _generators)
@@ -61,11 +59,11 @@ namespace Sanatana.DataGenerator.Generators
         {
             if (_generators.Count == 0)
             {
-                throw new ArgumentException($"No inner generators were provided in {nameof(CombineGenerator)} for type {entityContext.Type.FullName}. Expected at least 1 inner generator. {nameof(CombineGenerator)} should use multiple generators in turn to produce entity instances.");
+                throw new ArgumentException($"No inner generators provided in {nameof(CombineGenerator)} for type {entityContext.Type.FullName}. Expected at least 1 inner generator. {nameof(CombineGenerator)} should use multiple generators in turn to produce entity instances.");
             }
             if (_combineStrategy == null)
             {
-                throw new ArgumentNullException(nameof(ICombineStrategy));
+                throw new ArgumentNullException(nameof(IGeneratorsCombiner));
             }
 
             foreach (IGenerator generator in _generators)
@@ -115,16 +113,17 @@ namespace Sanatana.DataGenerator.Generators
 
         /// <summary>
         /// Set ICombineStrategy to assign each generator some portion of instances to generate.
-        /// By default, if not set, will use RoundRobinCombineStrategy.
+        /// By default, if not set, will use RoundRobinGeneratorsCombiner.
         /// </summary>
         /// <param name="combineStrategy"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public virtual CombineGenerator SetCombineStrategy(ICombineStrategy combineStrategy)
+        public virtual CombineGenerator SetCombineStrategy(IGeneratorsCombiner combineStrategy)
         {
             _combineStrategy = combineStrategy ?? throw new ArgumentNullException(nameof(combineStrategy));
             return this;
         }
         #endregion
+
     }
 }

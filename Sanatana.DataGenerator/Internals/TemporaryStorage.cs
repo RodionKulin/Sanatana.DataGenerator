@@ -145,6 +145,7 @@ namespace Sanatana.DataGenerator.Internals
             _entitiesAwaitingFlush[entityContext.Type] = _listOperations
                 .Skip(entityContext.Type, entitiesAwaitingFlush, numberToFlush);
 
+            //exclude some items with IStorageInsertGuard
             IStorageInsertGuard guard = entityContext.Description.StorageInsertGuard;
             if (guard != null)
             {

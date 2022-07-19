@@ -9,9 +9,9 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
 {
     /// <summary>
-    /// Validate that IEntityDescription is supported in Generator and all settings for Generator are present.
+    /// Validate that IEntityDescription is supported in IGenerator and all settings for IGenerator are present.
     /// </summary>
-    public class GeneratorSettingsBeforeSetupValidator : IBeforeSetupValidator
+    public class GeneratorsBeforeSetupValidator : IBeforeSetupValidator
     {
         public virtual void ValidateSetup(GeneratorServices generatorServices)
         {

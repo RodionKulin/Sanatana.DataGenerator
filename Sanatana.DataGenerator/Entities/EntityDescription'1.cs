@@ -157,7 +157,12 @@ namespace Sanatana.DataGenerator.Entities
             return SetRequired(requiredEntity);
         }
 
-        protected virtual void SetRequiredFromGenerator(IDelegateParameterizedGenerator parameterizedGenerator)
+        /// <summary>
+        /// Internal method for IDelegateParameterizedGenerator to get genertic arguments and set Required entities from them.
+        /// It is called internally when registering new generator.
+        /// </summary>
+        /// <param name="parameterizedGenerator"></param>
+        public virtual void SetRequiredFromGenerator(IDelegateParameterizedGenerator parameterizedGenerator)
         {
             Required.Clear();
             List<Type> argumentTypes = parameterizedGenerator.GetRequiredEntitiesFuncArguments();
@@ -167,7 +172,11 @@ namespace Sanatana.DataGenerator.Entities
             }
         }
 
-        protected virtual void SetRequiredFromModifier(IDelegateParameterizedModifier parameterizedModifier)
+        /// <summary>
+        /// Internal method for IDelegateParameterizedModifier to get genertic arguments and set Required entities from them.
+        /// It is called internally when registering new modifier.
+        /// </summary>
+        public virtual void SetRequiredFromModifier(IDelegateParameterizedModifier parameterizedModifier)
         {
             Required.Clear();
             List<Type> argumentTypes = parameterizedModifier.GetRequiredEntitiesFuncArguments();
@@ -412,7 +421,7 @@ namespace Sanatana.DataGenerator.Entities
         #endregion
 
 
-        #region Generator set and remove
+        #region Generator set, combine and remove
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>
@@ -435,14 +444,14 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="combineGeneratorSetup"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public virtual EntityDescription<TEntity> SetCombineGenerator(Func<CombineGenerator, CombineGenerator> combineGeneratorSetup)
+        public virtual EntityDescription<TEntity> SetCombineGenerator(Func<CombineGenerator<TEntity>, CombineGenerator<TEntity>> combineGeneratorSetup)
         {
             if(combineGeneratorSetup == null)
             {
                 throw new ArgumentNullException(nameof(combineGeneratorSetup));
             }
 
-            var combineGenerator = new CombineGenerator();
+            var combineGenerator = new CombineGenerator<TEntity>(this);
             combineGenerator = combineGeneratorSetup(combineGenerator);
             Generator = combineGenerator ?? throw new ArgumentNullException(nameof(combineGenerator));
             return this;
@@ -1820,7 +1829,7 @@ namespace Sanatana.DataGenerator.Entities
         #endregion
 
 
-        #region Modifier add and remove
+        #region Modifier add, combine and remove
         /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
@@ -1838,14 +1847,14 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="combineModifierSetup"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public virtual EntityDescription<TEntity> SetCombineModifier(Func<CombineModifier, CombineModifier> combineModifierSetup)
+        public virtual EntityDescription<TEntity> SetCombineModifier(Func<CombineModifier<TEntity>, CombineModifier<TEntity>> combineModifierSetup)
         {
             if (combineModifierSetup == null)
             {
                 throw new ArgumentNullException(nameof(combineModifierSetup));
             }
 
-            var combineModifier = new CombineModifier();
+            var combineModifier = new CombineModifier<TEntity>(this);
             combineModifier = combineModifierSetup(combineModifier);
             combineModifier = combineModifier ?? throw new ArgumentNullException(nameof(combineModifier));
             Modifiers.Add(combineModifier);

@@ -32,10 +32,10 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
                     //6. Set EfCorePersistentStorage as default.
                     .SetupFullEfSettingsBundle()
                 )
-                .ModifyEntity<Buyer>(entity => entity
+                .EditEntity<Buyer>(entity => entity
                     .SetTargetCount(10)
                 )
-                .ModifyEntity<Supplier>(entity => entity
+                .EditEntity<Supplier>(entity => entity
                     .SetTargetCount(10)
                 );
 

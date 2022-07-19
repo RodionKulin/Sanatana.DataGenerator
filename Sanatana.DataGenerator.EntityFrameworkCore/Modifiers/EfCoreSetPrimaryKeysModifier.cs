@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
 {
@@ -77,5 +79,12 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
             return instances;
         }
 
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
+        {
+        }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
     }
 }

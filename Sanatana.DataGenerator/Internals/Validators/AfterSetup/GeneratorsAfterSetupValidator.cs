@@ -7,10 +7,10 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 namespace Sanatana.DataGenerator.Internals.Validators.AfterSetup
 {
     /// <summary>
-    /// Validate that IEntityDescription is supported in Generator and all settings for Generator are present.
+    /// Validate that IEntityDescription is supported in IGenerator and all settings for IGenerator are present.
     /// Will provide EntityContext as argument, that contains TargetCount and list of parent and child entities, based on Required settings.
     /// </summary>
-    public class GeneratorSettingsAfterSetupValidator : IAfterSetupValidator
+    public class GeneratorsAfterSetupValidator : IAfterSetupValidator
     {
         public virtual void ValidateSetup(GeneratorServices generatorServices)
         {

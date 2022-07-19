@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -15,5 +17,14 @@ namespace Sanatana.DataGenerator.Modifiers
         {
             return instances;
         }
+
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
+        {
+        }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
+
     }
 }

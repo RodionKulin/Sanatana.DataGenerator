@@ -7,28 +7,32 @@ using System.Collections.Generic;
 
 namespace Sanatana.DataGenerator.Modifiers
 {
-    /// <summary>
-    /// CombineModifier uses multiple IModifier sets in turn to modify entity instances.
-    /// </summary>
-    public class CombineModifier : IModifier
+    public class CombineModifier<TEntity> : IModifier
+        where TEntity : class
     {
         //fields
+        protected EntityDescription<TEntity> _entityDescription;
         protected List<List<IModifier>> _modifiers;
         protected IModifiersCombiner _combineStrategy;
 
 
+
         //init
-        public CombineModifier(IModifiersCombiner combineStrategy = null)
+        public CombineModifier(EntityDescription<TEntity> entityDescription, IModifiersCombiner combineStrategy = null)
         {
+            _entityDescription = entityDescription;
             _modifiers = new List<List<IModifier>>();
             _combineStrategy = combineStrategy ?? new RoundRobinModifiersCombiner();
         }
 
-        public CombineModifier(List<List<IModifier>> modifiers, IModifiersCombiner combineStrategy = null)
+        public CombineModifier(EntityDescription<TEntity> entityDescription,
+            List<List<IModifier>> modifiers, IModifiersCombiner combineStrategy = null)
         {
+            _entityDescription = entityDescription;
             _modifiers = modifiers ?? throw new ArgumentNullException(nameof(modifiers));
             _combineStrategy = combineStrategy ?? new RoundRobinModifiersCombiner();
         }
+
 
 
         #region IModifier methods
@@ -82,6 +86,7 @@ namespace Sanatana.DataGenerator.Modifiers
 
 
         #region Configure methods
+
         /// <summary>
         /// Add modifiers set for CombineModifier.
         /// CombineModifier uses multiple IModifier sets in turn to modify entity instances.
@@ -89,14 +94,14 @@ namespace Sanatana.DataGenerator.Modifiers
         /// <param name="setSetup"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public virtual CombineModifier AddModifiersSet(Func<CombineModifierSet, CombineModifierSet> setSetup)
+        public virtual CombineModifier<TEntity> AddModifiersSet(Func<CombineModifierSet<TEntity>, CombineModifierSet<TEntity>> setSetup)
         {
             setSetup = setSetup ?? throw new ArgumentNullException(nameof(setSetup));
-            var combineModifiersSet = new CombineModifierSet();
+            var combineModifiersSet = new CombineModifierSet<TEntity>(_entityDescription);
             combineModifiersSet = setSetup(combineModifiersSet) ?? throw new ArgumentNullException(nameof(combineModifiersSet));
-            
+
             _modifiers.Add(combineModifiersSet.GetModifiers());
-            
+
             return this;
         }
 
@@ -104,7 +109,7 @@ namespace Sanatana.DataGenerator.Modifiers
         /// Remove all Modifiers.
         /// </summary>
         /// <returns></returns>
-        public virtual CombineModifier RemoveModifiersSets()
+        public virtual CombineModifier<TEntity> RemoveModifiersSets()
         {
             _modifiers.Clear();
             return this;
@@ -117,7 +122,7 @@ namespace Sanatana.DataGenerator.Modifiers
         /// <param name="combineStrategy"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public virtual CombineModifier SetCombineStrategy(IModifiersCombiner combineStrategy)
+        public virtual CombineModifier<TEntity> SetCombineStrategy(IModifiersCombiner combineStrategy)
         {
             _combineStrategy = combineStrategy ?? throw new ArgumentNullException(nameof(combineStrategy));
             return this;

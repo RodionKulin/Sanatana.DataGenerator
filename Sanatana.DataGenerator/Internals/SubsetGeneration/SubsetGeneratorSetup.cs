@@ -5,6 +5,7 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Subset;
 using Sanatana.DataGenerator.TargetCountProviders;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -47,7 +48,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         #region Configure services
         protected virtual void SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
         {
-            _generatorSetup = _generatorSetup.ModifyEntity((IEntityDescription[] all) =>
+            _generatorSetup = _generatorSetup.EditEntity((IEntityDescription[] all) =>
             {
                 all.SelectEntities(entitiesSelection, _subsetSettings)
                     .ToList()
@@ -59,7 +60,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         protected virtual void SetTargetCount<TEntity>(long targetCount) 
             where TEntity : class
         {
-            _generatorSetup = _generatorSetup.ModifyEntity((EntityDescription<TEntity> description) =>
+            _generatorSetup = _generatorSetup.EditEntity((EntityDescription<TEntity> description) =>
             {
                 return description.SetTargetCount(targetCount);
             });
@@ -67,7 +68,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
         protected virtual void SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
         {
-            _generatorSetup = _generatorSetup.ModifyEntity((IEntityDescription[] all) =>
+            _generatorSetup = _generatorSetup.EditEntity((IEntityDescription[] all) =>
             {
                 IEnumerable<IEntityDescription> selectedEntities = all.SelectEntities(entitiesSelection, _subsetSettings);
                 foreach (IEntityDescription description in selectedEntities)
@@ -88,7 +89,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         protected virtual void SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
             where TEntity : class
         {
-            _generatorSetup = _generatorSetup.ModifyEntity((EntityDescription<TEntity> description) =>
+            _generatorSetup = _generatorSetup.EditEntity((EntityDescription<TEntity> description) =>
             {
                 if (removeOtherStorages)
                 {
@@ -105,7 +106,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
 
         #region Generate methods
-        protected virtual object[] GetMultipleTargetsImp()
+        protected virtual IList GetMultipleTargetsImp()
         {
             //validate
             GeneratorServices services = _generatorSetup.GetGeneratorServices();
@@ -126,8 +127,8 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             InMemoryStorage storage = inMemoryStorages[0];
 
             //get instance generated
-            object[] instancesGenerated = storage.Select(targetEntityType);
-            if (instancesGenerated.Length == 0)
+            IList instancesGenerated = storage.Select(targetEntityType);
+            if (instancesGenerated.Count == 0)
             {
                 throw new ArgumentException($"No instances of type {targetEntityType.FullName} were found in {nameof(InMemoryStorage)}.");
             }
@@ -145,7 +146,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             _generatorSetup.Generate();
         }
 
-        protected virtual Dictionary<Type, object[]> GetAllImp()
+        protected virtual Dictionary<Type, IList> GetAllImp()
         {
             //validate
             GeneratorServices services = _generatorSetup.GetGeneratorServices();
@@ -157,7 +158,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             _generatorSetup.Generate();
 
             //get instances from InMemoryStorage
-            var entitiesInstances = new Dictionary<Type, object[]>();
+            var entitiesInstances = new Dictionary<Type, IList>();
             foreach (Type entityType in entityTypes)
             {
                 IEntityDescription description = services.EntityDescriptions[entityType];
@@ -167,7 +168,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
                 {
                     //If no InMemoryStorage was added then entity will not be returned.
                     //It's required to supports inserting entity to db without keeping in memory
-                    object[] entityInstances = inMemoryStorage.Select(entityType);
+                    IList entityInstances = inMemoryStorage.Select(entityType);
                     entitiesInstances.Add(entityType, entityInstances);
                 }
             }

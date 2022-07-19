@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Collections;
 using System.Reflection;
-using System.Text;
 using System.Linq;
-using Sanatana.DataGenerator.Generators;
+using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Modifiers
 {
@@ -668,6 +668,16 @@ namespace Sanatana.DataGenerator.Modifiers
                 .ToList();
 
             return requiredParametersTypes;
+        }
+
+
+        //validate
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
+        {
+        }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
         }
     }
 }

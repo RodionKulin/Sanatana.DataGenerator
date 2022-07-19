@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Sanatana.DataGeneratorSpecs.TestTools.Samples
+namespace Sanatana.DataGeneratorSpecs.TestTools.Entities
 {
     public class Category
     {

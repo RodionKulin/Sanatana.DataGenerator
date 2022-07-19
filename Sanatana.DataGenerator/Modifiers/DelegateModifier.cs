@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
+using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Modifiers
 {
@@ -188,5 +190,14 @@ namespace Sanatana.DataGenerator.Modifiers
             return res;
         }
 
+
+        //validate
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
+        {
+        }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
     }
 }

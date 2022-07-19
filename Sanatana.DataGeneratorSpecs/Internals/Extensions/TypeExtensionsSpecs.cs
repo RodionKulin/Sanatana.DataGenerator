@@ -10,7 +10,7 @@ using Sanatana.DataGenerator.Internals.Extensions;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator;
 using System;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 
 namespace Sanatana.DataGeneratorSpecs.Internals.Extensions
 {

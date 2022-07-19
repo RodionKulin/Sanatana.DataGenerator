@@ -2,6 +2,7 @@
 using Sanatana.DataGenerator.Storages;
 using Sanatana.DataGenerator.Supervisors.Subset;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -126,17 +127,17 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         #endregion
 
 
-        #region Modify entity
+        #region Edit entity
         /// <summary>
         /// Get existing EntityDescription&lt;TEntity&gt; to modify.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
         /// <exception cref="TypeAccessException"></exception>
-        public virtual SubsetGeneratorSetupMany ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
+        public virtual SubsetGeneratorSetupMany EditEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
             where TEntity : class
         {
-            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
+            _generatorSetup = _generatorSetup.EditEntity(entityDescriptionSetup);
             return this;
         }
 
@@ -147,9 +148,9 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// <param name="entityDescriptionSetup"></param>
         /// <returns></returns>
         /// <exception cref="KeyNotFoundException"></exception>
-        public virtual SubsetGeneratorSetupMany ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        public virtual SubsetGeneratorSetupMany EditEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
         {
-            _generatorSetup = _generatorSetup.ModifyEntity(entityType, entityDescriptionSetup);
+            _generatorSetup = _generatorSetup.EditEntity(entityType, entityDescriptionSetup);
             return this;
         }
 
@@ -159,9 +160,9 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// <param name="entityDescriptionSetup"></param>
         /// <returns></returns>
         /// <exception cref="KeyNotFoundException"></exception>
-        public virtual SubsetGeneratorSetupMany ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        public virtual SubsetGeneratorSetupMany EditEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
         {
-            _generatorSetup = _generatorSetup.ModifyEntity(entityDescriptionSetup);
+            _generatorSetup = _generatorSetup.EditEntity(entityDescriptionSetup);
             return this;
         }
         #endregion
@@ -176,7 +177,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// Use GetAll method if entities inserted to InMemoryStorage. Can optionally also insert to database persistent storage.
         /// </summary>
         /// <returns></returns>
-        public virtual Dictionary<Type, object[]> GetAll()
+        public virtual Dictionary<Type, IList> GetAll()
         {
             return base.GetAllImp();
         }

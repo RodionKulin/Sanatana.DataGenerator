@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System.Diagnostics;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Entities;

@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

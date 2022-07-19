@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Storages;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using Sanatana.DataGenerator.Internals.Validators.BeforeSetup;
 
 namespace Sanatana.DataGeneratorSpecs.Internals

@@ -27,6 +27,7 @@ namespace Sanatana.DataGenerator
     {
         //fields
         protected DefaultSettings _defaults;
+        protected ValidatorsSetup _validators;
         protected ISupervisor _supervisor;
         protected ReflectionInvoker _reflectionInvoker;
         protected CommandsHistory _commandsHistory;
@@ -40,7 +41,6 @@ namespace Sanatana.DataGenerator
         /// Inmemory storage for generated entities to accumulate batches before inserting to persistent storage.
         /// </summary>
         protected TemporaryStorage _temporaryStorage;
-        protected ValidatorsSetup _validators;
 
 
         //init
@@ -87,7 +87,7 @@ namespace Sanatana.DataGenerator
         }
 
 
-        #region Register entity
+        #region Register and edit entity
 
         /// <summary>
         /// Add new IEntityDescription.
@@ -129,7 +129,7 @@ namespace Sanatana.DataGenerator
             entityDescription = entityDescription ?? throw new ArgumentNullException(nameof(entityDescription));
             if (_entityDescriptions.ContainsKey(entityDescription.Type))
             {
-                throw new ArgumentException($"Entity type {entityDescription.Type} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
+                throw new ArgumentException($"Entity type {entityDescription.Type} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(EditEntity)} method.");
             }
 
             Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
@@ -153,7 +153,7 @@ namespace Sanatana.DataGenerator
             if (duplicateEntityTypes.Count > 0)
             {
                 string duplicateTypesJoined = string.Join(",", duplicateEntityTypes.Select(x => x.FullName));
-                throw new ArgumentException($"Entity type(s) {duplicateTypesJoined} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(ModifyEntity)} method.");
+                throw new ArgumentException($"Entity type(s) {duplicateTypesJoined} already registered. To modify existing {nameof(IEntityDescription)} use {nameof(EditEntity)} method.");
             }
 
             string[] duplicateTypes = entityDescriptions.Select(x => x.Type)
@@ -180,7 +180,7 @@ namespace Sanatana.DataGenerator
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
         /// <exception cref="TypeAccessException"></exception>
-        public virtual GeneratorSetup ModifyEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
+        public virtual GeneratorSetup EditEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
@@ -194,7 +194,7 @@ namespace Sanatana.DataGenerator
             {
                 Type descriptionActualType = entityDescription.GetType();
                 Type descriptionBaseType = typeof(EntityDescription<>);
-                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with IEntityDescription of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use another {nameof(ModifyEntity)} method instead.");
+                throw new TypeAccessException($"Entity type [{entityType.FullName}] was registered with IEntityDescription of type [{descriptionActualType.FullName}]. Not able to cast description to type [{descriptionBaseType.FullName}]. Use another {nameof(EditEntity)} method instead.");
             }
 
             entityDescription = entityDescription.Clone();
@@ -203,7 +203,7 @@ namespace Sanatana.DataGenerator
             entityDescription = entityDescription ?? throw new ArgumentNullException(nameof(entityDescription));
             if (entityDescription.Type != entityType)
             {
-                throw new ArgumentException($"Entity type {entityDescription.Type.FullName} returned from {nameof(ModifyEntity)}. Not allowed to change type of existing entity {entityType.FullName}.");
+                throw new ArgumentException($"Entity type {entityDescription.Type.FullName} returned from {nameof(EditEntity)}. Not allowed to change type of existing entity {entityType.FullName}.");
             }
 
             Dictionary<Type, IEntityDescription> allEntityDescriptions = _entityDescriptions.ToDictionary(x => x.Key, x => x.Value);
@@ -218,7 +218,7 @@ namespace Sanatana.DataGenerator
         /// <param name="entityDescriptionSetup"></param>
         /// <returns></returns>
         /// <exception cref="KeyNotFoundException"></exception>
-        public virtual GeneratorSetup ModifyEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
+        public virtual GeneratorSetup EditEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
         {
             if (!_entityDescriptions.ContainsKey(entityType))
             {
@@ -240,7 +240,7 @@ namespace Sanatana.DataGenerator
         /// <param name="entityDescriptionSetup"></param>
         /// <returns></returns>
         /// <exception cref="KeyNotFoundException"></exception>
-        public virtual GeneratorSetup ModifyEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
+        public virtual GeneratorSetup EditEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
         {
             IEntityDescription[] newEntityDescriptions = _entityDescriptions.Values
                 .Select(x => x.Clone())

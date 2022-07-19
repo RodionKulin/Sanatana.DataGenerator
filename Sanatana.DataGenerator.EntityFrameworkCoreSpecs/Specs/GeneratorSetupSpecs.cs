@@ -213,10 +213,10 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                     .SetupWithEntityFrameworkCore(dbContextFactory, efSetup => efSetup
                         .SetupFullEfSettingsBundle()
                     )
-                    .ModifyEntity<Post>(entity => entity
+                    .EditEntity<Post>(entity => entity
                         .SetTargetCount(10)
                     )
-                    .ModifyEntity<Comment>(entity => entity
+                    .EditEntity<Comment>(entity => entity
                         .SetTargetCount(10)
                     );
 

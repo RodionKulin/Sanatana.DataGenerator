@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.EntityFrameworkCore.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Modifiers;
 using System;
 using System.Collections;
@@ -40,6 +42,15 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
 
             return instances;
         }
+
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults)
+        {
+        }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
+
 
     }
 }

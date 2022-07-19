@@ -4,7 +4,7 @@ using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
 using FluentAssertions;

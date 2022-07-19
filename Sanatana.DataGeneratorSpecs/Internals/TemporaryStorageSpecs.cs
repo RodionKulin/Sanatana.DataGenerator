@@ -5,7 +5,7 @@ using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.Progress;
 using Sanatana.DataGenerator.Storages;
-using Sanatana.DataGeneratorSpecs.TestTools.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
