@@ -9,6 +9,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
     {
         //fields
         protected ISupervisor _supervisor;
+        protected long _commandsProcessed;
         protected decimal _lastPercents;
         protected long invokeOnEveryNCommand = 1000;
         /// <summary>
@@ -36,6 +37,7 @@ namespace Sanatana.DataGenerator.Internals.Progress
         {
             _supervisor = supervisor;
             _lastPercents = 0;
+            _commandsProcessed = 0;
         }
 
 
@@ -62,10 +64,10 @@ namespace Sanatana.DataGenerator.Internals.Progress
         /// <param name="forceUpdate"></param>
         protected virtual void UpdateProgress(bool forceUpdate)
         {
-            long actionCalls = IdIterator.GetNextId<IProgressState>();
+            _commandsProcessed++;
 
             //trigger event only every N generated instances
-            bool invoke = actionCalls % invokeOnEveryNCommand == 0;
+            bool invoke = _commandsProcessed % invokeOnEveryNCommand == 0;
             if (!invoke && forceUpdate == false)
             {
                 return;

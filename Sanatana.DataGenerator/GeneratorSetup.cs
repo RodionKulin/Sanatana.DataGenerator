@@ -15,6 +15,7 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Internals.SubsetGeneration;
 using Sanatana.DataGenerator.Internals.Validators;
 using Sanatana.DataGenerator.Internals.Extensions;
+using Sanatana.DataGenerator.TargetCountProviders;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
@@ -87,8 +88,7 @@ namespace Sanatana.DataGenerator
         }
 
 
-        #region Register and edit entity
-
+        #region Register entity
         /// <summary>
         /// Add new IEntityDescription.
         /// </summary>
@@ -173,7 +173,10 @@ namespace Sanatana.DataGenerator
             }
             return Clone(entityDescriptions: allEntityDescriptions);
         }
+        #endregion
 
+
+        #region Edit entity
         /// <summary>
         /// Get existing EntityDescription&lt;TEntity&gt; to modify.
         /// </summary>
@@ -183,6 +186,8 @@ namespace Sanatana.DataGenerator
         public virtual GeneratorSetup EditEntity<TEntity>(Func<EntityDescription<TEntity>, EntityDescription<TEntity>> entityDescriptionSetup)
             where TEntity : class
         {
+            entityDescriptionSetup = entityDescriptionSetup ?? throw new ArgumentNullException(nameof(entityDescriptionSetup));
+
             Type entityType = typeof(TEntity);
             if (!_entityDescriptions.ContainsKey(entityType))
             {
@@ -220,6 +225,8 @@ namespace Sanatana.DataGenerator
         /// <exception cref="KeyNotFoundException"></exception>
         public virtual GeneratorSetup EditEntity(Type entityType, Func<IEntityDescription, IEntityDescription> entityDescriptionSetup)
         {
+            entityDescriptionSetup = entityDescriptionSetup ?? throw new ArgumentNullException(nameof(entityDescriptionSetup));
+
             if (!_entityDescriptions.ContainsKey(entityType))
             {
                 throw new KeyNotFoundException($"Entity type [{entityType.FullName}] is not registered. Use {nameof(RegisterEntity)} method first.");
@@ -242,15 +249,43 @@ namespace Sanatana.DataGenerator
         /// <exception cref="KeyNotFoundException"></exception>
         public virtual GeneratorSetup EditEntity(Func<IEntityDescription[], IEntityDescription[]> entityDescriptionSetup)
         {
+            entityDescriptionSetup = entityDescriptionSetup ?? throw new ArgumentNullException(nameof(entityDescriptionSetup));
+
             IEntityDescription[] newEntityDescriptions = _entityDescriptions.Values
                 .Select(x => x.Clone())
                 .ToArray();
-            newEntityDescriptions = entityDescriptionSetup(newEntityDescriptions);
+            newEntityDescriptions = entityDescriptionSetup(newEntityDescriptions)
+                ?? throw new ArgumentNullException(nameof(newEntityDescriptions));
 
             Dictionary<Type, IEntityDescription> allEntityDescriptions = newEntityDescriptions.ToDictionary(x => x.Type, x => x);
             return Clone(entityDescriptions: allEntityDescriptions);
         }
 
+        /// <summary>
+        /// Set TargetCount to 1 for all entities.
+        /// </summary>
+        /// <returns></returns>
+        public virtual GeneratorSetup SetTargetCountSingle()
+        {
+            return SetTargetCount(1);
+        }
+
+        /// <summary>
+        /// Set TargetCount for all entities.
+        /// </summary>
+        /// <param name="targetCount"></param>
+        /// <returns></returns>
+        public virtual GeneratorSetup SetTargetCount(long targetCount)
+        {
+            return EditEntity(descriptions =>
+            {
+                foreach (IEntityDescription entity in descriptions)
+                {
+                    entity.TargetCountProvider = new StrictTargetCountProvider(targetCount);
+                }
+                return descriptions;
+            });
+        }
         #endregion
 
 
@@ -415,16 +450,34 @@ namespace Sanatana.DataGenerator
 
         protected virtual void Setup(GeneratorServices generatorServices)
         {
+            //reset inner variables in services
             _progress.Setup(_supervisor);
-            _commandsHistory.Clear();
+            _commandsHistory.Setup();
             _temporaryStorage.Setup();
 
             //Should be called first to setup Parent and Child entities for each entity.
             generatorServices.SetupEntityContexts();
-            //Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITargetCountProvider.GetTargetCount based on parent entities TargetCount.
+            //Should be called before SetupTargetCount to support CombinatoricsSpreadStrategy that returns ITargetCountProvider.GetTargetCount based on parent entities TargetCount.
             generatorServices.SetupSpreadStrategies();
             generatorServices.SetupTargetCount();
             generatorServices.SetupPersistentStorages();
+
+            //reset inner variables in generators and modifiers
+            _entityDescriptions.Values.Where(x => x.Generator != null)
+                .ToList()
+                .ForEach(x => x.Generator.Setup(generatorServices));
+            _entityDescriptions.Values.Where(x => x.Modifiers != null)
+                .SelectMany(x => x.Modifiers)
+                .ToList()
+                .ForEach(x => x.Setup(generatorServices));
+            if(_defaults.Generator != null)
+            {
+                _defaults.Generator.Setup(generatorServices);
+            }
+            if (_defaults.Modifiers != null)
+            {
+                _defaults.Modifiers.ForEach(x => x.Setup(generatorServices));
+            }
 
             _supervisor.Setup(generatorServices);
         }

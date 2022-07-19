@@ -29,6 +29,15 @@ namespace Sanatana.DataGenerator.Modifiers
             _modifiers = modifiers ?? throw new ArgumentNullException(nameof(modifiers));
             _combineStrategy = combineStrategy ?? new RoundRobinModifiersCombiner();
         }
+        
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+            _combineStrategy.Setup(generatorServices);
+        }
+
 
 
         #region IModifier methods

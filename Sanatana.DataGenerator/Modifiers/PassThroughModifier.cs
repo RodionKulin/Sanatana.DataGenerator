@@ -26,5 +26,11 @@ namespace Sanatana.DataGenerator.Modifiers
         {
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
     }
 }

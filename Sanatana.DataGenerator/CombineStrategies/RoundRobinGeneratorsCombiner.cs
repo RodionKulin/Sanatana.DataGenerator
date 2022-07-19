@@ -1,4 +1,5 @@
 ﻿using Sanatana.DataGenerator.Generators;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using System;
 using System.Collections.Generic;
 
@@ -9,7 +10,7 @@ namespace Sanatana.DataGenerator.CombineStrategies
     /// </summary>
     public class RoundRobinGeneratorsCombiner : IGeneratorsCombiner
     {
-        public IGenerator GetNext(List<IGenerator> generators, GeneratorContext generatorContext)
+        public virtual IGenerator GetNext(List<IGenerator> generators, GeneratorContext generatorContext)
         {
             if(generators.Count == 0)
             {
@@ -18,6 +19,10 @@ namespace Sanatana.DataGenerator.CombineStrategies
 
             int nextGeneratorInd = (int)(generatorContext.CurrentCount % generators.Count);
             return generators[nextGeneratorInd];
+        }
+
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
         }
     }
 }

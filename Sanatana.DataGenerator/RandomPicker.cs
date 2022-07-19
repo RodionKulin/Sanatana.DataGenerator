@@ -6,7 +6,7 @@ using System.Threading;
 namespace Sanatana.DataGenerator
 {
     /// <summary>
-    /// Random pick methods
+    /// Random pick methods.
     /// </summary>
     public class RandomPicker
     {

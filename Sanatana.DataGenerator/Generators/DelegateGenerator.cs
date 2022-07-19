@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using Sanatana.DataGenerator.Internals;
 using Sanatana.DataGenerator.Entities;
 using System.Linq;
 using Sanatana.DataGenerator.Internals.EntitySettings;
@@ -12,12 +11,12 @@ namespace Sanatana.DataGenerator.Generators
         where TEntity : class
     {
         //fields
-        protected bool _isMultiDelegate;
+        protected bool _isMultiOutput;
         protected object _generateFunc;
 
 
         //init
-        protected DelegateGenerator(object generateFunc, bool isMultiDelegate)
+        protected DelegateGenerator(object generateFunc, bool isMultiOutput)
         {
             if (generateFunc == null)
             {
@@ -25,7 +24,7 @@ namespace Sanatana.DataGenerator.Generators
             }
 
             _generateFunc = generateFunc;
-            _isMultiDelegate = isMultiDelegate;
+            _isMultiOutput = isMultiOutput;
         }
 
         public static class Factory
@@ -41,6 +40,13 @@ namespace Sanatana.DataGenerator.Generators
             {
                 return new DelegateGenerator<TEntity>(generateFunc, true);
             }
+        }
+
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
         }
 
 

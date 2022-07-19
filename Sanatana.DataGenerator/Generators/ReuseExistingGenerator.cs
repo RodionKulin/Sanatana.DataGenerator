@@ -28,7 +28,16 @@ namespace Sanatana.DataGenerator.Generators
         protected bool _isAscOrder;
 
 
-        //setup methods
+        //setup method
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
+
+
+        //configuration methods
         /// <summary>
         /// Set batch size of entity instances to select from persistent storage.
         /// By default will select 1000 instances.

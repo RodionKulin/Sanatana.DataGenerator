@@ -38,7 +38,7 @@ namespace Sanatana.DataGenerator.Internals.Debugging
             return string.Join(Environment.NewLine, Logs);
         }
 
-        public virtual void Clear()
+        public virtual void Setup()
         {
             Logs.Clear();
         }

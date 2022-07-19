@@ -16,7 +16,7 @@ namespace Sanatana.DataGenerator.Modifiers
 
         //fields
         protected MethodInfo _delegateInvokeMethod;
-        protected Dictionary<Type, int[]> _delegateMapping;
+        protected int[] _requiredTypesOrder;
         protected bool _isMultiInput;
         protected Output _output;
         protected object _modifyFunc;
@@ -25,8 +25,6 @@ namespace Sanatana.DataGenerator.Modifiers
         //init
         protected DelegateParameterizedModifier(object modifyFunc, bool isMultiInput, Output output)
         {
-            _delegateMapping = new Dictionary<Type, int[]>();
-
             _modifyFunc = modifyFunc;
             _isMultiInput = isMultiInput;
             _output = output;
@@ -553,16 +551,24 @@ namespace Sanatana.DataGenerator.Modifiers
             #endregion
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices) 
+        {
+            _requiredTypesOrder = null;
+        }
+
 
         //Invoke modify method
         public virtual IList Modify(GeneratorContext context, IList entities)
         {
             //order required types according to delegate parameters order
-            int[] argsOrder = GetRequiredTypesOrder(context);
+            int[] delegateArgumentsOrder = GetRequiredTypesOrder(context);
             object[] requiredValues = context.RequiredEntities.Values.ToArray();
-            Array.Sort(argsOrder, requiredValues);
+            Array.Sort(delegateArgumentsOrder, requiredValues);
 
-            object[] arguments = new object[argsOrder.Length + 2];
+            object[] arguments = new object[delegateArgumentsOrder.Length + 2];
             Array.Copy(requiredValues, 0, arguments, 2, requiredValues.Length);
 
             return _isMultiInput
@@ -638,9 +644,7 @@ namespace Sanatana.DataGenerator.Modifiers
 
         protected virtual int[] GetRequiredTypesOrder(GeneratorContext context)
         {
-            Type delegateType = _modifyFunc.GetType();
-
-            if (!_delegateMapping.ContainsKey(delegateType))
+            if (_requiredTypesOrder == null)
             {
                 List<Type> requiredParametersTypes = GetRequiredEntitiesFuncArguments();
 
@@ -649,10 +653,11 @@ namespace Sanatana.DataGenerator.Modifiers
                     .Select(x => requiredParametersTypes.IndexOf(x))
                     .ToArray();
 
-                _delegateMapping.Add(delegateType, requiredTypesOrder);
+                _requiredTypesOrder = requiredTypesOrder;
             }
 
-            return _delegateMapping[delegateType].ToArray();
+            //need to clone it every time, because it gets changed
+            return _requiredTypesOrder.ToArray();
         }
 
         public virtual List<Type> GetRequiredEntitiesFuncArguments()

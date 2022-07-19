@@ -59,5 +59,13 @@ namespace Sanatana.DataGenerator.Internals.Progress
                 .Where(x => x <= latestFlushedCount)
                 .ToList();
         }
+    
+        /// <summary>
+        /// Reset new instance count.
+        /// </summary>
+        public virtual void Setup()
+        {
+            _newInstancesCountPointsInTime.Clear();
+        }
     }
 }

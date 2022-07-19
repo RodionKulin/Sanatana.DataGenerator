@@ -15,7 +15,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
     /// <summary>
     /// Modifier that will increment primary key value if 
     /// 1. Primary key is not configured to auto increment by database;
-    /// 2. If primary key is of type long of int.
+    /// 2. If primary key is of type long or int.
     /// </summary>
     public class EfCoreSetPrimaryKeysModifier : IModifier
     {
@@ -40,8 +40,15 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
             _primaryKeyStartFrom = primaryKeyStartFrom ?? new Dictionary<Type, long>();
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
 
-        //configure methods
+
+        //configuration methods
         public virtual EfCoreSetPrimaryKeysModifier SetPrimaryKeyStartFrom<TEntity>(long startFromId)
         {
             _primaryKeyStartFrom[typeof(TEntity)] = startFromId;

@@ -65,8 +65,15 @@ namespace Sanatana.DataGenerator.Modifiers
             }
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
 
-        //methods
+
+        //modify methods
         public virtual IList Modify(GeneratorContext context, IList entities)
         {
             if(_output == Output.Void)

@@ -15,14 +15,14 @@ namespace Sanatana.DataGenerator.Generators
     public interface IGenerator
     {
         /// <summary>
-        /// Generate next entity instance.
+        /// Generate next entity instance batch.
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
         IList Generate(GeneratorContext context);
 
         /// <summary>
-        /// Validate IGenerator Setup before setup.
+        /// Validate IGenerator before setup.
         /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
         /// </summary>
         /// <param name="defaults"></param>
@@ -30,11 +30,16 @@ namespace Sanatana.DataGenerator.Generators
         void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults);
 
         /// <summary>
-        /// Validate IGenerator Setup after setup.
+        /// Validate IGenerator after setup.
         /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
         /// </summary>
         /// <param name="entityContext"></param>
         /// <param name="defaults"></param>
         void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults);
+
+        /// <summary>
+        /// Reset variables when starting new generation.
+        /// </summary>
+        void Setup(GeneratorServices generatorServices);
     }
 }

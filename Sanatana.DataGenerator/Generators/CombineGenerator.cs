@@ -30,6 +30,14 @@ namespace Sanatana.DataGenerator.Generators
             _combineStrategy = combineStrategy ?? new RoundRobinGeneratorsCombiner();
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+            _combineStrategy.Setup(generatorServices);
+        }
+
 
         #region IGenerator methods
         public virtual IList Generate(GeneratorContext context)

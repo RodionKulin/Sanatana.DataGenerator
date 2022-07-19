@@ -25,6 +25,13 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
             _modelService = new EfCoreModelService(dbContextFactory);
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
+
 
         //methods
         public IList Modify(GeneratorContext context, IList instances)
@@ -50,7 +57,5 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Modifiers
         public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
         {
         }
-
-
     }
 }

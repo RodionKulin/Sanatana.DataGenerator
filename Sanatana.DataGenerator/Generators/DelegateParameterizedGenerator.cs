@@ -13,7 +13,7 @@ namespace Sanatana.DataGenerator.Generators
     {
         //fields
         protected MethodInfo _delegateInvokeMethod;
-        protected Dictionary<Type, int[]> _delegateMapping;
+        protected int[] _requiredTypesOrder;
         protected object _generateFunc;
 
 
@@ -25,13 +25,13 @@ namespace Sanatana.DataGenerator.Generators
                 throw new ArgumentNullException($"Argument [{nameof(generateFunc)}] can not be null.");
             }
 
-            _delegateMapping = new Dictionary<Type, int[]>();
-
             _generateFunc = generateFunc;
+            _delegateInvokeMethod = GetDelegateInvokeMethod();
         }
         
         public static class Factory
         {
+            #region Single output
             public static DelegateParameterizedGenerator<TEntity> Create<T1>(
                 Func<GeneratorContext, T1, TEntity> generateFunc)
             {
@@ -121,7 +121,9 @@ namespace Sanatana.DataGenerator.Generators
             {
                 return new DelegateParameterizedGenerator<TEntity>(generateFunc);
             }
+            #endregion
 
+            #region Multi output
             public static DelegateParameterizedGenerator<TEntity> CreateMulti<T1>(
                 Func<GeneratorContext, T1, List<TEntity>> generateFunc)
             {
@@ -211,6 +213,15 @@ namespace Sanatana.DataGenerator.Generators
             {
                 return new DelegateParameterizedGenerator<TEntity>(generateFunc);
             }
+            #endregion
+        }
+
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+            _requiredTypesOrder = null;
         }
 
 
@@ -218,11 +229,11 @@ namespace Sanatana.DataGenerator.Generators
         public virtual IList Generate(GeneratorContext context)
         {
             //order required types according to delegate parameters order
-            int[] argsOrder = GetRequiredTypesOrder(context);
+            int[] delegateArgumentsOrder = GetRequiredTypesOrder(context);
             object[] requiredValues = context.RequiredEntities.Values.ToArray();
-            Array.Sort(argsOrder, requiredValues);
+            Array.Sort(delegateArgumentsOrder, requiredValues);
 
-            object[] arguments = new object[argsOrder.Length + 1];
+            object[] arguments = new object[delegateArgumentsOrder.Length + 1];
             arguments[0] = context;
             Array.Copy(requiredValues, 0, arguments, 1, requiredValues.Length);
             
@@ -246,16 +257,15 @@ namespace Sanatana.DataGenerator.Generators
             throw new NotImplementedException($"Unexpected result type {res.GetType()} for {typeof(TEntity)} generateFunc");
         }
 
-        protected virtual int[] GetRequiredTypesOrder(GeneratorContext context)
+        protected virtual MethodInfo GetDelegateInvokeMethod()
         {
             Type delegateType = _generateFunc.GetType();
+            return delegateType.GetMethod("Invoke");
+        }
 
-            if (_delegateInvokeMethod == null)
-            {
-                _delegateInvokeMethod = delegateType.GetMethod("Invoke");
-            }
-
-            if (!_delegateMapping.ContainsKey(delegateType))
+        protected virtual int[] GetRequiredTypesOrder(GeneratorContext context)
+        {
+            if (_requiredTypesOrder == null)
             {
                 List<Type> requiredParametersTypes = GetRequiredEntitiesFuncArguments();
 
@@ -264,10 +274,11 @@ namespace Sanatana.DataGenerator.Generators
                     .Select(x => requiredParametersTypes.IndexOf(x))
                     .ToArray();
 
-                _delegateMapping.Add(delegateType, requiredTypesOrder);
+                _requiredTypesOrder = requiredTypesOrder;
             }
 
-            return _delegateMapping[delegateType].ToArray();
+            //need to clone it every time, because it gets changed
+            return _requiredTypesOrder.ToArray();
         }
 
         public virtual List<Type> GetRequiredEntitiesFuncArguments()

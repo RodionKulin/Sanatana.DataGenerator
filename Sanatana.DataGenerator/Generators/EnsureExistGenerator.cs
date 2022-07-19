@@ -42,6 +42,15 @@ namespace Sanatana.DataGenerator.Generators
             _newInstanceCounter = new NewInstanceCounter();
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+            _existingInstancesCache = null;
+            _newInstanceCounter.Setup();
+        }
+
 
         //configure methods
         /// <summary>
@@ -228,9 +237,16 @@ namespace Sanatana.DataGenerator.Generators
                     $"This is a measure to prevent selecting too large datasets into inmemory cache. " +
                     $"Optionally can increase this cap in {nameof(SetMaxSelectableInstances)} method.");
             }
+
+            //validate inner generator
+            _newInstancesGenerator.ValidateBeforeSetup(entity, defaults);
         }
 
-        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) { }
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) 
+        {
+            //validate inner generator
+            _newInstancesGenerator.ValidateAfterSetup(entityContext, defaults);
+        }
 
 
         //IStorageInsertGuard methods

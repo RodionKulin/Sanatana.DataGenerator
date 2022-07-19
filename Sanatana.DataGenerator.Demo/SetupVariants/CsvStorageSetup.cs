@@ -49,7 +49,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
 
         private static Buyer GenerateBuyer(GeneratorContext context)
         {
-            int id = (int)IdIterator.GetNextId(context.Description.Type);
+            int id = (int)context.CurrentCount;
             return new Buyer()
             {
                 Id = id,
@@ -61,7 +61,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
 
         private static Supplier GenerateSupplier(GeneratorContext context)
         {
-            int id = (int)IdIterator.GetNextId(context.Description.Type);
+            int id = (int)context.CurrentCount;
             return new Supplier()
             {
                 Id = id,
@@ -80,7 +80,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
                 new[] { supplier.Longitude, supplier.Latitude });
             bool purchasePositive = distance <= 50;
 
-            int id = (int)IdIterator.GetNextId(context.Description.Type);
+            int id = (int)context.CurrentCount;
             return new PurchaseOrder()
             {
                 Id = id,

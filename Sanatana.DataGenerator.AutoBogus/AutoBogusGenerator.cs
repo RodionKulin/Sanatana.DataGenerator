@@ -11,6 +11,9 @@ using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.AutoBogus
 {
+    /// <summary>
+    /// Create new entity instance and populate properties. 
+    /// </summary>
     public class AutoBogusGenerator : IGenerator
     {
         //fields
@@ -19,11 +22,19 @@ namespace Sanatana.DataGenerator.AutoBogus
 
 
         //init
+        /// <summary>
+        /// Create new entity instance and populate properties. By default will auto populate value properties.
+        /// </summary>
         public AutoBogusGenerator()
         {
             _autoFaker = AutoFaker.Create();
         }
 
+        /// <summary>
+        /// Create new entity instance and populate properties. By default will auto populate value properties.
+        /// </summary>
+        /// <param name="autoFaker"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public AutoBogusGenerator(IAutoFaker autoFaker)
         {
             if (autoFaker == null)
@@ -32,6 +43,14 @@ namespace Sanatana.DataGenerator.AutoBogus
             }
 
             _autoFaker = autoFaker;
+        }
+
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+            //_generateMethods var does not need to be reseted.
         }
 
 
