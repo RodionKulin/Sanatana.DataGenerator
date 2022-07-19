@@ -26,7 +26,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// <returns></returns>
         public virtual SubsetGeneratorSetupMany SetTargetCountSingle(EntitiesSelection entitiesSelection)
         {
-            base.SetTargetCount(entitiesSelection, 1);
+            base.SetTargetCountImp(entitiesSelection, 1);
             return this;
         }
 
@@ -38,7 +38,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         public virtual SubsetGeneratorSetupMany SetTargetCountSingle<TEntity>()
             where TEntity : class
         {
-            base.SetTargetCount<TEntity>(1);
+            base.SetTargetCountImp<TEntity>(1);
             return this;
         }
 
@@ -50,7 +50,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// <returns></returns>
         public virtual SubsetGeneratorSetupMany SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
         {
-            base.SetTargetCount(entitiesSelection, targetCount);
+            base.SetTargetCountImp(entitiesSelection, targetCount);
             return this;
         }
 
@@ -63,65 +63,65 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         public virtual SubsetGeneratorSetupMany SetTargetCount<TEntity>(long targetCount)
             where TEntity : class
         {
-            base.SetTargetCount<TEntity>(targetCount);
+            base.SetTargetCountImp<TEntity>(targetCount);
             return this;
         }
 
         /// <summary>
-        /// Set InMemoryStorage as persistent storage for all entities matching entitiesSelection.
+        /// Add InMemoryStorage as persistent storage for all entities matching entitiesSelection.
         /// Optionally remove previously added persistent storages.
         /// </summary>
         /// <param name="entitiesSelection"></param>
         /// <param name="removeOtherStorages"></param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupMany SetInMemoryStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages)
+        public virtual SubsetGeneratorSetupMany AddInMemoryStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages = false)
         {
             var memoryStorage = new InMemoryStorage();
-            base.SetStorage(entitiesSelection, removeOtherStorages, memoryStorage);
+            base.AddStorageImp(entitiesSelection, memoryStorage, removeOtherStorages);
             return this;
         }
 
         /// <summary>
-        /// Set InMemoryStorage as persistent storage for entity.
+        /// Add InMemoryStorage as persistent storage for entity.
         /// Optionally remove previously added persistent storages.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="removeOtherStorages"></param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupMany SetInMemoryStorage<TEntity>(bool removeOtherStorages)
+        public virtual SubsetGeneratorSetupMany AddInMemoryStorage<TEntity>(bool removeOtherStorages = false)
             where TEntity : class
         {
             var memoryStorage = new InMemoryStorage();
-            base.SetStorage<TEntity>(removeOtherStorages, memoryStorage);
+            base.AddStorageImp<TEntity>(memoryStorage, removeOtherStorages);
             return this;
         }
 
         /// <summary>
-        /// Set persistent storage for all entities matching entitiesSelection.
+        /// Add persistent storage for all entities matching entitiesSelection.
         /// Optionally remove previously added persistent storages.
         /// </summary>
         /// <param name="entitiesSelection"></param>
         /// <param name="removeOtherStorages"></param>
         /// <param name="storage"></param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupMany SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
+        public virtual SubsetGeneratorSetupMany AddStorage(EntitiesSelection entitiesSelection, IPersistentStorage storage, bool removeOtherStorages = false)
         {
-            base.SetStorage(entitiesSelection, removeOtherStorages, storage);
+            base.AddStorageImp(entitiesSelection, storage, removeOtherStorages);
             return this;
         }
 
         /// <summary>
-        /// Set persistent storage for entity.
+        /// Add persistent storage for entity.
         /// Optionally remove previously added persistent storages.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="removeOtherStorages"></param>
         /// <param name="storage"></param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupMany SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
+        public virtual SubsetGeneratorSetupMany AddStorage<TEntity>(IPersistentStorage storage, bool removeOtherStorages = false)
             where TEntity : class
         {
-            base.SetStorage<TEntity>(removeOtherStorages, storage);
+            base.AddStorageImp<TEntity>(storage, removeOtherStorages);
             return this;
         }
         #endregion

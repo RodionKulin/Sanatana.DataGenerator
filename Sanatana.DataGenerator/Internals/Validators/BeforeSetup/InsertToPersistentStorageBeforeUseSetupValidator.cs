@@ -1,5 +1,6 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +11,9 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
     {
         public void ValidateSetup(GeneratorServices generatorServices)
         {
-            
             string[] inconsistentEntities = generatorServices.EntityDescriptions.Values
                 .Where(x => x.InsertToPersistentStorageBeforeUse)
-                .Where(x => generatorServices.Defaults.GetPersistentStorages(x).Count > 1)
+                .Where(x => generatorServices.Defaults.GetPersistentStorages(x).Where(strg => !(strg is InMemoryStorage)).Count() > 1)
                 .Select(x => x.Type.FullName)
                 .ToArray();
 

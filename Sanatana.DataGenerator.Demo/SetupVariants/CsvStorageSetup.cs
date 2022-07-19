@@ -7,11 +7,13 @@ using System.Collections.Generic;
 
 namespace Sanatana.DataGenerator.Demo.SetupVariants
 {
-    internal class CsvStorageSetup
+    public class CsvStorageSetup
     {
 
         public static void Start()
         {
+            Console.WriteLine($"{nameof(CsvStorageSetup)} generation started");
+
             //Arrange
             var setup = new GeneratorSetup()
                 .SetMaxParallelInserts(1)
@@ -39,11 +41,14 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
 
             //Assert
             Console.WriteLine($"{nameof(CsvStorageSetup)} generation completed");
+            Console.WriteLine();
         }
 
+        static int? _progressCursorPos;
         private static void PrintProgress(decimal percent)
         {
-            Console.CursorTop = 0;
+            _progressCursorPos = _progressCursorPos ?? Console.CursorTop;
+            Console.CursorTop = _progressCursorPos.Value;
             Console.WriteLine(percent.ToString("F"));
         }
 

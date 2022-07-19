@@ -664,12 +664,13 @@ namespace Sanatana.DataGenerator.Modifiers
         {
             Type delegateType = _modifyFunc.GetType();
             Type[] genericArgs = delegateType.GetGenericArguments();
+            int skipLastArgument = _output == Output.Void ? 0 : 1;
 
             List<Type> requiredParametersTypes = genericArgs
                 //1 parameter is GeneratorContext
                 //2 parameter is TEntity or List<TEntity> list of instances
                 .Skip(2)   
-                .Take(genericArgs.Length - 3)   //last is returned instnace  
+                .Take(genericArgs.Length - 2 - skipLastArgument)   //last is returned instance  
                 .ToList();
 
             return requiredParametersTypes;

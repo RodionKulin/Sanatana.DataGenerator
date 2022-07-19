@@ -3,13 +3,17 @@ using System;
 using Sanatana.DataGenerator.Demo.Database;
 using Sanatana.DataGenerator.AutoBogus;
 using Sanatana.DataGenerator.Supervisors.Subset;
+using System.Linq;
+using Sanatana.DataGenerator.EntityFrameworkCore;
 
 namespace Sanatana.DataGenerator.Demo.SetupVariants
 {
-    internal class SubsetGenerationSetup
+    public class SubsetGenerationSetup
     {
         public static void Start()
         {
+            Console.WriteLine($"{nameof(SubsetGenerationSetup)} generation started");
+
             //Arrange
             Func<ProcurementDbContext> dbContextFactory = () => new ProcurementDbContext();
             using (ProcurementDbContext context = dbContextFactory())
@@ -20,7 +24,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
 
             var setup = new GeneratorSetup()
                 .SetDefaultSettings(def => def
-                    .SetGenerator(new AutoBogusGenerator()) //will populate random values for entity instances
+                    .SetGenerator(new AutoBogusGenerator()) //will populate random values for instance properties
                 )
                 .SetupWithEntityFrameworkCore(dbContextFactory, efSetup => efSetup
                     //1. Register entities from EF Model;
@@ -35,12 +39,20 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
             //Act
             PurchaseOrder purchaseOrder = setup.ToSubsetSetup<PurchaseOrder>()
                 .SetTargetCountSingle(EntitiesSelection.All)
-                .SetInMemoryStorage(EntitiesSelection.Target, true)
+                .AddInMemoryStorage(EntitiesSelection.Target)
+                .AddStorage(EntitiesSelection.Target, new EfCorePersistentStorage(dbContextFactory))
                 .GetSingleTarget();
 
             //Assert
+            PurchaseOrder[] purchaseOrders = null;
+            using (ProcurementDbContext dbContext = dbContextFactory())
+            {
+                purchaseOrders = dbContext.PurchaseOrders.ToArray();
+            }
+
             Console.WriteLine($"Generated {nameof(PurchaseOrder)} with Id={purchaseOrder.Id}");
             Console.WriteLine($"{nameof(SubsetGenerationSetup)} generation completed");
+            Console.WriteLine();
         }
 
     }

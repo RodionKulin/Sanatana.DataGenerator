@@ -6,10 +6,12 @@ using System.Linq;
 
 namespace Sanatana.DataGenerator.Demo.SetupVariants
 {
-    internal class AutoBogusSetup
+    public class AutoBogusSetup
     {
         public static void Start()
         {
+            Console.WriteLine($"{nameof(AutoBogusSetup)} generation started");
+
             //Arrange
             Func<ProcurementDbContext> dbContextFactory = () => new ProcurementDbContext();
             using (ProcurementDbContext context = dbContextFactory())
@@ -53,6 +55,7 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
             Console.WriteLine($"Generated {purchaseOrders.Length} instances of {nameof(PurchaseOrder)}");
             Console.WriteLine($"Generated {suppliers.Length} instances of {nameof(Supplier)}");
             Console.WriteLine($"{nameof(AutoBogusSetup)} generation completed");
+            Console.WriteLine();
         }
 
     }

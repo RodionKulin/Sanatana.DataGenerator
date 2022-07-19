@@ -1,9 +1,5 @@
-﻿using Sanatana.DataGenerator.Csv;
-using Sanatana.DataGenerator.Demo.Entities;
-using Sanatana.DataGenerator.Demo.SetupVariants;
-using Sanatana.DataGenerator.SpreadStrategies;
+﻿using Sanatana.DataGenerator.Demo.SetupVariants;
 using System;
-using System.Collections.Generic;
 
 namespace Sanatana.DataGenerator.Demo
 {
@@ -11,9 +7,11 @@ namespace Sanatana.DataGenerator.Demo
     {
         static void Main(string[] args)
         {
-            AutoBogusSetup.Start();
             CsvStorageSetup.Start();
+            AutoBogusSetup.Start();
             SubsetGenerationSetup.Start();
+
+            Console.WriteLine($"Press any key to exit");
             Console.ReadKey();
         }
 

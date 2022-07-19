@@ -53,6 +53,12 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// </summary>
         public virtual void SetupEntityContexts()
         {
+            if(EntityContexts != null)
+            {
+                //prevent setting EntityProgress = null by recreating already configured EntityContexts
+                return;
+            }
+
             EntityContexts = EntityDescriptions.Values
                 .Select(description => EntityContext.Factory.Create(EntityDescriptions, description))
                 .ToDictionary(ctx => ctx.Type, ctx => ctx);

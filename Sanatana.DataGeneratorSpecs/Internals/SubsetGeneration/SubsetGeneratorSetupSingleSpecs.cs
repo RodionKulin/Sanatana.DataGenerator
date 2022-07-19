@@ -19,7 +19,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
             //Arrange
             SubsetGeneratorSetupSingle generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup(typeof(Comment))
-                .SetInMemoryStorage(EntitiesSelection.All, true)
+                .AddInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All);
 
             //Act
@@ -35,7 +35,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
             //Arrange
             SubsetGeneratorSetupSingle generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup(typeof(Comment))
-                .SetInMemoryStorage(EntitiesSelection.All, true)
+                .AddInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);
 
@@ -53,7 +53,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
             //Arrange
             SubsetGeneratorSetupSingle generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
                 .ToSubsetSetup(typeof(Comment))
-                .SetInMemoryStorage(EntitiesSelection.All, true)
+                .AddInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);
 

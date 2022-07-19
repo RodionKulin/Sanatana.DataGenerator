@@ -26,7 +26,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
             //change supervisor
             _previousSupervisor = _generatorSetup.GetGeneratorServices().Supervisor;
-            _generatorSetup.SetSupervisor(new SubsetSupervisor(targetEntities));
+            _generatorSetup = _generatorSetup.SetSupervisor(new SubsetSupervisor(targetEntities));
 
             //prepare subset settings
             _subsetSettings = new SubsetSettings(targetEntities);
@@ -46,7 +46,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
 
         #region Configure services
-        protected virtual void SetTargetCount(EntitiesSelection entitiesSelection, long targetCount)
+        protected virtual void SetTargetCountImp(EntitiesSelection entitiesSelection, long targetCount)
         {
             _generatorSetup = _generatorSetup.EditEntity((IEntityDescription[] all) =>
             {
@@ -57,7 +57,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             });
         }
 
-        protected virtual void SetTargetCount<TEntity>(long targetCount) 
+        protected virtual void SetTargetCountImp<TEntity>(long targetCount) 
             where TEntity : class
         {
             _generatorSetup = _generatorSetup.EditEntity((EntityDescription<TEntity> description) =>
@@ -66,7 +66,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             });
         }
 
-        protected virtual void SetStorage(EntitiesSelection entitiesSelection, bool removeOtherStorages, IPersistentStorage storage)
+        protected virtual void AddStorageImp(EntitiesSelection entitiesSelection, IPersistentStorage storage, bool removeOtherStorages = false)
         {
             _generatorSetup = _generatorSetup.EditEntity((IEntityDescription[] all) =>
             {
@@ -86,7 +86,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             });
         }
 
-        protected virtual void SetStorage<TEntity>(bool removeOtherStorages, IPersistentStorage storage)
+        protected virtual void AddStorageImp<TEntity>(IPersistentStorage storage, bool removeOtherStorages = false)
             where TEntity : class
         {
             _generatorSetup = _generatorSetup.EditEntity((EntityDescription<TEntity> description) =>
