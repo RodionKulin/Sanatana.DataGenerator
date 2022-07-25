@@ -1,4 +1,5 @@
-﻿using Sanatana.DataGenerator.Internals.EntitySettings;
+﻿using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using Sanatana.DataGenerator.Modifiers;
 using System;
 using System.Collections.Generic;
@@ -14,14 +15,22 @@ namespace Sanatana.DataGenerator.CombineStrategies
         {
             if (modifierSets.Count == 0)
             {
-                throw new NotSupportedException($"Provided empty list of modifierSets for entity {generatorContext.Description.Type.FullName} in {nameof(CombineModifier)} {nameof(RoundRobinModifiersCombiner)}.");
+                throw new NotSupportedException($"Provided empty list of {nameof(modifierSets)} for entity {generatorContext.Description.Type.FullName} in {nameof(CombineModifier)} {nameof(RoundRobinModifiersCombiner)}.");
             }
 
             int nextIndex = (int)(generatorContext.CurrentCount % modifierSets.Count);
             return modifierSets[nextIndex];
         }
 
-        public virtual void Setup(GeneratorServices generatorServices)
+        public virtual void Setup(List<List<IModifier>> modifierSets, GeneratorServices generatorServices)
+        {
+        }
+
+        public void ValidateAfterSetup(List<List<IModifier>> modifiers, EntityContext entityContext, DefaultSettings defaults)
+        {
+        }
+
+        public void ValidateBeforeSetup(List<List<IModifier>> modifiers, IEntityDescription entity, DefaultSettings defaults)
         {
         }
     }

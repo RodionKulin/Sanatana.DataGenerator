@@ -8,8 +8,10 @@ namespace Sanatana.DataGenerator.Demo
         static void Main(string[] args)
         {
             CsvStorageSetup.Start();
-            AutoBogusSetup.Start();
-            SubsetGenerationSetup.Start();
+            //AutoBogusSetup.Start();
+            //SubsetGenerationSetup.Start();
+
+            Sanatana.DataGenerator.RandomPicker.NextBoolean(0.5);
 
             Console.WriteLine($"Press any key to exit");
             Console.ReadKey();

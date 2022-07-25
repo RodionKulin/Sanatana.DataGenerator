@@ -35,7 +35,7 @@ namespace Sanatana.DataGenerator.Modifiers
         /// </summary>
         public virtual void Setup(GeneratorServices generatorServices)
         {
-            _combineStrategy.Setup(generatorServices);
+            _combineStrategy.Setup(_modifiers, generatorServices);
         }
 
 
@@ -68,6 +68,8 @@ namespace Sanatana.DataGenerator.Modifiers
                 {
                     modifier.ValidateBeforeSetup(entity, defaults);
                 }
+
+            _combineStrategy.ValidateBeforeSetup(_modifiers, entity, defaults);
         }
 
         public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults)
@@ -86,6 +88,8 @@ namespace Sanatana.DataGenerator.Modifiers
                 {
                     modifier.ValidateAfterSetup(entityContext, defaults);
                 }
+
+            _combineStrategy.ValidateAfterSetup(_modifiers, entityContext, defaults);
         }
         #endregion
 

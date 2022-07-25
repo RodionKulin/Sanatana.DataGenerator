@@ -1,7 +1,6 @@
 ﻿using Sanatana.DataGenerator.Entities;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using System.Collections;
@@ -127,7 +126,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             if (entityContext.Description.InsertToPersistentStorageBeforeUse)
             {
                 //for entities that generate Id on database, will generate as much as possible before flushing.
-                //the number to generate will be determined by IFlushTrigger.
+                //the number to generate will be determined by IFlushStrategy.
                 if (isFlushRequired)
                 {
                     _entitiesOrder.Pop();

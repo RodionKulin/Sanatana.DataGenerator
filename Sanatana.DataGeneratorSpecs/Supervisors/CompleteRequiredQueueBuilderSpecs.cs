@@ -38,14 +38,13 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         {
             var list = new List<Type>();
 
-            ICommand nextCommand = requiredQueueBuilder.GetNextCommand();
+            GenerateCommand nextCommand = (GenerateCommand)requiredQueueBuilder.GetNextCommand();
             while (nextCommand != null)
             {
-                GenerateCommand genCommand = (GenerateCommand)nextCommand;
-                list.Add(genCommand.EntityContext.Type);
+                list.Add(nextCommand.EntityContext.Type);
 
                 var itemsGenerated = new List<string>() { "item" };
-                provider.Supervisor.HandleGenerateCompleted(genCommand.EntityContext, itemsGenerated);
+                provider.Supervisor.HandleGenerateCompleted(nextCommand.EntityContext, itemsGenerated);
               
                 int limit = 1000;
                 if (list.Count > limit)
@@ -53,7 +52,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
                     throw new InternalTestFailureException($"{typeof(ISupervisor)} did not complete after {limit} next items");
                 }
 
-                nextCommand = requiredQueueBuilder.GetNextCommand();
+                nextCommand = (GenerateCommand)requiredQueueBuilder.GetNextCommand();
             }
 
             return list;

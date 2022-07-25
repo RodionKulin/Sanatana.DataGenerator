@@ -1,4 +1,5 @@
-﻿using Sanatana.DataGenerator.Generators;
+﻿using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Generators;
 using Sanatana.DataGenerator.Internals.EntitySettings;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,27 @@ namespace Sanatana.DataGenerator.CombineStrategies
         /// <summary>
         /// Reset variables when starting new generation.
         /// </summary>
-        void Setup(GeneratorServices generatorServices);
+        void Setup(List<IGenerator> generators, GeneratorServices generatorServices);
+
+
+        /// <summary>
+        /// Validate IGeneratorsCombiner before setup.
+        /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
+        /// </summary>
+        /// <param name="generators"></param>
+        /// <param name="entity"></param>
+        /// <param name="defaults"></param>
+        void ValidateBeforeSetup(List<IGenerator> generators, IEntityDescription entity, DefaultSettings defaults);
+
+        /// <summary>
+        /// Validate IGeneratorsCombiner after setup.
+        /// During setup TargetCount is calculated and Required entities ordered by their generation hierarchy.
+        /// </summary>
+        /// <param name="generators"></param>
+        /// <param name="entityContext"></param>
+        /// <param name="defaults"></param>
+        void ValidateAfterSetup(List<IGenerator> generators, EntityContext entityContext, DefaultSettings defaults);
+
+
     }
 }
