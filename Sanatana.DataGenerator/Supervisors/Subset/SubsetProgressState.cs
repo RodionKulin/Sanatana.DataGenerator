@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Subset
 {
@@ -11,6 +12,7 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
     {
         //fields
         protected List<Type> _entitiesSubset;
+
 
         //init
         public SubsetProgressState(List<Type> entitiesSubset, Dictionary<Type, EntityContext> entityContexts)

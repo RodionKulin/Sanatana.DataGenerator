@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Subset
 {
@@ -16,9 +18,8 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
 
         //init
-        public SubsetFlushCandidatesRegistry(List<Type> entitiesSubset, GeneratorSetup generatorSetup,
-            Dictionary<Type, EntityContext> entityContexts, IProgressState orderProgress)
-            : base(generatorSetup, entityContexts, orderProgress)
+        public SubsetFlushCandidatesRegistry(List<Type> entitiesSubset, GeneratorServices generatorServices, IProgressState orderProgress)
+            : base(generatorServices, orderProgress)
         {
             if (entitiesSubset == null)
             {
@@ -31,21 +32,22 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
         //methods
         protected override EntityContext FindChildThatCanGenerate(
-            EntityContext parentContext, bool onlyCheckCanGenerate)
+            EntityContext parentContext, FlushRange parentRange, bool includeChildrenThatAreFlushCandidates)
         {
-            List<EntityContext> notCompletedChildren = parentContext.ChildEntities
+            IEnumerable<EntityContext> notCompletedChildren = parentContext.ChildEntities
                 .Where(x => _entitiesSubset.Contains(x.Type))   //only subset of types
                 .Where(child => !_progressState.CompletedEntityTypes.Contains(child.Type))
-                .Select(x => _entityContexts[x.Type])
-                .ToList();
-            if (notCompletedChildren.Count == 0)
+                .Select(x => _entityContexts[x.Type]);
+
+            if (includeChildrenThatAreFlushCandidates == false)
             {
-                return null;
+                notCompletedChildren = notCompletedChildren
+                    .Where(childContext => !_flushCandidates.Contains(childContext));
             }
 
-            EntityContext childContext = notCompletedChildren.Find(child =>
-                CheckChildCanGenerate(child, parentContext, onlyCheckCanGenerate));
-            return childContext;
+            return notCompletedChildren
+                .ToList()
+                .Find(childContext => CheckChildCanGenerate(childContext, parentContext, parentRange));
         }
     }
 }

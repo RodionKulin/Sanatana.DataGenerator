@@ -2,23 +2,27 @@
 using Sanatana.DataGenerator.Storages;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Strategies;
-using Sanatana.DataGenerator.QuantityProviders;
-using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.TargetCountProviders;
 using Sanatana.DataGenerator.Modifiers;
+using System.Linq.Expressions;
+using Sanatana.DataGenerator.StorageInsertGuards;
+using Sanatana.DataGenerator.RequestCapacityProviders;
 
 namespace Sanatana.DataGenerator.Entities
 {
+    /// <summary>
+    /// Entity configuration for generation process.
+    /// </summary>
     public class EntityDescription<TEntity> : IEntityDescription
             where TEntity : class
     {
-        //properties
+        #region Properties
         /// <summary>
-        /// Type of entity to generate
+        /// Type of entity to generate.
         /// </summary>
         public Type Type
         {
@@ -29,35 +33,60 @@ namespace Sanatana.DataGenerator.Entities
         }
         /// <summary>
         /// Entities that are needed for generator as foreign keys or other type of dependency.
+        /// Required entity intstances are generated first, then will be passed as parameters to generator.
         /// </summary>
         public List<RequiredEntity> Required { get; set; }
         /// <summary>
-        /// Entities generator. Can return entities one by one or in small batches. 
-        /// Usually better to return single entity not to store extra entities in memory.
+        /// Entity instances generator. Can return instances one by one or in small batches. 
+        /// Usually better to return single instance not to store extra instances in memory.
+        /// If not specified will use Generator from DefaultSettings.
         /// </summary>
         public IGenerator Generator { get; set; }
         /// <summary>
-        /// A method to make adjustments to entity after generated.
+        /// List of methods to make adjustments to entity instance after generation.
+        /// If not specified will use Modifiers from DefaultSettings.
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
-        /// Database storage for generated entities.
+        /// Database storages for generated entity instances.
+        /// If not specified will use PersistentStorages from DefaultSettings.
         /// </summary>
         public List<IPersistentStorage> PersistentStorages { get; set; }
         /// <summary>
-        /// Provider of total number of entities that needs to be generated.
+        /// Provider of total number of entity instances that need to be generated.
+        /// If not specified will use TargetCountProvider from DefaultSettings.
         /// </summary>
-        public IQuantityProvider QuantityProvider { get; set; }
+        public ITargetCountProvider TargetCountProvider { get; set; }
         /// <summary>
-        /// Checker of temporary storage if it is time to flush entities to database.
+        /// Checker of temporary storage if it is time to flush entity instances to persistent storage.
+        /// If not specified will use FlushStrategy from DefaultSettings.
         /// </summary>
-        public IFlushStrategy FlushTrigger { get; set; }
+        public IFlushStrategy FlushStrategy { get; set; }
         /// <summary>
-        /// Get database generated columns like Id after inserting entities first. 
-        /// Than only pass entities as required.
+        /// Provider of number of entity instances that can be inserted with next request to persistent storage.
+        /// If not specified will use RequestCapacityProvider from DefaultSettings.
+        /// </summary>
+        public IRequestCapacityProvider RequestCapacityProvider { get; set; }
+        /// <summary>
+        /// Checker of entity instances to be inserted into database. 
+        /// Excludes unwanted instances, like the ones that already exist in database for EnsureExistGenerator.
+        /// If not specified is not used.
+        /// </summary>
+        public IStorageInsertGuard StorageInsertGuard { get; set; }
+        /// <summary>
+        /// Get database generated columns after inserting entities instances to persistent storage. For example Id.
+        /// Only after receiving such columns pass entity instances as required to generator.
+        /// Also makes insert requests to persistent storage sync for this entity. Multiple parallel inserts wont be possible.
         /// Default is false.
         /// </summary>
         public bool InsertToPersistentStorageBeforeUse { get; set; }
+        /// <summary>
+        /// Selector from persistent storage, that will provide existing instances.
+        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// If not specified will use PersistentStorageSelector from DefaultSettings.
+        /// </summary>
+        public IPersistentStorageSelector PersistentStorageSelector { get; set; }
+        #endregion
 
 
         //init
@@ -65,10 +94,28 @@ namespace Sanatana.DataGenerator.Entities
         {
             Required = new List<RequiredEntity>();
             Modifiers = new List<IModifier>();
+            PersistentStorages = new List<IPersistentStorage>();
+        }
+
+        public virtual IEntityDescription Clone()
+        {
+            return new EntityDescription<TEntity>
+            {
+                Required = new List<RequiredEntity>(Required),
+                Generator = Generator,
+                Modifiers = new List<IModifier>(Modifiers),
+                PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
+                TargetCountProvider = TargetCountProvider,
+                FlushStrategy = FlushStrategy,
+                RequestCapacityProvider = RequestCapacityProvider,
+                StorageInsertGuard = StorageInsertGuard,
+                InsertToPersistentStorageBeforeUse = InsertToPersistentStorageBeforeUse,
+                PersistentStorageSelector = PersistentStorageSelector
+            };
         }
 
 
-        //methods
+        #region Configure methods
         /// <summary>
         /// Add required entity type that will be generated first and then pasted as parameter to generator.
         /// </summary>
@@ -93,7 +140,8 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Add required entity type that will be generated first and then pasted as parameter to generator.
+        /// Add Required entity type that will be generated first and then passed as parameter to Generator.
+        /// Required entities should also be registered for generation.
         /// </summary>
         /// <param name="requiredType">Type of foreign key entity</param>
         /// <param name="spreadStrategy">Distribution handler that defines how many times same foreign key entity can be reused</param>
@@ -109,28 +157,48 @@ namespace Sanatana.DataGenerator.Entities
             return SetRequired(requiredEntity);
         }
 
-        protected virtual void SetRequiredFromGenerator(Type delegateType)
+        /// <summary>
+        /// Internal method for IDelegateParameterizedGenerator to get genertic arguments and set Required entities from them.
+        /// It is called internally when registering new generator.
+        /// </summary>
+        /// <param name="parameterizedGenerator"></param>
+        public virtual void SetRequiredFromGenerator(IDelegateParameterizedGenerator parameterizedGenerator)
         {
-            Type[] genericArgs = delegateType.GetGenericArguments();
-            List<Type> argumentTypes = genericArgs
-                .Skip(1)                        //the first one is GeneratorContext
-                .Take(genericArgs.Length - 2)   //and the last argument is result
-                .ToList();                      //the rest are required entities
-
-            foreach (Type requiredType in argumentTypes)
+            Required.Clear();
+            List<Type> argumentTypes = parameterizedGenerator.GetRequiredEntitiesFuncArguments();
+            foreach (Type argumentType in argumentTypes)
             {
-                var requiredEntity = new RequiredEntity
-                {
-                    Type = requiredType
-                };
-
-                SetRequired(requiredEntity);
+                SetRequired(new RequiredEntity(argumentType));
             }
         }
 
         /// <summary>
+        /// Internal method for IDelegateParameterizedModifier to get genertic arguments and set Required entities from them.
+        /// It is called internally when registering new modifier.
+        /// </summary>
+        public virtual void SetRequiredFromModifier(IDelegateParameterizedModifier parameterizedModifier)
+        {
+            Required.Clear();
+            List<Type> argumentTypes = parameterizedModifier.GetRequiredEntitiesFuncArguments();
+            foreach (Type argumentType in argumentTypes)
+            {
+                SetRequired(new RequiredEntity(argumentType));
+            }
+        }
+
+        /// <summary>
+        /// Remove all Required entity types.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemoveRequired()
+        {
+            Required.Clear();
+            return this;
+        }
+
+        /// <summary>
         /// Set custom SpreadStrategy for Required Entity. 
-        /// Required Entity should already be registered when calling this method.        /// 
+        /// Required Entity should already be registered when calling this method.
         /// </summary>
         /// <param name="requiredType"></param>
         /// <param name="spreadStrategy"></param>
@@ -140,7 +208,7 @@ namespace Sanatana.DataGenerator.Entities
         {
             if (spreadStrategy == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(spreadStrategy)}] of {nameof(SetSpreadStrategy)} can not be null.");
+                throw new ArgumentNullException(nameof(spreadStrategy));
             }
 
             RequiredEntity requiredEntity = Required.FirstOrDefault(x => x.Type == requiredType);
@@ -158,9 +226,9 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set custom SpreadStrategy for all Required Entities. 
-        /// Required Entities should already be registered when calling this method.
-        /// All Required Entities registered after this method call will not be effected and will have default SpreadStrategy value.
+        /// Set custom SpreadStrategy for all Required entities. 
+        /// Required entities should already be registered when calling this method.
+        /// All Required entities registered after this method call will not be effected and will have default SpreadStrategy value.
         /// </summary>
         /// <param name="spreadStrategy"></param>
         /// <returns></returns>
@@ -168,12 +236,12 @@ namespace Sanatana.DataGenerator.Entities
         {
             if (spreadStrategy == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(spreadStrategy)}] of {nameof(SetSpreadStrategy)} can not be null.");
+                throw new ArgumentNullException(nameof(spreadStrategy));
             }
 
             if (Required.Count == 0)
             {
-                throw new NotSupportedException($"Was not able to set {nameof(ISpreadStrategy)}. No {nameof(Required)} entities were configured on type {Type.FullName}.");
+                throw new NotSupportedException($"Not able to set {nameof(ISpreadStrategy)}. No {nameof(Required)} entities were configured on type {Type.FullName}.");
             }
 
             foreach (RequiredEntity requiredEntity in Required)
@@ -185,39 +253,14 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Call SetSpreadStrategy on Required entities and set TargetCount as total number of distinct combinations that can be generated.
+        /// Set SpreadStrategy for Required entities and set TargetCount as total number of combinations that can be generated.
         /// </summary>
         /// <param name="spreadStrategy"></param>
-        /// <param name="generatorSetup"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetSpreadStrategyAndTargetCount(
-            CombinatoricsSpreadStrategy spreadStrategy, GeneratorSetup generatorSetup)
+        public virtual EntityDescription<TEntity> SetSpreadStrategyAndTargetCount(CombinatoricsSpreadStrategy spreadStrategy)
         {
             SetSpreadStrategy(spreadStrategy);
-
-            //Get subset of all entities that are required
-            var requiredTypes = Required.Select(x => x.Type);
-            Dictionary<Type, IEntityDescription> requiredDescriptions = generatorSetup.EntityDescriptions
-                .Where(x => requiredTypes.Contains(x.Key))
-                .ToDictionary(x => x.Key, x => x.Value);
-
-            //validate
-            var validator = new Validator(generatorSetup);
-            validator.CheckGeneratorSetupComplete(requiredDescriptions);
-
-            //Setup spread strategy
-            var entityContext = new EntityContext
-            {
-                Description = this,
-                EntityProgress = new EntityProgress(),
-                Type = Type
-            };
-            Dictionary<Type, EntityContext> requiredEntities = generatorSetup.SetupEntityContexts(requiredDescriptions);
-            spreadStrategy.Setup(entityContext, requiredEntities);
-
-            //Get total count of combinations
-            long totalCount = spreadStrategy.GetTotalCount();
-            SetTargetCount(totalCount);
+            SetTargetCount(spreadStrategy);
 
             return this;
         }
@@ -225,16 +268,16 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Set total number of entities that need to be generated.
         /// </summary>
-        /// <param name="quantityProvider"></param>
+        /// <param name="targetCountProvider"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetTargetCount(IQuantityProvider quantityProvider)
+        public virtual EntityDescription<TEntity> SetTargetCount(ITargetCountProvider targetCountProvider)
         {
-            if (quantityProvider == null)
+            if (targetCountProvider == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(quantityProvider)}] of {nameof(SetTargetCount)} can not be null.");
+                throw new ArgumentNullException(nameof(targetCountProvider));
             }
 
-            QuantityProvider = quantityProvider;
+            TargetCountProvider = targetCountProvider;
             return this;
         }
 
@@ -245,68 +288,105 @@ namespace Sanatana.DataGenerator.Entities
         /// <returns></returns>
         public virtual EntityDescription<TEntity> SetTargetCount(long count)
         {
-            QuantityProvider = new StrictQuantityProvider(count);
+            TargetCountProvider = new StrictTargetCountProvider(count);
             return this;
         }
 
         /// <summary>
-        /// Set database inserting storage.
+        /// Add database storage provider that will receive generated entity instances.
+        /// Multiple storages can be used. Will insert instances to each of them.
         /// </summary>
         /// <param name="persistentStorage"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetPersistentStorage(IPersistentStorage persistentStorage)
+        public virtual EntityDescription<TEntity> AddPersistentStorage(IPersistentStorage persistentStorage)
         {
             if (persistentStorage == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(persistentStorage)}] of {nameof(SetPersistentStorage)} can not be null.");
+                throw new ArgumentNullException(nameof(persistentStorage));
             }
-            
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
+
             PersistentStorages.Add(persistentStorage);
             return this;
         }
 
         /// <summary>
-        /// Set database inserting storage.
+        /// Add database storage provider that will receive generated entity instances.
+        /// Multiple storages can be used. Will insert instances to each of them.
         /// </summary>
         /// <param name="insertFunc"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetPersistentStorage(Func<List<TEntity>, Task> insertFunc)
+        public virtual EntityDescription<TEntity> AddPersistentStorage(Func<List<TEntity>, Task> insertFunc)
         {
             if (insertFunc == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(insertFunc)}] of {nameof(SetPersistentStorage)} can not be null.");
+                throw new ArgumentNullException(nameof(insertFunc));
             }
 
-            PersistentStorages = PersistentStorages ?? new List<IPersistentStorage>();
             PersistentStorages.Add(new DelegatePersistentStorage(insertFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Remove all database storage providers that will receive generated entity instances.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemovePersistentStorages()
+        {
+            PersistentStorages.Clear();
             return this;
         }
 
         /// <summary>
         /// Set entity persistent storage write trigger, that signals a required flush.
         /// </summary>
-        /// <param name="flushTrigger"></param>
+        /// <param name="flushStrategy"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetFlushTrigger(IFlushStrategy flushTrigger)
+        public virtual EntityDescription<TEntity> SetFlushStrategy(IFlushStrategy flushStrategy)
         {
-            if (flushTrigger == null)
+            if (flushStrategy == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(flushTrigger)}] of {nameof(SetFlushTrigger)} can not be null.");
+                throw new ArgumentNullException(nameof(flushStrategy));
             }
 
-            FlushTrigger = flushTrigger;
+            FlushStrategy = flushStrategy;
             return this;
         }
 
         /// <summary>
-        /// Set entity persistent storage write trigger, that signals a required flush, when capacity of generated items is filled.
+        /// Set RequestCapacityProvider that returns number of entity instances that can be inserted with next request to persistent storage.
+        /// </summary>
+        /// <param name="requestCapacityProvider"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(IRequestCapacityProvider requestCapacityProvider)
+        {
+            if (requestCapacityProvider == null)
+            {
+                throw new ArgumentNullException(nameof(requestCapacityProvider));
+            }
+
+            RequestCapacityProvider = requestCapacityProvider;
+            return this;
+        }
+
+        /// <summary>
+        /// Set StrictRequestCapacityProvider that returns static capacity number of entity instances that can be inserted with next request to persistent storage.
         /// </summary>
         /// <param name="capacity"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetLimitedCapacityFlushTrigger(long capacity)
+        public virtual EntityDescription<TEntity> SetRequestCapacityProvider(int capacity)
         {
-            FlushTrigger = new LimitedCapacityFlushStrategy(capacity);
+            RequestCapacityProvider = new StrictRequestCapacityProvider(capacity);
+            return this;
+        }
+
+        /// <summary>
+        /// Set checker of entity instances to be inserted into database. Excludes unwanted instances, like the ones that already exist in database.
+        /// </summary>
+        /// <param name="storageInsertGuard"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetStorageInsertGuard(IStorageInsertGuard storageInsertGuard)
+        {
+            StorageInsertGuard = storageInsertGuard;
             return this;
         }
 
@@ -325,8 +405,23 @@ namespace Sanatana.DataGenerator.Entities
             return this;
         }
 
+        /// <summary>
+        /// Set selector from persistent storage, that will provide existing instances.
+        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// If not specified will use PersistentStorageSelector from DefaultSettings.
+        /// </summary>
+        /// <param name="persistentStorageSelector"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetPersistentStorageSelector(
+            IPersistentStorageSelector persistentStorageSelector)
+        {
+            PersistentStorageSelector = persistentStorageSelector;
+            return this;
+        }
+        #endregion
 
-        //Generator
+
+        #region Generator set, combine and remove
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>
@@ -336,13 +431,45 @@ namespace Sanatana.DataGenerator.Entities
         {
             if (generator == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(generator)}] of {nameof(SetGenerator)} can not be null.");
+                throw new ArgumentNullException(nameof(generator));
             }
 
             Generator = generator;
             return this;
         }
 
+        /// <summary>
+        /// Set CombineGenerator, that uses multiple inner generators in turn to produce entity instances.
+        /// </summary>
+        /// <param name="combineGeneratorSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual EntityDescription<TEntity> SetCombineGenerator(Func<CombineGenerator<TEntity>, CombineGenerator<TEntity>> combineGeneratorSetup)
+        {
+            if(combineGeneratorSetup == null)
+            {
+                throw new ArgumentNullException(nameof(combineGeneratorSetup));
+            }
+
+            var combineGenerator = new CombineGenerator<TEntity>(this);
+            combineGenerator = combineGeneratorSetup(combineGenerator);
+            Generator = combineGenerator ?? throw new ArgumentNullException(nameof(combineGenerator));
+            return this;
+        }
+
+        /// <summary>
+        /// Remove Generator.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemoveGenerator()
+        {
+            Generator = null;
+            return this;
+        }
+        #endregion
+
+
+        #region Generator with single output
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>
@@ -353,17 +480,14 @@ namespace Sanatana.DataGenerator.Entities
         {
             if (generateFunc == null)
             {
-                throw new ArgumentNullException($"Argument [{nameof(generateFunc)}] of {nameof(SetGenerator)} can not be null.");
+                throw new ArgumentNullException(nameof(generateFunc));
             }
-
             Generator = DelegateGenerator<TEntity>.Factory.Create(generateFunc);
             return this;
         }
-
-        
-
+               
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -372,15 +496,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1>(
             Func<GeneratorContext, T1, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -390,15 +514,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2>(
             Func<GeneratorContext, T1, T2, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -409,15 +533,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3>(
             Func<GeneratorContext, T1, T2, T3, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -429,15 +553,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4>(
             Func<GeneratorContext, T1, T2, T3, T4, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -450,15 +574,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -472,15 +596,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -495,15 +619,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -519,15 +643,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -544,15 +668,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -570,15 +694,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -597,15 +721,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -625,15 +749,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -654,15 +778,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -684,15 +808,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -715,15 +839,16 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.Create(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
+        #endregion
 
 
-
+        #region Generator with multi outputs
         /// <summary>
         /// Set generator Func that will create new TEntity instances.
         /// </summary>
@@ -737,7 +862,7 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -746,14 +871,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1>(
             Func<GeneratorContext, T1, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -763,15 +889,16 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2>(
             Func<GeneratorContext, T1, T2, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
-            SetRequiredFromGenerator(generateFunc.GetType());
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -782,15 +909,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3>(
             Func<GeneratorContext, T1, T2, T3, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -802,15 +929,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4>(
             Func<GeneratorContext, T1, T2, T3, T4, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -823,15 +950,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -845,15 +972,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -868,15 +995,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -892,15 +1019,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -917,15 +1044,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -943,15 +1070,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -970,15 +1097,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -998,15 +1125,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1027,15 +1154,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1057,15 +1184,15 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
         /// <summary>
-        /// Set generator Func that will receive Required type instances as arguments and create new TEntity instances.
+        /// Set generator Func that will receive Required type instances as parameters and create new TEntity instances.
         /// Will also register generic arguments as Required types.
         /// </summary>
         /// <typeparam name="T1"></typeparam>
@@ -1088,20 +1215,625 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> SetMultiGenerator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
             Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, List<TEntity>> generateFunc)
         {
-            Generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
-
-            SetRequiredFromGenerator(generateFunc.GetType());
+            var generator = DelegateParameterizedGenerator<TEntity>.Factory.CreateMulti(generateFunc);
+            SetRequiredFromGenerator(generator);
+            Generator = generator;
 
             return this;
         }
 
+        #endregion
 
 
-        //Modifier
+        #region Generator that reuses instances from persistent storage
+        /// <summary>
+        /// Set generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Such existing entities can be used to populate foreign key of other entities.
+        /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
+        /// </summary>
+        /// <param name="generator"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetReuseExistingGenerator<TOrderByKey>(ReuseExistingGenerator<TEntity, TOrderByKey> generator)
+        {
+            Generator = generator ?? throw new ArgumentNullException(nameof(generator));
+
+            PersistentStorages.Add(new VoidStorage());
+
+            return this;
+        }
+
+        /// <summary>
+        /// Set generator that provides existing entity instances from persistent storage instead of creating new.
+        /// Such existing entities can be used to populate foreign key of other entities.
+        /// Will set SetBatchSizeMax to select all instances from persistent storage matchign filter.
+        /// Will use VoidStorage as PersistentStorage to prevent inserting already existing instances to persistent storage.
+        /// Will set CountExistingTargetCountProvider as TargetCountProvider to select all instances.
+        /// </summary>
+        /// <param name="filter">Optional filter expression to select existing entity instances from persistent storage. By default will include all instances.</param>
+        /// <param name="orderBy">Optional OrderBy expression to select existing entity instances with expected order. By default will select unordered instances.</param>
+        /// <param name="isAscOrder"></param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
+        public virtual EntityDescription<TEntity> SetReuseExistingGeneratorForAll<TOrderByKey>(
+            Expression<Func<TEntity, bool>> filter = null,
+            Expression<Func<TEntity, TOrderByKey>> orderBy = null, bool isAscOrder = false)
+        {
+            if (filter == null)
+            {
+                filter = (entity) => true;
+            }
+
+            var generator = new ReuseExistingGenerator<TEntity, TOrderByKey>()
+                .SetBatchSizeMax()
+                .SetFilter(filter);
+            if (orderBy != null)
+            {
+                generator.SetOrderBy(orderBy, isAscOrder);
+            }
+
+            Generator = generator;
+
+            PersistentStorages.Add(new VoidStorage());
+            TargetCountProvider = new CountExistingTargetCountProvider<TEntity>(filter);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Generator that inserts instances only if they dont exist in persistent storage
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey"></typeparam>
+        /// <param name="generator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey>(
+            EnsureExistGenerator<TEntity, TOrderByKey> generator)
+        {
+            generator = generator ?? throw new ArgumentNullException(nameof(generator));
+
+            Generator = generator;
+            FlushStrategy = generator;
+            StorageInsertGuard = generator;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will create new TEntity instances.</param>
+
+        /// <param name="generatorSetupFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey>(
+            Func<GeneratorContext, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateGenerator<TEntity> newInstanceGenerator =
+                DelegateGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1>(
+            Func<GeneratorContext, T1, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2>(
+            Func<GeneratorContext, T1, T2, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3>(
+            Func<GeneratorContext, T1, T2, T3, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4>(
+            Func<GeneratorContext, T1, T2, T3, T4, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <typeparam name="T15"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistGenerator<TOrderByKey, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
+            Func<GeneratorContext, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TEntity> newInstanceGenerateFunc,
+            Func<EnsureExistGenerator<TEntity, TOrderByKey>, EnsureExistGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistGenerator<TEntity, TOrderByKey>(newInstanceGenerator);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistGenerator(ensureExistGenerator);
+        }
+
+        #endregion
+
+
+        #region Generator that inserts instances only if they dont exist in persistent storage in ranges
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey"></typeparam>
+        /// <param name="generator"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual EntityDescription<TEntity> SetEnsureExistRangeGenerator<TOrderByKey>(
+            EnsureExistRangeGenerator<TEntity, TOrderByKey> generator)
+        {
+            generator = generator ?? throw new ArgumentNullException(nameof(generator));
+
+            Generator = generator;
+            FlushStrategy = generator;
+            StorageInsertGuard = generator;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Set generator that provides new instance only if it does not exist in PersistentStorage yet.
+        /// Will set FlushStrategy that counts only new instances returned from Generator, excluding instances existing in persistent storage. It is required to plan number of rows inserted to persistent storage.
+        /// Will set StorageInsertGuard that excludes all existing instances when preparing insert request to persistent storage.
+        /// </summary>
+        /// <typeparam name="TOrderByKey">property type that will be used to order instances in persistent storage. Required to predictably repeat same order of instances during generation.</typeparam>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="newInstanceGenerateFunc">Generator Func that will receive Required type instances as parameters and create new TEntity instance. Will also register generic arguments as Required types.</param>
+        /// <param name="idSelector"></param>
+        /// <param name="generatorSetupFunc">Configure EnsureExistGenerator expression</param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> SetEnsureExistRangeGenerator<TOrderByKey, T1>(
+            Func<GeneratorContext, T1, TEntity> newInstanceGenerateFunc, Func<TEntity, long> idSelector,
+            Func<EnsureExistRangeGenerator<TEntity, TOrderByKey>, EnsureExistRangeGenerator<TEntity, TOrderByKey>> generatorSetupFunc)
+        {
+            DelegateParameterizedGenerator<TEntity> newInstanceGenerator =
+                DelegateParameterizedGenerator<TEntity>.Factory.Create(newInstanceGenerateFunc);
+            SetRequiredFromGenerator(newInstanceGenerator);
+
+            var ensureExistGenerator = new EnsureExistRangeGenerator<TEntity, TOrderByKey>(newInstanceGenerator, idSelector);
+            ensureExistGenerator = generatorSetupFunc(ensureExistGenerator);
+            return SetEnsureExistRangeGenerator(ensureExistGenerator);
+        }
+
+        #endregion
+
+
+        #region Modifier add, combine and remove
         /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
-        /// <param name="modifyFunc"></param>
+        /// <param name="modifier"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier(IModifier modifier)
         {
@@ -1110,12 +1842,45 @@ namespace Sanatana.DataGenerator.Entities
         }
 
         /// <summary>
+        /// Set CombineModifier, that uses multiple IModifier sets in turn to modify entity instances.
+        /// </summary>
+        /// <param name="combineModifierSetup"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual EntityDescription<TEntity> SetCombineModifier(Func<CombineModifier<TEntity>, CombineModifier<TEntity>> combineModifierSetup)
+        {
+            if (combineModifierSetup == null)
+            {
+                throw new ArgumentNullException(nameof(combineModifierSetup));
+            }
+
+            var combineModifier = new CombineModifier<TEntity>(this);
+            combineModifier = combineModifierSetup(combineModifier);
+            combineModifier = combineModifier ?? throw new ArgumentNullException(nameof(combineModifier));
+            Modifiers.Add(combineModifier);
+            return this;
+        }
+
+        /// <summary>
+        /// Remove all Modifiers.
+        /// </summary>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> RemoveModifiers()
+        {
+            Modifiers.Clear();
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with single input, void output
+        /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier(
-            Func<GeneratorContext, List<TEntity>, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity> modifyFunc)
         {
             Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
             return this;
@@ -1124,26 +1889,15 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
         /// </summary>
-        /// <param name="modifyFunc"></param>
-        /// <returns></returns>
-        public virtual EntityDescription<TEntity> AddMultiModifier(
-            Func<GeneratorContext, List<TEntity>, List<TEntity>> modifyFunc)
-        {
-            Modifiers.Add(DelegateModifier<TEntity>.Factory.CreateMulti(modifyFunc));
-            return this;
-        }
-
-
-        /// <summary>
-        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
-        /// </summary>
         /// <typeparam name="T1"></typeparam>
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1>(
-            Func<GeneratorContext, List<TEntity>, T1, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1156,9 +1910,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1172,9 +1928,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1189,9 +1947,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1207,9 +1967,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1226,9 +1988,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1246,9 +2010,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1267,9 +2033,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1289,9 +2057,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1312,9 +2082,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1336,9 +2108,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1361,9 +2135,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1387,9 +2163,11 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
-            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> modifyFunc)
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1414,10 +2192,1347 @@ namespace Sanatana.DataGenerator.Entities
         /// <param name="modifyFunc"></param>
         /// <returns></returns>
         public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Action<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with single input, single output
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier(
+            Func<GeneratorContext, TEntity, TEntity> modifyFunc)
+        {
+            Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1>(
+            Func<GeneratorContext, TEntity, T1, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2>(
+            Func<GeneratorContext, TEntity, T1, T2, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with single input, multiple outputs
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier(
+            Func<GeneratorContext, TEntity, List<TEntity>> modifyFunc)
+        {
+            Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1>(
+            Func<GeneratorContext, TEntity, T1, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2>(
+            Func<GeneratorContext, TEntity, T1, T2, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Func<GeneratorContext, TEntity, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with multi inputs, void output
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier(
+            Action<GeneratorContext, List<TEntity>> modifyFunc)
+        {
+            Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1>(
+            Action<GeneratorContext, List<TEntity>, T1> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2>(
+            Action<GeneratorContext, List<TEntity>, T1, T2> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
+            Action<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with multi inputs, single output
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier(
+            Func<GeneratorContext, List<TEntity>, TEntity> modifyFunc)
+        {
+            Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1>(
+            Func<GeneratorContext, List<TEntity>, T1, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
+            Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TEntity> modifyFunc)
+        {
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <typeparam name="T1"></typeparam>
+        /// <typeparam name="T2"></typeparam>
+        /// <typeparam name="T3"></typeparam>
+        /// <typeparam name="T4"></typeparam>
+        /// <typeparam name="T5"></typeparam>
+        /// <typeparam name="T6"></typeparam>
+        /// <typeparam name="T7"></typeparam>
+        /// <typeparam name="T8"></typeparam>
+        /// <typeparam name="T9"></typeparam>
+        /// <typeparam name="T10"></typeparam>
+        /// <typeparam name="T11"></typeparam>
+        /// <typeparam name="T12"></typeparam>
+        /// <typeparam name="T13"></typeparam>
+        /// <typeparam name="T14"></typeparam>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddSingleModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TEntity> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.Create(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
+            return this;
+        }
+        #endregion
+
+
+        #region Modifier with multi inputs, multi outputs
+        /// <summary>
+        /// Add modifier that is triggered after generation. Can be used to apply additional customization to existing entity instance.
+        /// </summary>
+        /// <param name="modifyFunc"></param>
+        /// <returns></returns>
+        public virtual EntityDescription<TEntity> AddMultiModifier(
+            Func<GeneratorContext, List<TEntity>, List<TEntity>> modifyFunc)
+        {
+            Modifiers.Add(DelegateModifier<TEntity>.Factory.Create(modifyFunc));
             return this;
         }
 
@@ -1430,7 +3545,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1>(
             Func<GeneratorContext, List<TEntity>, T1, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1445,7 +3562,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2>(
             Func<GeneratorContext, List<TEntity>, T1, T2, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1461,7 +3580,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1478,7 +3599,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1496,7 +3619,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1515,7 +3640,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1535,7 +3662,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1556,7 +3685,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1578,7 +3709,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1601,7 +3734,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1625,7 +3760,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1650,7 +3787,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1676,7 +3815,9 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
@@ -1703,10 +3844,14 @@ namespace Sanatana.DataGenerator.Entities
         public virtual EntityDescription<TEntity> AddMultiModifier<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
             Func<GeneratorContext, List<TEntity>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, List<TEntity>> modifyFunc)
         {
-            Modifiers.Add(DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc));
+            var modifier = DelegateParameterizedModifier<TEntity>.Factory.CreateMulti(modifyFunc);
+            Modifiers.Add(modifier);
+            SetRequiredFromModifier(modifier);
 
             return this;
         }
+
+        #endregion
 
     }
 }

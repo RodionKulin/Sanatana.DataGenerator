@@ -4,10 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System.Diagnostics;
 using Sanatana.DataGenerator.SpreadStrategies;
 using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 {
@@ -18,42 +20,42 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         [DataRow(50, 10, 5)]
         [DataRow(1, 1, 1)]
         [DataRow(2, 1, 2)]
-        public void GetTotalCount_ReturnsExpectedProductsLength(
+        public void GetTargetCount_WhenCalledWithVariousInputs_ThenReturnsExpectedProductsLength(
             int expectedCombinationsCount, int categoriesCount, int postsCount)
         {
-            //Prepare
+            //Arrange
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(new[]
             {
                 (typeof(Category), categoriesCount),
                 (typeof(Post), postsCount)
             });
 
-            //Invoke
-            long actual = target.GetTotalCount();
+            //Act
+            long actual = target.GetTargetCount(null, null);
 
             //Assert
             Assert.AreEqual(expectedCombinationsCount, actual);
         }
 
         [TestMethod]
-        public void GetTotalCount_WhenNoRequired_ReturnsExpectedProductsLength()
+        public void GetTargetCount_WhenNoRequiredEntities_ThenReturnsExpectedProductsLength()
         {
-            //Prepare
+            //Arrange
             var parentCounts = new (Type, int)[0];
             Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            //Invoke
-            long actual = target.GetTotalCount();
+            //Act
+            long actual = target.GetTargetCount(null, null);
 
             //Assert
             Assert.AreEqual(0, actual);
         }
 
         [TestMethod]
-        public void GetParentIndex_WhenTargetCountIncludeAllCombinations_ReturnDistinct()
+        public void GetParentIndex_WhenTargetCountIncludeAllCombinations_ThenReturnDistinct()
         {
-            //Prepare
+            //Arrange
             (Type, int)[] parentCounts = new[]
             {
                 (typeof(Category), 10),
@@ -62,8 +64,8 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            //Invoke
-            long expectedCombinationsCount = target.GetTotalCount();
+            //Act
+            long expectedCombinationsCount = target.GetTargetCount(null, null);
             List<long[]> resultingCombinations = InvokeGetParentIndex(target,
                 parentEntities.Keys.ToList(), expectedCombinationsCount);
 
@@ -78,9 +80,9 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetParentIndex_WhenTargetCountExceedsAllCombinations_ResetAndRepeat()
+        public void GetParentIndex_WhenTargetCountExceedsAllCombinations_ThenResetAndRepeat()
         {
-            //Prepare
+            //Arrange
             (Type, int)[] parentCounts = new[]
             {
                 (typeof(Category), 10),
@@ -89,11 +91,11 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             Dictionary<Type, EntityContext> parentEntities = GetEntities(parentCounts);
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
 
-            long expectedDistinctCount = target.GetTotalCount();
+            long expectedDistinctCount = target.GetTargetCount(null, null);
             int numberOfRepeats = 2;
             long expectedCombinationsCount = expectedDistinctCount * numberOfRepeats;
 
-            //Invoke
+            //Act
             List<long[]> resultingCombinations = InvokeGetParentIndex(target,
                 parentEntities.Keys.ToList(), expectedCombinationsCount);
 
@@ -115,9 +117,9 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
         }
 
         [TestMethod]
-        public void GetNextIterationParentsCount_Increment_ResetAndRepeat()
+        public void GetNextIterationParentsCount_WhenReachesEndOfSequence_ThenResetAndRepeats()
         {
-            //Prepare
+            //Arrange
             (Type, int)[] parentCounts = new[]
            {
                 (typeof(Category), 10),
@@ -127,8 +129,8 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
             CartesianProductSpreadStrategy target = SetupTarget<Comment>(parentCounts);
             int nextIterationIncrement = 5;
 
-            //Invoke
-            long expectedCombinationsCount = target.GetTotalCount();
+            //Act
+            long expectedCombinationsCount = target.GetTargetCount(null, null);
             List<long[]> actualParentsCount = InvokeGetNextIterationParentsCount(target,
                 parentEntities.Keys.ToList(), expectedCombinationsCount, nextIterationIncrement);
             List<long[]> actualParentIndex = InvokeGetParentIndex(target,
@@ -165,7 +167,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 
 
 
-        //Prepare Helpers
+        //Arrange Helpers
         private Dictionary<Type, EntityContext> GetEntities(
             IEnumerable<(Type, int)> targetCounts)
         {
@@ -210,7 +212,7 @@ namespace Sanatana.DataGeneratorSpecs.SpreadStrategiesSpecs
 
 
 
-        //Invoke helpers
+        //Act helpers
         private List<long[]> InvokeGetParentIndex(CartesianProductSpreadStrategy spreadStrategy, 
             List<Type> parents, long combosCount)
         {

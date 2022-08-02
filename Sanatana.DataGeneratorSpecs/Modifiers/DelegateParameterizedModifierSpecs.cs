@@ -1,10 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Sanatana.DataGenerator.Generators;
+using Sanatana.DataGenerator;
 using Sanatana.DataGenerator.Modifiers;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using FluentAssertions;
 
 namespace Sanatana.DataGeneratorSpecs.Modifiers
 {
@@ -12,10 +12,10 @@ namespace Sanatana.DataGeneratorSpecs.Modifiers
     public class DelegateParameterizedModifierSpecs
     {
         [TestMethod]
-        public void Modify_WhenParametersOutOfOrder_ReturnsEntity()
+        public void Modify_WhenParametersOutOfOrder_ThenReturnsEntity()
         {
-            //Prepare
-            var t = DelegateParameterizedModifier<Comment>.Factory.Create(
+            //Arrange
+            var modifier = DelegateParameterizedModifier<Comment>.Factory.Create(
                 (GeneratorContext ctx, List<Comment> comments, Category cat, Post pst) =>
                 {
                     return new Comment
@@ -24,8 +24,6 @@ namespace Sanatana.DataGeneratorSpecs.Modifiers
                         CommentText = "text"
                     };
                 });
-
-            //Invoke
             var generatorContext = new GeneratorContext()
             {
                 RequiredEntities = new Dictionary<Type, object>
@@ -34,17 +32,50 @@ namespace Sanatana.DataGeneratorSpecs.Modifiers
                     { typeof(Category), new Category() },
                 }
             };
-            List<Comment> inputComments = new List<Comment> {
+            var inputComments = new List<Comment> {
                 new Comment()
             };
-            List<Comment> comment = (List<Comment>)t.Modify(generatorContext, inputComments);
-            List<Comment> comment2 = (List<Comment>)t.Modify(generatorContext, inputComments);
+
+            //Act
+            List<Comment> comments1 = (List<Comment>)modifier.Modify(generatorContext, inputComments);
+            List<Comment> comments2 = (List<Comment>)modifier.Modify(generatorContext, inputComments);
 
             //Assert 
-            Assert.IsNotNull(comment);
-            Assert.AreEqual(1, comment.Count);
-            Assert.IsNotNull(comment2);
-            Assert.AreEqual(1, comment2.Count);
+            comments1.Should().NotBeNull()
+                .And.HaveCount(1);
+            comments2.Should().NotBeNull()
+                .And.HaveCount(1);
+        }
+
+        [TestMethod]
+        public void GetRequiredEntitiesFuncArguments_WhenCalledForReturnVoidModifyFunction_ThenReturnsExpectedTypesCount()
+        {
+            //Arrange
+            var modifier = DelegateParameterizedModifier<Comment>.Factory.Create(
+                (GeneratorContext ctx, List<Comment> comments, Category cat) => {});
+
+            //Act
+            List<Type> requiredTypes = modifier.GetRequiredEntitiesFuncArguments();
+
+            //Assert 
+            requiredTypes.Should().HaveCount(1)
+                .And.Contain(typeof(Category));
+        }
+
+
+        [TestMethod]
+        public void GetRequiredEntitiesFuncArguments_WhenCalledForReturnMultiModifyFunction_ThenReturnsExpectedTypesCount()
+        {
+            //Arrange
+            var modifier = DelegateParameterizedModifier<Comment>.Factory.CreateMulti(
+                (GeneratorContext ctx, List<Comment> comments, Category cat) => comments);
+
+            //Act
+            List<Type> requiredTypes = modifier.GetRequiredEntitiesFuncArguments();
+
+            //Assert 
+            requiredTypes.Should().HaveCount(1)
+                .And.Contain(typeof(Category));
         }
     }
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.136
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32228.430
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator", "Sanatana.DataGenerator\Sanatana.DataGenerator.csproj", "{3EC44DF7-B25D-40C6-A506-10B02ECA3656}"
 EndProject
@@ -12,8 +12,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Specs", "Specs", "{6F236CAA-C48A-454C-9469-0F147BFFBF58}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demo", "Demo", "{DE82CA51-2354-4C75-B86A-863BBA779C68}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sanatana.DataGenerator.Demo", "Sanatana.DataGenerator.Demo\Sanatana.DataGenerator.Demo.csproj", "{6F7B5685-D63D-4BCA-BD17-7043CDD03797}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.Csv", "Sanatana.DataGenerator.Csv\Sanatana.DataGenerator.Csv.csproj", "{2EFE9722-5208-41D1-97EA-039365C2DF48}"
 EndProject
@@ -36,6 +34,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.Auto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.EntityFrameworkCoreSpecs", "Sanatana.DataGenerator.EntityFrameworkCoreSpecs\Sanatana.DataGenerator.EntityFrameworkCoreSpecs.csproj", "{C7A4D05F-0D38-4692-B67E-F7C09002F602}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sanatana.DataGenerator.Demo", "Sanatana.DataGenerator.Demo\Sanatana.DataGenerator.Demo.csproj", "{6F7B5685-D63D-4BCA-BD17-7043CDD03797}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,10 +54,6 @@ Global
 		{FCF08514-D84A-43FD-8FA2-B55CFB25E13C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FCF08514-D84A-43FD-8FA2-B55CFB25E13C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FCF08514-D84A-43FD-8FA2-B55CFB25E13C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2EFE9722-5208-41D1-97EA-039365C2DF48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2EFE9722-5208-41D1-97EA-039365C2DF48}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2EFE9722-5208-41D1-97EA-039365C2DF48}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -82,6 +78,10 @@ Global
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -89,12 +89,12 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{15F8A083-94FD-487B-81AB-3E6DE83617C8} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
 		{FCF08514-D84A-43FD-8FA2-B55CFB25E13C} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797} = {DE82CA51-2354-4C75-B86A-863BBA779C68}
 		{2EFE9722-5208-41D1-97EA-039365C2DF48} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
 		{92130B55-C84D-4F7B-9859-A52ABAAAF4E4} = {6F236CAA-C48A-454C-9469-0F147BFFBF58}
 		{5C70ED7A-D649-4EB7-A794-B2F2C0F1F9DF} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
 		{16ECADAC-0F03-41BE-AFDA-FFAA258233D9} = {6F236CAA-C48A-454C-9469-0F147BFFBF58}
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602} = {6F236CAA-C48A-454C-9469-0F147BFFBF58}
+		{6F7B5685-D63D-4BCA-BD17-7043CDD03797} = {DE82CA51-2354-4C75-B86A-863BBA779C68}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A63449A2-80E3-4FE8-93EB-16C4819674E6}

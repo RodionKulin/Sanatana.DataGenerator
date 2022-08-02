@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.Commands;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Contracts
 {

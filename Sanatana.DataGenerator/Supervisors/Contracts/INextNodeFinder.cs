@@ -1,4 +1,5 @@
 ﻿using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 using System.Collections;
 
 namespace Sanatana.DataGenerator.Supervisors.Contracts

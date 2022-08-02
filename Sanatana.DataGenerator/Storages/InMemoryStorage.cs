@@ -1,48 +1,56 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
+using Sanatana.DataGenerator.Internals.Collections;
+using System.Collections;
 
 namespace Sanatana.DataGenerator.Storages
 {
     public class InMemoryStorage : IPersistentStorage
     {
         //fields
-        protected Dictionary<Type, ArrayList> _entities;
-
+        protected ConcurrentDictionary<Type, ILockedList> _storages;
+        
 
         //init
         public InMemoryStorage()
         {
-            _entities = new Dictionary<Type, ArrayList>();
+            _storages = new ConcurrentDictionary<Type, ILockedList>();
         }
-        
+
+        public virtual void Setup()
+        {
+            _storages.Clear();
+        }
+
 
         //methods
-        public virtual Task Insert<TEntity>(List<TEntity> entities)
+        public virtual Task Insert<TEntity>(List<TEntity> instances)
             where TEntity : class
         {
             Type entityType = typeof(TEntity);
-            if (!_entities.ContainsKey(entityType))
-            {
-                _entities.Add(entityType, new ArrayList());
-            }
+            LockedList<TEntity> storage = _storages.GetOrAdd(entityType, (t) => new LockedList<TEntity>())
+                as LockedList<TEntity>;
 
-            _entities[entityType].AddRange(entities);
-            return Task.FromResult(0);
+            storage.AddRange(instances);
+          
+            return Task.CompletedTask;
         }
 
-        public virtual TEntity[] GetList<TEntity>()
+        public virtual List<TEntity> Select<TEntity>()
         {
             Type entityType = typeof(TEntity);
-            ArrayList itemsList = _entities[entityType];
-            TEntity[] array = itemsList.ToArray(typeof(TEntity)) as TEntity[];
-            return array;
+            LockedList<TEntity> storage = _storages[entityType] as LockedList<TEntity>;
+            return storage.SelectGeneric();
         }
 
-        public virtual void Dispose()
+        public virtual IList Select(Type entityType)
         {
+            ILockedList storage = _storages[entityType];
+            return storage.SelectNonGeneric();
         }
+
     }
 }

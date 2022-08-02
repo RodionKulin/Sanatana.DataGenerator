@@ -45,15 +45,21 @@ namespace Sanatana.DataGenerator.Csv
             return _csvWriter;
         }
 
+        public virtual void Setup()
+        {
+            if (File.Exists(_csvFilePath))
+            {
+                File.Delete(_csvFilePath);
+            }
+        }
+
         public virtual void Dispose()
         {
-            if(_csvWriter == null)
+            if(_csvWriter != null)
             {
-                return;
+                _csvWriter.Dispose();
+                _csvWriter = null;
             }
-
-            _csvWriter.Dispose();
-            _csvWriter = null;
         }
     }
 }

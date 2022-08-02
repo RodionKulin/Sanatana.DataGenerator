@@ -6,6 +6,6 @@ namespace Sanatana.DataGenerator.Generators
 {
     public interface IDelegateParameterizedGenerator : IGenerator
     {
-        List<Type> GetRequiredEntitiesFuncParameters();
+        List<Type> GetRequiredEntitiesFuncArguments();
     }
 }

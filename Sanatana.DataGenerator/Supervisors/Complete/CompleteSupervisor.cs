@@ -4,8 +4,9 @@ using Sanatana.DataGenerator.Supervisors.Contracts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Sanatana.DataGenerator.Commands;
+using Sanatana.DataGenerator.Internals.Commands;
 using System.Collections.Concurrent;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {
@@ -16,15 +17,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
     {
         //fields
         /// <summary>
-        /// Default services for entities.
-        /// </summary>
-        protected GeneratorSetup _generatorSetup;
-        /// <summary>
-        /// All entities with their current generated count.
-        /// </summary>
-        protected Dictionary<Type, EntityContext> _entityContexts;
-        /// <summary>
-        /// Next actions to execute between generate entity actions
+        /// Next commands to execute between generate entity commands
         /// </summary>
         protected ConcurrentQueue<ICommand> _commandsQueue;
         protected IFlushCandidatesRegistry _flushCandidatesRegistry;
@@ -37,36 +30,41 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
 
         //init
-        public virtual void Setup(GeneratorSetup generatorSetup, 
-            Dictionary<Type, EntityContext> entityContexts)
+        public virtual void Setup(GeneratorServices generatorServices)
         {
             _commandsQueue = new ConcurrentQueue<ICommand>();
 
-            _entityContexts = entityContexts;
-            _generatorSetup = generatorSetup;
-
-            ProgressState = new CompleteProgressState(entityContexts);
+            ProgressState = new CompleteProgressState(generatorServices.EntityContexts);
             _flushCandidatesRegistry = new CompleteFlushCandidatesRegistry(
-                generatorSetup, entityContexts, ProgressState);
+                generatorServices, ProgressState);
             _nextNodeFinder = new CompleteNextNodeFinder(
-                generatorSetup, _flushCandidatesRegistry, ProgressState);
+                generatorServices, _flushCandidatesRegistry, ProgressState);
             _requiredQueueBuilder = new CompleteRequiredQueueBuilder(
-                generatorSetup, entityContexts, _nextNodeFinder);
+                generatorServices, _nextNodeFinder);
         }
 
 
         //methods
-        public virtual ICommand GetNextCommand()
+        public virtual IEnumerable<ICommand> IterateCommands()
         {
-            ICommand nextCommand = null;
-            _commandsQueue.TryDequeue(out nextCommand);
-            if (nextCommand != null)
+            while (true)
             {
-                return nextCommand;
-            }
+                _commandsQueue.TryDequeue(out ICommand nextCommand);
+                if (nextCommand != null)
+                {
+                    yield return nextCommand;
+                    continue;
+                }
 
-            nextCommand = _requiredQueueBuilder.GetNextCommand();
-            return nextCommand;
+                nextCommand = _requiredQueueBuilder.GetNextCommand();
+                if (nextCommand != null)
+                {
+                    yield return nextCommand;
+                    continue;
+                }
+
+                yield break;
+            }
         }
 
         public virtual void EnqueueCommand(ICommand command)
@@ -83,7 +81,8 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
 
             //check if flush to persistent storage required
             //and enqueue flush actions
-            bool isFlushRequired = _flushCandidatesRegistry.CheckIsFlushRequired(entityContext);
+            _flushCandidatesRegistry.UpdateRequestCapacity(entityContext);
+            bool isFlushRequired = _flushCandidatesRegistry.UpdateFlushRequired(entityContext);
             if (isFlushRequired)
             {
                 List<ICommand> flushCommands = _flushCandidatesRegistry.GetNextFlushCommands(entityContext);
@@ -95,6 +94,11 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
             _requiredQueueBuilder.UpdateCounters(entityContext, generatedEntities, isFlushRequired);
         }
 
-      
+
+        //Clone
+        public virtual ISupervisor Clone()
+        {
+            return new CompleteSupervisor();
+        }
     }
 }

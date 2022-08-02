@@ -4,10 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGenerator.TargetCountProviders;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
-    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy
+    public abstract class CombinatoricsSpreadStrategy : ISpreadStrategy, ITargetCountProvider
     {
         //fields
         protected Dictionary<Type, EntityContext> _parentEntities;
@@ -15,6 +18,7 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         protected IEnumerator<long[]> _combinationsEnumerator;
         protected long _currentCombinationIndex = -1;
         protected Dictionary<long, long[]> _combinationsBuffer;
+        protected bool _isSetupCompleted = false;
 
 
         //init
@@ -25,6 +29,10 @@ namespace Sanatana.DataGenerator.SpreadStrategies
 
         public virtual void Setup(EntityContext childEntity, Dictionary<Type, EntityContext> allEntities)
         {
+            //1. This method prepares combination placements for all parents of child entity.
+            //2. Setup can be called multiple times for each parent entity.
+            //3. Should be called before GetTargetCount to support CombinatoricsSpreadStrategy that returns ITargetCountProvider.GetTargetCount based on parent entities TargetCount.
+
             _parentEntities = childEntity.Description.Required
                 .Select(x => allEntities[x.Type])
                 .ToDictionary(x => x.Type, x => x);
@@ -32,6 +40,8 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             _parentsCombinationPlacements = _parentEntities.Keys
                 .Select((x, i) => new { Type = x, Placement = i })
                 .ToDictionary(keyValue => keyValue.Type, keyValue => keyValue.Placement);
+
+            _isSetupCompleted = true;
         }
 
 
@@ -70,15 +80,15 @@ namespace Sanatana.DataGenerator.SpreadStrategies
             return parentEntityCount;
         }
 
-        public virtual bool CanGenerateFromParentNextReleaseCount(
-            EntityContext parentEntity, EntityContext childEntity)
+        public virtual bool CanGenerateFromParentRange(EntityContext parentEntity, 
+            FlushRange parentRange, EntityContext childEntity)
         {
             //Always accumulate parent entities in memory and never release to persistent storage
             //until child item generates all instances.
-            //Parents are required to build combinations.
+            //1.Parents are used multiple times starting from 1 to end.
+            //2.List of combinations can reset and start from beginnning if TargetCount is larger then total number of possible combinations.
             return childEntity.EntityProgress.CurrentCount < childEntity.EntityProgress.TargetCount;
         }
-
 
 
         //Combinatorics methods
@@ -172,6 +182,6 @@ namespace Sanatana.DataGenerator.SpreadStrategies
         //Abstract methods to implement combinatorics
         protected abstract IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths);
 
-        public abstract long GetTotalCount();
+        public abstract long GetTargetCount(IEntityDescription description, DefaultSettings defaults);
     }
 }

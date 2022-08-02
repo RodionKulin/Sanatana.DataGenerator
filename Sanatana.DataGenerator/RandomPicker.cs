@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator
 {
+    /// <summary>
+    /// Random pick methods.
+    /// </summary>
     public class RandomPicker
     {
         //fields

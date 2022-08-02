@@ -46,6 +46,10 @@ namespace Sanatana.DataGenerator.MongoDb
             _mongoDatabase = mongoDatabase;
             _collectionName = collectionName;
         }
+                
+        public virtual void Setup()
+        {
+        }
 
 
         //methods

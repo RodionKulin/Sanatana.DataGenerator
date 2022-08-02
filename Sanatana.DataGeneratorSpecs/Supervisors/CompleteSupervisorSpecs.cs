@@ -1,15 +1,17 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sanatana.DataGenerator.Entities;
 using Sanatana.DataGenerator.Internals;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using Sanatana.DataGenerator.Supervisors.Contracts;
 using Sanatana.DataGenerator.Supervisors.Complete;
-using Sanatana.DataGenerator.Commands;
 using Sanatana.DataGenerator;
+using Sanatana.DataGenerator.Internals.EntitySettings;
+using Sanatana.DataGeneratorSpecs.TestTools.DataProviders;
+using Sanatana.DataGenerator.Internals.Commands;
 
 namespace Sanatana.DataGeneratorSpecs.Supervisors
 {
@@ -17,26 +19,23 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
     public class CompleteSupervisorSpecs
     {
         [TestMethod]
-        public void GetNext_WhenPyramidHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenPyramidHierarcy_ThenReturnsExpectedCount()
         {
-            //Prepare
-            var category = new EntityDescription<Category>()
-                .SetTargetCount(1);
-            var post = new EntityDescription<Post>()
-                .SetTargetCount(2)
-                .SetRequired(typeof(Category));
-            var comment = new EntityDescription<Comment>()
-                .SetTargetCount(3)
-                .SetRequired(typeof(Post));
+            //Arrange
             var descriptions = new List<IEntityDescription>
             {
-                category,
-                post,
-                comment
+                new EntityDescription<Category>()
+                    .SetTargetCount(1),
+                new EntityDescription<Post>()
+                    .SetTargetCount(2)
+                    .SetRequired(typeof(Category)),
+                new EntityDescription<Comment>()
+                    .SetTargetCount(3)
+                    .SetRequired(typeof(Post))
             };
-            CompleteSupervisor target = SetupCompleteOrderProvider(descriptions);
+            CompleteSupervisor target = CompleteSupervisorProvider.GetCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -45,26 +44,23 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenMiddleBulgeHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenMiddleBulgeHierarcy_ThenReturnsExpectedCount()
         {
-            //Prepare
-            var category = new EntityDescription<Category>()
-                .SetTargetCount(1);
-            var post = new EntityDescription<Post>()
-                .SetTargetCount(4)
-                .SetRequired(typeof(Category));
-            var comment = new EntityDescription<Comment>()
-                .SetTargetCount(2)
-                .SetRequired(typeof(Post));
+            //Arrange
             var descriptions = new List<IEntityDescription>
             {
-                category,
-                post,
-                comment
+                new EntityDescription<Category>()
+                    .SetTargetCount(1),
+                new EntityDescription<Post>()
+                    .SetTargetCount(4)
+                    .SetRequired(typeof(Category)),
+                new EntityDescription<Comment>()
+                    .SetTargetCount(2)
+                    .SetRequired(typeof(Post))
             };
-            CompleteSupervisor target = SetupCompleteOrderProvider(descriptions);
+            CompleteSupervisor target = CompleteSupervisorProvider.GetCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -73,30 +69,26 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
         }
 
         [TestMethod]
-        public void GetNext_WhenBranchingHierarcy_ReturnsExpectedOrder()
+        public void GetNext_WhenBranchingHierarcy_ThenReturnsExpectedCount()
         {
-            //Prepare
-            var category = new EntityDescription<Category>()
-                .SetTargetCount(1);
-            var post = new EntityDescription<Post>()
-                .SetTargetCount(3)
-                .SetRequired(typeof(Category));
-            var comment = new EntityDescription<Comment>()
-                .SetTargetCount(2)
-                .SetRequired(typeof(Post));
-            var attachment = new EntityDescription<Attachment>()
-                .SetTargetCount(2)
-                .SetRequired(typeof(Post));
+            //Arrange
             var descriptions = new List<IEntityDescription>
             {
-                category,
-                post,
-                comment,
-                attachment
+                new EntityDescription<Category>()
+                    .SetTargetCount(1),
+                new EntityDescription<Post>()
+                    .SetTargetCount(3)
+                    .SetRequired(typeof(Category)),
+                new EntityDescription<Comment>()
+                    .SetTargetCount(2)
+                    .SetRequired(typeof(Post)),
+                new EntityDescription<Attachment>()
+                    .SetTargetCount(2)
+                    .SetRequired(typeof(Post))
             };
-            CompleteSupervisor target = SetupCompleteOrderProvider(descriptions);
+            CompleteSupervisor target = CompleteSupervisorProvider.GetCompleteSupervisor(descriptions);
 
-            //Invoke
+            //Act
             List<ICommand> actualCommands = GetNextList(target);
 
             //Assert
@@ -106,21 +98,7 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
 
 
 
-        //Setup helpers
-        private CompleteSupervisor SetupCompleteOrderProvider(
-            List<IEntityDescription> descriptions)
-        {
-            var generatorSetup = new GeneratorSetup();
-            Dictionary<Type, IEntityDescription> dictDescriptions = 
-                descriptions.ToDictionary(x => x.Type, x => x);
-            Dictionary<Type, EntityContext> contexts =
-                generatorSetup.SetupEntityContexts(dictDescriptions);
-
-            var target = new CompleteSupervisor();
-            target.Setup(generatorSetup, contexts);
-            return target;
-        }
-
+        //Act helpers
         private List<ICommand> GetNextList(ISupervisor plan)
         {
             Func<List<object>> generator = null;
@@ -130,20 +108,14 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             }
 
             var list = new List<ICommand>();
-            while (true)
+            foreach (ICommand next in plan.IterateCommands())
             {
-                ICommand next = plan.GetNextCommand();
-                if (next.GetType() == typeof(FinishCommand))
-                {
-                    break;
-                }
-
-                if(next.GetType() == typeof(GenerateEntitiesCommand))
+                if(next.GetType() == typeof(GenerateCommand))
                 {
                     list.Add(next);
 
                     IList generatedList = generator();
-                    plan.HandleGenerateCompleted(((GenerateEntitiesCommand)next).EntityContext, generatedList);
+                    plan.HandleGenerateCompleted(((GenerateCommand)next).EntityContext, generatedList);
                 }
 
                 int limit = 1000;
@@ -158,21 +130,20 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
 
 
         //Assert helpers
-        private void AssertPlanCount(List<IEntityDescription> descriptions,
-            List<ICommand> actualCommands)
+        private void AssertPlanCount(List<IEntityDescription> descriptions, List<ICommand> actualCommands)
         {
             Dictionary<Type, long> expectedCalls = descriptions
                 .Select(x => new
                 {
                     Type = x.Type,
-                    Total = x.QuantityProvider.GetTargetQuantity()
+                    Total = x.TargetCountProvider.GetTargetCount(null, null)
                 })
                 .OrderBy(x => x.Type.FullName)
                 .ToDictionary(x => x.Type, x => x.Total);
 
             Dictionary<Type, long> actualCalls = actualCommands
-                .Where(x => x.GetType() == typeof(GenerateEntitiesCommand))
-                .Select(x => ((GenerateEntitiesCommand)x).EntityContext.Type)
+                .Where(x => x.GetType() == typeof(GenerateCommand))
+                .Select(x => ((GenerateCommand)x).EntityContext.Type)
                 .GroupBy(x => x)
                 .Select(x => new
                 {
@@ -193,8 +164,8 @@ namespace Sanatana.DataGeneratorSpecs.Supervisors
             List<ICommand> actualCommands)
         {
             List<IEntityDescription> actualEntities = actualCommands
-                .Where(x => x.GetType() == typeof(GenerateEntitiesCommand))
-                .Select(x => ((GenerateEntitiesCommand)x).EntityContext.Description)
+                .Where(x => x.GetType() == typeof(GenerateCommand))
+                .Select(x => ((GenerateCommand)x).EntityContext.Description)
                 .ToList();
 
             bool actualListEqualsExpected = expectedList.SequenceEqual(actualEntities);

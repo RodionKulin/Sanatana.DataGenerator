@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Sanatana.DataGenerator.EntityFramework</RootNamespace>
     <AssemblyName>Sanatana.DataGenerator.EntityFramework</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -55,7 +55,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EntityFrameworkFlushTrigger.cs" />
+    <Compile Include="EntityDescriptionExtensions.cs" />
+    <Compile Include="EntityFrameworkRequestCapacityProvider.cs" />
     <Compile Include="EntityFrameworkPersistentStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

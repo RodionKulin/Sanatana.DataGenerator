@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 
 namespace Sanatana.DataGenerator.Storages
 {
+    /// <summary>
+    /// Insert generated entity instances with lambda expression
+    /// </summary>
     public class DelegatePersistentStorage : IPersistentStorage
     {
         //properties
@@ -22,6 +25,10 @@ namespace Sanatana.DataGenerator.Storages
         {
             var insertFunc = (Func<List<TEntity>, Task>)InsertFunc;
             return insertFunc.Invoke(entities);
+        }
+
+        public virtual void Setup()
+        {
         }
 
         public virtual void Dispose()

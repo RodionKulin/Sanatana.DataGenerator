@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Sanatana.DataGenerator;
 using Sanatana.DataGenerator.Generators;
-using Sanatana.DataGeneratorSpecs.Samples;
+using Sanatana.DataGeneratorSpecs.TestTools.Entities;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,9 +12,9 @@ namespace Sanatana.DataGeneratorSpecs.Generators
     public class DelegateParameterizedGeneratorSpecs
     {
         [TestMethod]
-        public void Generate_WhenParametersOutOfOrder_ReturnsEntity()
+        public void Generate_WhenParametersOutOfOrder_ThenReturnsEntity()
         {
-            //Prepare
+            //Arrange
             var t = DelegateParameterizedGenerator<Comment>.Factory.Create(
                 (GeneratorContext ctx, Category cat, Post pst) =>
                 {
@@ -23,8 +24,6 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                         CommentText = "text"
                     };
                 });
-
-            //Invoke
             var generatorContext = new GeneratorContext()
             {
                 RequiredEntities = new Dictionary<Type, object>
@@ -33,6 +32,8 @@ namespace Sanatana.DataGeneratorSpecs.Generators
                     { typeof(Category), new Category() },
                 }
             };
+
+            //Act
             List<Comment> comment = (List<Comment>)t.Generate(generatorContext);
             List<Comment> comment2 = (List<Comment>)t.Generate(generatorContext);
 

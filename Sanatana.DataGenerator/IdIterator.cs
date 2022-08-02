@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Sanatana.DataGenerator
 {
+    /// <summary>
+    /// Iterator of sequential long Id per Type.
+    /// </summary>
     public class IdIterator
     {
         //fields
@@ -41,6 +43,24 @@ namespace Sanatana.DataGenerator
             }
 
             return _typeIds[type];
+        }
+
+        public static void Reset()
+        {
+            _typeIds.Clear();
+        }
+
+        public static void Reset<T>()
+        {
+            Reset(typeof(T));
+        }
+
+        public static void Reset(Type type)
+        {
+            if (_typeIds.ContainsKey(type))
+            {
+                _typeIds.Remove(type);
+            }
         }
     }
 }

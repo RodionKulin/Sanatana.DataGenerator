@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using Sanatana.DataGenerator.Internals;
-using System.Collections;
+using Sanatana.DataGenerator.Entities;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.SpreadStrategies
 {
     public class CartesianProductSpreadStrategy : CombinatoricsSpreadStrategy
     {
         //methods
-        public override long GetTotalCount()
+        public override long GetTargetCount(IEntityDescription description, DefaultSettings defaults)
         {
+            if (!_isSetupCompleted)
+            {
+                throw new NotSupportedException($"{nameof(CartesianProductSpreadStrategy)} method {nameof(Setup)} should be called before {nameof(GetTargetCount)}.");
+            }
+
             List<long> targetCounts = _parentEntities.Values
                 .Select(x => x.EntityProgress.TargetCount)
                 .ToList();
@@ -21,9 +25,8 @@ namespace Sanatana.DataGenerator.SpreadStrategies
                 return 0;
             }
 
-            long totalCount = targetCounts
+            return targetCounts
                 .Aggregate((long)1, (targetCount, total) => total * targetCount);
-            return totalCount;
         }
 
         protected override IEnumerator<long[]> GetCombinationsEnumerator(List<long> sequencesLengths)

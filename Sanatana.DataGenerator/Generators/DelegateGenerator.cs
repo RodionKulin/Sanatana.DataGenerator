@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections;
-using Sanatana.DataGenerator.Internals;
+using Sanatana.DataGenerator.Entities;
+using System.Linq;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Generators
 {
@@ -9,20 +11,20 @@ namespace Sanatana.DataGenerator.Generators
         where TEntity : class
     {
         //fields
-        protected bool _isMultiDelegate;
+        protected bool _isMultiOutput;
         protected object _generateFunc;
 
 
         //init
-        protected DelegateGenerator(object generateFunc, bool isMultiDelegate)
+        protected DelegateGenerator(object generateFunc, bool isMultiOutput)
         {
-            if(generateFunc == null)
+            if (generateFunc == null)
             {
                 throw new ArgumentNullException(nameof(generateFunc));
             }
 
             _generateFunc = generateFunc;
-            _isMultiDelegate = isMultiDelegate;
+            _isMultiOutput = isMultiOutput;
         }
 
         public static class Factory
@@ -40,11 +42,18 @@ namespace Sanatana.DataGenerator.Generators
             }
         }
 
+        /// <summary>
+        /// Internal method to reset variables when starting new generation.
+        /// </summary>
+        public virtual void Setup(GeneratorServices generatorServices)
+        {
+        }
 
-        //methods
+
+        //generation
         public virtual IList Generate(GeneratorContext context)
         {
-            if(_generateFunc is Func<GeneratorContext, List<TEntity>>)
+            if (_generateFunc is Func<GeneratorContext, List<TEntity>>)
             {
                 return InvokeMultiResult(context);
             }
@@ -84,5 +93,11 @@ namespace Sanatana.DataGenerator.Generators
 
             return new List<TEntity>() { entity };
         }
+
+
+        //validation
+        public virtual void ValidateBeforeSetup(IEntityDescription entity, DefaultSettings defaults) { }
+
+        public virtual void ValidateAfterSetup(EntityContext entityContext, DefaultSettings defaults) { }
     }
 }

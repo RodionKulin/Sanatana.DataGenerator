@@ -1,10 +1,10 @@
-﻿using Sanatana.DataGenerator.Internals;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using System.Collections;
 using Sanatana.DataGenerator.Supervisors.Contracts;
+using Sanatana.DataGenerator.Internals.Progress;
+using Sanatana.DataGenerator.Internals.EntitySettings;
 
 namespace Sanatana.DataGenerator.Supervisors.Complete
 {
@@ -40,6 +40,7 @@ namespace Sanatana.DataGenerator.Supervisors.Complete
         /// Update NextNodeFinder internal counters updates entity was generated
         /// </summary>
         /// <param name="updateEntityContext"></param>
+        /// <param name="generatedEntities"></param>
         public virtual void UpdateCounters(EntityContext updateEntityContext, IList generatedEntities)
         {
             EntityProgress progress = updateEntityContext.EntityProgress;
