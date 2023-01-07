@@ -1,0 +1,68 @@
+name: DataGenerator nuget push
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3.0.3
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Build Sanatana.DataGenerator
+      run: dotnet build "Sanatana.DataGenerator/Sanatana.DataGenerator.csproj" --configuration Release
+      
+    - name: Build Sanatana.DataGenerator.AutoBogus
+      run: dotnet build "Sanatana.DataGenerator.AutoBogus/Sanatana.DataGenerator.AutoBogus.csproj" --configuration Release
+
+    - name: Build Sanatana.DataGenerator.Csv
+      run: dotnet build "Sanatana.DataGenerator.Csv/Sanatana.DataGenerator.Csv.csproj" --configuration Release
+
+    - name: Build Sanatana.DataGenerator.EntityFrameworkCore
+      run: dotnet build "Sanatana.DataGenerator.EntityFrameworkCore/Sanatana.DataGenerator.EntityFrameworkCore.csproj" --configuration Release
+
+    - name: Build Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql
+      run: dotnet build "Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql/Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql.csproj" --configuration Release
+
+    - name: Build Sanatana.DataGenerator.EntityFrameworkCore.SqlServer
+      run: dotnet build "Sanatana.DataGenerator.EntityFrameworkCore.SqlServer/Sanatana.DataGenerator.EntityFrameworkCore.SqlServer.csproj" --configuration Release
+
+    - name: Build Sanatana.DataGenerator.MongoDb
+      run: dotnet build "Sanatana.DataGenerator.MongoDb/Sanatana.DataGenerator.MongoDb.csproj" --configuration Release
+
+
+    - name: Nuget pack for Sanatana.DataGenerator
+      run: dotnet pack Sanatana.DataGenerator/Sanatana.DataGenerator.csproj -o ../nuget -c Release -v n
+    
+    - name: Nuget pack for Sanatana.DataGenerator.AutoBogus
+      run: dotnet pack Sanatana.DataGenerator.AutoBogus/Sanatana.DataGenerator.AutoBogus.csproj -o ../nuget -c Release -v n
+
+    - name: Nuget pack for Sanatana.DataGenerator.Csv
+      run: dotnet pack Sanatana.DataGenerator.Csv/Sanatana.DataGenerator.Csv.csproj -o ../nuget -c Release -v n
+
+    - name: Nuget pack for Sanatana.DataGenerator.EntityFrameworkCore
+      run: dotnet pack Sanatana.DataGenerator.EntityFrameworkCore/Sanatana.DataGenerator.EntityFrameworkCore.csproj -o ../nuget -c Release -v n
+
+    - name: Nuget pack for Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql
+      run: dotnet pack Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql/Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql.csproj -o ../nuget -c Release -v n
+
+    - name: Nuget pack for Sanatana.DataGenerator.EntityFrameworkCore.SqlServer
+      run: dotnet pack Sanatana.DataGenerator.EntityFrameworkCore.SqlServer/Sanatana.DataGenerator.EntityFrameworkCore.SqlServer.csproj -o ../nuget -c Release -v n
+
+    - name: Nuget pack for Sanatana.DataGenerator.MongoDb
+      run: dotnet pack Sanatana.DataGenerator.MongoDb/Sanatana.DataGenerator.MongoDb.csproj -o ../nuget -c Release -v n
+
+
+    - name: Publish all nuget packages
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: dotnet nuget push ../nuget/Sanatana.DataGenerator.*.nupkg --force-english-output -k $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+
+    

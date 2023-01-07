@@ -1,4 +1,5 @@
-﻿using Sanatana.DataGenerator.Csv;
+﻿using Bogus;
+using Sanatana.DataGenerator.Csv;
 using Sanatana.DataGenerator.Demo.Entities;
 using Sanatana.DataGenerator.SpreadStrategies;
 using System;
@@ -9,6 +10,9 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
 {
     public class CsvStorageSetup
     {
+        private static readonly Randomizer _randomizer = new Randomizer();
+
+
 
         public static void Start()
         {
@@ -59,8 +63,8 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
             {
                 Id = id,
                 Name = "Company " + id,
-                Latitude = RandomPicker.Random.Next(75),
-                Longitude = RandomPicker.Random.Next(75)
+                Latitude = _randomizer.Double(75),
+                Longitude = _randomizer.Double(75)
             };
         }
 
@@ -71,8 +75,8 @@ namespace Sanatana.DataGenerator.Demo.SetupVariants
             {
                 Id = id,
                 Name = "Company " + id,
-                Latitude = RandomPicker.Random.Next(75),
-                Longitude = RandomPicker.Random.Next(75)
+                Latitude = _randomizer.Double(75),
+                Longitude = _randomizer.Double(75)
             };
         }
 

@@ -14,47 +14,67 @@ namespace Sanatana.DataGenerator.Internals.Collections
     /// </summary>
     public class EntitiesOrderedList : IEnumerable<Type>
     {
-        private readonly List<Type> _list = new List<Type>();
+        private Dictionary<Type, EntityContext> _entityContexts;
+        private List<EntityContext> _sortedEntities;
 
 
-        //methods
-        public void Add(EntityContext next)
+        //init
+        public EntitiesOrderedList(Dictionary<Type, EntityContext> entityContexts)
         {
-            //insert before smallest index of child entity
-            int? minChildEntityIndex = next.ChildEntities
-                .Select(ent => _list.IndexOf(ent.Type))
-                .Where(ind => ind != -1)
-                .Select(ind => (int?)ind)
-                .Min();
-            minChildEntityIndex = minChildEntityIndex ?? int.MaxValue;
-
-            //insert after largest index of parent entity
-            int? maxParentEntityIndex = next.ParentEntities
-                .Select(ent => _list.IndexOf(ent.Type))
-                .Where(ind => ind != -1)
-                .Select(ind => (int?)ind)
-                .Max();
-            maxParentEntityIndex = maxParentEntityIndex ?? -1;
-
-            if(minChildEntityIndex <= maxParentEntityIndex)
-            {
-                throw new NotSupportedException($"Not able to build an ordered list of entities for {next.Type.FullName} minChildEntityIndex={minChildEntityIndex} maxParentEntityIndex={maxParentEntityIndex}");
-            }
-
-            _list.Insert(maxParentEntityIndex.Value + 1, next.Type);
+            _entityContexts = entityContexts;
+            _sortedEntities = entityContexts.Values.ToList();
+            _sortedEntities.Sort(CompareTypesOrder);
         }
 
-        public IEnumerator<Type> GetEnumerator()
+
+        //IEnumerator
+        public virtual IEnumerator<Type> GetEnumerator()
         {
-            foreach (Type type in _list)
+            foreach (EntityContext entity in _sortedEntities)
             {
-                yield return type;
+                yield return entity.Type;
             }
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+
+        //Comparer
+        protected virtual int CompareTypesOrder(EntityContext t1, EntityContext t2)
+        {
+            bool t2IsParentOft1 = ParentsContainEntity(t1.ParentEntities, t2.Type);
+            if (t2IsParentOft1)
+            {
+                return 1;
+            }
+
+            bool t1IsParentOft2 = ParentsContainEntity(t2.ParentEntities, t1.Type);
+            if (t1IsParentOft2)
+            {
+                return -1;
+            }
+
+            return 0;
+        }
+
+        protected virtual bool ParentsContainEntity(List<IEntityDescription> parents, Type entityToCheck)
+        {
+            if(parents == null || parents.Count == 0)
+            {
+                return false;
+            }
+
+            if (parents.Find(x => x.Type == entityToCheck) != null)
+            {
+                return true;
+            }
+
+            return parents.SelectMany(x => x.Required)
+                .Select(required => _entityContexts[required.Type])
+                .Any(parentEntity => ParentsContainEntity(parentEntity.ParentEntities, entityToCheck));
         }
     }
 }

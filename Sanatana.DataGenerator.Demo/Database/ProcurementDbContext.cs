@@ -17,11 +17,9 @@ namespace Sanatana.DataGenerator.Demo.Database
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            optionsBuilder.UseSqlServer($@"Data Source=(LocalDb)\MSSQLLocalDB;
-                 AttachDbFilename={basePath}GeneratorEfCoreContextDemo.mdf;
-                 Initial Catalog=GeneratorEfCoreContextDemo;
-                 Integrated Security=True");
+            optionsBuilder.UseSqlServer(
+                "Data Source=.\\;Initial Catalog=TestDataGenerator-SampleDbDemo;integrated security=true;MultipleActiveResultSets=True;");
+
         }
     }
 }

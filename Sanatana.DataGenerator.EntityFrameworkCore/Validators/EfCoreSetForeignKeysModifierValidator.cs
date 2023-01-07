@@ -87,7 +87,9 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Validators
 
         protected virtual void ValidateEntity(IEntityDescription description, IEnumerable<EntityContext> allEntityContexts)
         {
-            Type[] foreignKeyParentEntities = _modelService.GetParentEntities(description.Type);
+            Type[] foreignKeyParentEntities = _modelService.GetParentEntities(description.Type)
+                .Where(x => x != description.Type)  //skip self reference by entity
+                .ToArray();
             
             Type[] requiredEntities = description.Required.Select(x => x.Type).ToArray();
             Type[] allConfiguredEntities = allEntityContexts.Select(x => x.Type).ToArray();

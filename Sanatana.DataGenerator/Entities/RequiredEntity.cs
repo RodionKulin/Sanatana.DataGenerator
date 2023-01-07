@@ -3,7 +3,7 @@ using System;
 
 namespace Sanatana.DataGenerator.Entities
 {
-    public class RequiredEntity
+    public class RequiredEntity : IEquatable<RequiredEntity>
     {
         /// <summary>
         /// Required entity type. Instances of required entity type will be passed to generator as arguments.
@@ -22,5 +22,23 @@ namespace Sanatana.DataGenerator.Entities
         {
             Type = type;
         }
+
+
+        //IEquatable<RequiredEntity> methods
+        public virtual bool Equals(RequiredEntity? other)
+        {
+            if(other == null)
+            {
+                return false;
+            }
+
+            return Type == other.Type;
+        }
+
+        public override int GetHashCode()
+        {
+            return Type.GetHashCode();
+        }
+
     }
 }

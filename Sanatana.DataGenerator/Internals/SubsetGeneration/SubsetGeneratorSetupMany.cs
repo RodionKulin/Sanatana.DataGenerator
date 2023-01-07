@@ -12,7 +12,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
     {
 
         //init
-        public SubsetGeneratorSetupMany(GeneratorSetup generatorSetup, List<Type> targetEntities)
+        public SubsetGeneratorSetupMany(GeneratorSetup generatorSetup, IEnumerable<Type> targetEntities)
             : base(generatorSetup, targetEntities)
         {
         }

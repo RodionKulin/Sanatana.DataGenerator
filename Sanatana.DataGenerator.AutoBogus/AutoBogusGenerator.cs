@@ -19,6 +19,24 @@ namespace Sanatana.DataGenerator.AutoBogus
         //fields
         protected IAutoFaker _autoFaker;
         protected Dictionary<Type, MethodInfo> _generateMethods = new Dictionary<Type, MethodInfo>();
+        private int _generationBatchSize = 1;
+
+        //properties
+        /// <summary>
+        /// Number of items generated together in a single batch.
+        /// </summary>
+        public int GenerationBatchSize
+        {
+            get { return _generationBatchSize; }
+            set
+            {
+                if (value < 1)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(GenerationBatchSize));
+                }
+                _generationBatchSize = value;
+            }
+        }
 
 
         //init
@@ -59,8 +77,11 @@ namespace Sanatana.DataGenerator.AutoBogus
         {
             MethodInfo generateMethod = GetGenerateMethod(context.Description.Type);
 
-            IList list = (IList)generateMethod.Invoke(_autoFaker, new object[] { 1, null });
-            return list;
+            long itemsLeft = context.TargetCount - context.CurrentCount;
+            long generateCount = Math.Min(GenerationBatchSize, itemsLeft);
+            generateCount = generateCount < 1 ? 1 : generateCount;
+
+            return (IList)generateMethod.Invoke(_autoFaker, new object[] { (int)generateCount, null });
         }
 
         protected virtual MethodInfo GetGenerateMethod(Type entityType)

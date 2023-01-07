@@ -8,18 +8,17 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Samples
 {
     public class SampleDbContext : DbContext
     {
+        //tables
         public DbSet<Category> Categories { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Post> Posts { get; set; }
 
 
+        //init
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            optionsBuilder.UseSqlServer($@"Data Source=(LocalDb)\MSSQLLocalDB;
-                 AttachDbFilename={basePath}GeneratorEfCoreContextSpecs.mdf;
-                 Initial Catalog=GeneratorEfCoreContextSpecs;
-                 Integrated Security=True");
+            optionsBuilder.UseSqlServer(
+                "Data Source=.\\;Initial Catalog=TestDataGenerator-SampleDb;integrated security=true;MultipleActiveResultSets=True;");
         }
 
 

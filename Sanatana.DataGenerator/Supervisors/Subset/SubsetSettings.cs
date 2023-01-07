@@ -16,14 +16,15 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
 
         //init
-        public SubsetSettings(List<Type> targetEntitiesSubset)
+        public SubsetSettings(IEnumerable<Type> targetEntitiesSubset)
         {
-            TargetEntities = targetEntitiesSubset ?? throw new ArgumentNullException(nameof(targetEntitiesSubset));
+            targetEntitiesSubset = targetEntitiesSubset ?? throw new ArgumentNullException(nameof(targetEntitiesSubset));
+            TargetEntities = targetEntitiesSubset.ToList();
             if(targetEntitiesSubset.Any(x => x == null))
             {
                 throw new ArgumentException("Provided entityType can not be null", nameof(targetEntitiesSubset));
             }
-            if (targetEntitiesSubset.Count == 0)
+            if (TargetEntities.Count == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(targetEntitiesSubset), "Target entities subset can not be empty");
             }

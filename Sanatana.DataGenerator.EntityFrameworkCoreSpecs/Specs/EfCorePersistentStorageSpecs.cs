@@ -8,6 +8,7 @@ using System.Linq;
 using SpecsFor.Core.ShouldExtensions;
 using FluentAssertions;
 using Sanatana.DataGenerator.EntityFrameworkCore;
+using Sanatana.EntityFrameworkCore.Batch.PostgreSql.Repositories;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 {
@@ -36,7 +37,10 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                     }
                 };
 
-                var sut = new EfCorePersistentStorage(() => new SampleDbContext());
+                Func<SampleDbContext> dbContextFactory = () => new SampleDbContext();
+                var repositoryFactory = new SqlRepositoryFactory(dbContextFactory);
+
+                var sut = new EfCorePersistentStorage(repositoryFactory);
                 sut.Insert(_insertedCategories).Wait();
             }
 

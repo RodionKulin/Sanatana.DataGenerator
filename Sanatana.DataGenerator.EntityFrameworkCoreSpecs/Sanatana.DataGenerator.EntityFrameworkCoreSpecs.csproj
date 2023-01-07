@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sanatana.DataGenerator.AutoBogus\Sanatana.DataGenerator.AutoBogus.csproj" />
+    <ProjectReference Include="..\Sanatana.DataGenerator.EntityFrameworkCore.SqlServer\Sanatana.DataGenerator.EntityFrameworkCore.SqlServer.csproj" />
     <ProjectReference Include="..\Sanatana.DataGenerator.EntityFrameworkCore\Sanatana.DataGenerator.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
