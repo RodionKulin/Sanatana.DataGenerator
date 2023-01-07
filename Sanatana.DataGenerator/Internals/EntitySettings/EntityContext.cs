@@ -30,15 +30,17 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 List<IEntityDescription> children = allDescriptions.Values
                     .Where(x => x.Required != null
                         && x.Required.Select(req => req.Type).Contains(description.Type))
+                    .Where(x => x.Type != description.Type) //skip self reference by entity
                     .ToList();
-
+                
                 var parents = new List<IEntityDescription>();
                 if (description.Required != null)
                 {
                     IEnumerable<Type> parentTypes = description.Required.Select(x => x.Type);
                     parents = allDescriptions.Values
-                       .Where(x => parentTypes.Contains(x.Type))
-                       .ToList();
+                        .Where(x => parentTypes.Contains(x.Type))
+                        .Where(x => x.Type != description.Type) //skip self reference by entity
+                        .ToList();
                 }
 
                 return new EntityContext

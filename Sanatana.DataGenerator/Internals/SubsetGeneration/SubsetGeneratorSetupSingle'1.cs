@@ -87,7 +87,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="removeOtherStorages"></param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupSingle<T> AddInMemoryStorage<TEntity>(bool removeOtherStorages)
+        public virtual SubsetGeneratorSetupSingle<T> AddInMemoryStorage<TEntity>(bool removeOtherStorages = false)
             where TEntity : class
         {
             var memoryStorage = new InMemoryStorage();

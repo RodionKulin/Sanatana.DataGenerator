@@ -19,8 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGeneratorSpecs
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B956E7E5-4D33-43F1-BE3D-46929296D7E3}"
 	ProjectSection(SolutionItems) = preProject
-		.travis.yml = .travis.yml
 		Directory.Build.props = Directory.Build.props
+		.github\workflows\dotnet-create-nuget-pkgs.yml = .github\workflows\dotnet-create-nuget-pkgs.yml
 		LICENSE = LICENSE
 	EndProjectSection
 EndProject
@@ -34,7 +34,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.Auto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.EntityFrameworkCoreSpecs", "Sanatana.DataGenerator.EntityFrameworkCoreSpecs\Sanatana.DataGenerator.EntityFrameworkCoreSpecs.csproj", "{C7A4D05F-0D38-4692-B67E-F7C09002F602}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sanatana.DataGenerator.Demo", "Sanatana.DataGenerator.Demo\Sanatana.DataGenerator.Demo.csproj", "{6F7B5685-D63D-4BCA-BD17-7043CDD03797}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.Demo", "Sanatana.DataGenerator.Demo\Sanatana.DataGenerator.Demo.csproj", "{28904C01-6CFB-4754-8496-B76C2E914FD9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.EntityFrameworkCore.SqlServer", "Sanatana.DataGenerator.EntityFrameworkCore.SqlServer\Sanatana.DataGenerator.EntityFrameworkCore.SqlServer.csproj", "{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql", "Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql\Sanatana.DataGenerator.EntityFrameworkCore.PostgreSql.csproj", "{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,10 +82,18 @@ Global
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28904C01-6CFB-4754-8496-B76C2E914FD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28904C01-6CFB-4754-8496-B76C2E914FD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28904C01-6CFB-4754-8496-B76C2E914FD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28904C01-6CFB-4754-8496-B76C2E914FD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -94,7 +106,9 @@ Global
 		{5C70ED7A-D649-4EB7-A794-B2F2C0F1F9DF} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
 		{16ECADAC-0F03-41BE-AFDA-FFAA258233D9} = {6F236CAA-C48A-454C-9469-0F147BFFBF58}
 		{C7A4D05F-0D38-4692-B67E-F7C09002F602} = {6F236CAA-C48A-454C-9469-0F147BFFBF58}
-		{6F7B5685-D63D-4BCA-BD17-7043CDD03797} = {DE82CA51-2354-4C75-B86A-863BBA779C68}
+		{28904C01-6CFB-4754-8496-B76C2E914FD9} = {DE82CA51-2354-4C75-B86A-863BBA779C68}
+		{2B6CD0BD-7A03-499B-B2F6-E4E3CE912EB3} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
+		{8CF33481-7A62-4DC7-AEF6-EC3E1C6EF40A} = {A9E634AB-E96D-4BE3-A463-CFDD4B33EC06}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A63449A2-80E3-4FE8-93EB-16C4819674E6}

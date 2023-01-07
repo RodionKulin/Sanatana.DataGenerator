@@ -20,9 +20,10 @@ namespace Sanatana.DataGenerator.Internals.Debugging
         }
 
 
-        public virtual void LogCommand(ICommand command)
+        public virtual void LogCommand(ICommand command, TimeSpan duration)
         {
             string logEntry = command.GetLogEntry();
+            logEntry += $" time: {duration}";
 
             Logs.Push(logEntry);
             if (Logs.Count > 1100)

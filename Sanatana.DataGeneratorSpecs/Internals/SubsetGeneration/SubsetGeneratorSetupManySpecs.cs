@@ -18,7 +18,7 @@ namespace Sanatana.DataGeneratorSpecs.Internals.SubsetGeneration
         {
             //Arrange
             SubsetGeneratorSetupMany generatorSetup = CompleteSupervisorProvider.GetMixedRequiredOrderGeneratorSetup()
-                .ToSubsetSetup(typeof(Category), typeof(Comment))
+                .ToSubsetSetup(new[] { typeof(Category), typeof(Comment) })
                 .AddInMemoryStorage(EntitiesSelection.All, true)
                 .SetTargetCountSingle(EntitiesSelection.All)
                 .SetTargetCount<Comment>(2);

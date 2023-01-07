@@ -15,6 +15,10 @@ using Sanatana.DataGenerator.Internals.SubsetGeneration;
 using Sanatana.DataGenerator.Internals.Validators;
 using Sanatana.DataGenerator.Internals.Extensions;
 using Sanatana.DataGenerator.TargetCountProviders;
+using System.Diagnostics;
+using Sanatana.DataGenerator.Storages;
+using Sanatana.DataGenerator.Modifiers;
+using Sanatana.DataGenerator.Supervisors.Subset;
 
 [assembly: InternalsVisibleTo("Sanatana.DataGeneratorSpecs")]
 [assembly: InternalsVisibleTo("Sanatana.DataGenerator.EntityFrameworkCoreSpecs")]
@@ -175,7 +179,7 @@ namespace Sanatana.DataGenerator
         #endregion
 
 
-        #region Edit entity
+        #region Edit single entity
         /// <summary>
         /// Get existing EntityDescription&lt;TEntity&gt; to modify.
         /// </summary>
@@ -259,6 +263,44 @@ namespace Sanatana.DataGenerator
             Dictionary<Type, IEntityDescription> allEntityDescriptions = newEntityDescriptions.ToDictionary(x => x.Type, x => x);
             return Clone(entityDescriptions: allEntityDescriptions);
         }
+        #endregion
+
+
+        #region Edit multiple entities
+        /// <summary>
+        /// Add InMemoryStorage as persistent storage for all entities.
+        /// </summary>
+        /// <param name="removeOtherStorages"></param>
+        /// <returns></returns>
+        public virtual GeneratorSetup AddInMemoryStorage(bool removeOtherStorages = false)
+        {
+            return AddStorage(new InMemoryStorage(), removeOtherStorages);
+        }
+
+        /// <summary>
+        /// Add persistent storage for all entities.
+        /// </summary>
+        /// <param name="storage"></param>
+        /// <param name="removeOtherStorages"></param>
+        /// <returns></returns>
+        public virtual GeneratorSetup AddStorage(IPersistentStorage storage, bool removeOtherStorages = false)
+        {
+            return EditEntity(descriptions =>
+            {
+                foreach (IEntityDescription entity in descriptions)
+                {
+                    if (removeOtherStorages)
+                    {
+                        entity.PersistentStorages.Clear();
+                    }
+                    if (!entity.PersistentStorages.Where(x => x.GetType() == storage.GetType()).Any())
+                    {
+                        entity.PersistentStorages.Add(storage);
+                    }
+                }
+                return descriptions;
+            });
+        }
 
         /// <summary>
         /// Set TargetCount to 1 for all entities.
@@ -285,6 +327,30 @@ namespace Sanatana.DataGenerator
                 return descriptions;
             });
         }
+
+        /// <summary>
+        /// Add modifier for all entities.
+        /// </summary>
+        /// <param name="modifier"></param>
+        /// <param name="removeOtherModifiers"></param>
+        /// <returns></returns>
+        public virtual GeneratorSetup AddModifier(IModifier modifier, bool removeOtherModifiers = false)
+        {
+            return EditEntity(descriptions =>
+            {
+                foreach (IEntityDescription entity in descriptions)
+                {
+                    entity.Modifiers = entity.Modifiers ?? new List<IModifier>();
+                    if (removeOtherModifiers)
+                    {
+                        entity.Modifiers.Clear();
+                    }
+                    entity.Modifiers.Add(modifier);
+                }
+                return descriptions;
+            });
+        }
+
         #endregion
 
 
@@ -483,10 +549,13 @@ namespace Sanatana.DataGenerator
 
         protected virtual void ExecuteGenerationLoop()
         {
+            Stopwatch generationTimer = new Stopwatch();
+
             foreach (ICommand command in _supervisor.IterateCommands())
             {
-                _commandsHistory.LogCommand(command);
+                generationTimer.Restart();
                 command.Execute();
+                _commandsHistory.LogCommand(command, generationTimer.Elapsed);
                 _progress.UpdateProgressInt(forceUpdate: false);
             }
 
@@ -501,23 +570,26 @@ namespace Sanatana.DataGenerator
         /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
         /// Will generate only entity types provided as parameters and their required entities.
         /// </summary>
-        /// <returns></returns>
-        public virtual SubsetGeneratorSetupMany ToSubsetSetup(List<Type> targetEntities)
-        {
-            return new SubsetGeneratorSetupMany(this, targetEntities);
-        }
-
-        /// <summary>
-        /// Convert to SubsetGeneratorSetup class, that has methods to configure and generate subset of all entities configured.
-        /// Will generate only entity types provided as parameters and their required entities.
-        /// </summary>
         /// <param name="targetEntities"></param>
+        /// <param name="addInMemoryStorageSelection">Add InMemoryStorage as persistent storage for all entities matching entitiesSelection.</param>
+        /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public virtual SubsetGeneratorSetupMany ToSubsetSetup(params Type[] targetEntities)
+        public virtual SubsetGeneratorSetupMany ToSubsetSetup(IEnumerable<Type> targetEntities,
+            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
         {
-            targetEntities = targetEntities ?? throw new ArgumentNullException(nameof(targetEntities));
-            return new SubsetGeneratorSetupMany(this, targetEntities.ToList());
+            var subsetSetup = new SubsetGeneratorSetupMany(this, targetEntities);
+
+            if (addInMemoryStorageSelection != null)
+            {
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+            }
+
+            if (targetCountSingleSelection != null)
+            {
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+            }
+
+            return subsetSetup;
         }
 
         /// <summary>
@@ -525,10 +597,25 @@ namespace Sanatana.DataGenerator
         /// Will generate only entity type provided as parameter and it's required entities.
         /// </summary>
         /// <param name="targetEntity"></param>
+        /// <param name="addInMemoryStorageSelection">Add InMemoryStorage as persistent storage for all entities matching entitiesSelection.</param>
+        /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupSingle ToSubsetSetup(Type targetEntity)
+        public virtual SubsetGeneratorSetupSingle ToSubsetSetup(Type targetEntity,
+            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
         {
-            return new SubsetGeneratorSetupSingle(this, targetEntity);
+            var subsetSetup = new SubsetGeneratorSetupSingle(this, targetEntity);
+
+            if (addInMemoryStorageSelection != null)
+            {
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+            }
+
+            if (targetCountSingleSelection != null)
+            {
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+            }
+
+            return subsetSetup;
         }
 
         /// <summary>
@@ -536,10 +623,25 @@ namespace Sanatana.DataGenerator
         /// Will generate only entity type provided as parameter and it's required entities.
         /// </summary>
         /// <typeparam name="TEntity"></typeparam>
+        /// <param name="addInMemoryStorageSelection">Add InMemoryStorage as persistent storage for all entities matching entitiesSelection.</param>
+        /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
-        public virtual SubsetGeneratorSetupSingle<TEntity> ToSubsetSetup<TEntity>()
+        public virtual SubsetGeneratorSetupSingle<TEntity> ToSubsetSetup<TEntity>(
+            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
         {
-            return new SubsetGeneratorSetupSingle<TEntity>(this);
+            var subsetSetup = new SubsetGeneratorSetupSingle<TEntity>(this);
+
+            if (addInMemoryStorageSelection != null)
+            {
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+            }
+
+            if (targetCountSingleSelection != null)
+            {
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+            }
+
+            return subsetSetup;
         }
         #endregion
     }

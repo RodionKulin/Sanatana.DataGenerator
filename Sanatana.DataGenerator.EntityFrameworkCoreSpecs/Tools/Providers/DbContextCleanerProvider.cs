@@ -15,7 +15,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.Providers
         //methods
         public override void SpecInit(INeedDatabaseCleared instance)
         {
-            instance.SampleDatabase.Database.ExecuteSqlCommand($@"
+            instance.SampleDatabase.Database.ExecuteSqlRaw($@"
 DELETE FROM [Comments];
 DELETE FROM [Posts];
 DELETE FROM [Categories];

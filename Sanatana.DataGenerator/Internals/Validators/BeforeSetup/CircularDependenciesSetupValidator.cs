@@ -48,6 +48,12 @@ namespace Sanatana.DataGenerator.Internals.Validators.BeforeSetup
 
             foreach (RequiredEntity required in entity.Required)
             {
+                //skip self reference by entity
+                if(required.Type == entity.Type)
+                {
+                    continue;
+                }
+
                 List<Type> dependenciesBranch = new List<Type>(requiredEntities);
                 IEntityDescription requiredEntity = allEntityDescriptions[required.Type];
                 List<Type> circleOfDependencies = FindCircularDependency

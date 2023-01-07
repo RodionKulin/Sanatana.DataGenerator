@@ -18,6 +18,24 @@ namespace Sanatana.DataGenerator.AutoBogus
     {
         //fields
         protected Faker<TEntity> _faker;
+        private int _generationBatchSize = 1;
+
+        //properties
+        /// <summary>
+        /// Number of items generated together in a single batch.
+        /// </summary>
+        public int GenerationBatchSize
+        {
+            get { return _generationBatchSize; }
+            set
+            {
+                if(value < 1)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(GenerationBatchSize));
+                }
+                _generationBatchSize = value;
+            }
+        }
 
 
         //init
@@ -63,7 +81,12 @@ namespace Sanatana.DataGenerator.AutoBogus
         public virtual IList Generate(GeneratorContext context)
         {
             int seed = GetNextSeed(context);
-            return _faker.UseSeed(seed).Generate(1);
+
+            long itemsLeft = context.TargetCount - context.CurrentCount;
+            long generateCount = Math.Min(GenerationBatchSize, itemsLeft);
+            generateCount = generateCount < 1 ? 1 : generateCount;
+
+            return _faker.UseSeed(seed).Generate((int)generateCount);
         }
 
         protected virtual int GetNextSeed(GeneratorContext context)

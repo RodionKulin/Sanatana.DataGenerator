@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <Description>EntityFrameworkCore storage for related entities generator</Description>
     <PackageTags>DataGenerator Generation Related NET EntityFrameworkCore</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
@@ -10,10 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sanatana.EntityFrameworkCore.Batch" Version="1.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.7" />
+    <PackageReference Include="Sanatana.EntityFrameworkCore.Batch" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sanatana.DataGenerator.AutoBogus\Sanatana.DataGenerator.AutoBogus.csproj" />
     <ProjectReference Include="..\Sanatana.DataGenerator\Sanatana.DataGenerator.csproj" />
   </ItemGroup>
 

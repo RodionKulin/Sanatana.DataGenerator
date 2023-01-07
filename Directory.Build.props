@@ -1,12 +1,14 @@
 <Project>
   <PropertyGroup>
-    <Version Condition=" '$(TRAVIS_BUILD_NUMBER)' == '' ">0.0.1-local</Version>
-    <Version Condition=" '$(TRAVIS_BUILD_NUMBER)' != '' ">2.0.0</Version>
+    <Version>3.0.0</Version>
     <Authors>Sanatana</Authors>
     <NeutralLanguage>en</NeutralLanguage>
     <RepositoryUrl>https://github.com/RodionKulin/Sanatana.DataGenerator</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseUrl>https://github.com/RodionKulin/Sanatana.DataGenerator/blob/master/LICENSE</PackageLicenseUrl>
+    <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
     <Copyright>Copyright ©2019 RodionKulin</Copyright>
+    <Tags>Data DataGeneration</Tags>
+    <ReleaseNotes>Add PostgreSql support.</ReleaseNotes>
   </PropertyGroup>
 </Project>

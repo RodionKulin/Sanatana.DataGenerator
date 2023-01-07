@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
@@ -35,27 +34,12 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Internals
         {
             using (DbContext dbContext = _dbContextFactory())
             {
-                string entityName = TypeExtensions.DisplayName(typeToCheck);
-                IEntityType efEntityType = dbContext.Model.FindEntityType(entityName);
+                IEntityType efEntityType = dbContext.Model.FindEntityType(typeToCheck);
 
                 IEnumerable<IProperty> keyProperties = efEntityType.GetProperties();
-                keyProperties = keyProperties.Where(x => x.ValueGenerated != ValueGenerated.OnAdd 
+                keyProperties = keyProperties.Where(x => x.ValueGenerated != ValueGenerated.OnAdd
                     || x.ValueGenerated == ValueGenerated.OnAddOrUpdate);
                 return keyProperties.Any();
-            }
-        }
-
-        public virtual PropertyInfo[] GetPrimaryKeysManuallyGenerated(Type typeToCheck)
-        {
-            using (DbContext dbContext = _dbContextFactory())
-            {
-                string entityName = TypeExtensions.DisplayName(typeToCheck);
-                IEntityType efEntityType = dbContext.Model.FindEntityType(entityName);
-
-                IEnumerable<IKey> keys = efEntityType.GetKeys();
-                IEnumerable<IProperty> keyProperties = keys.SelectMany(x => x.Properties);
-                keyProperties = keyProperties.Where(x => x.ValueGenerated == ValueGenerated.Never); //skip auto generated keys
-                return keyProperties.Select(x => x.PropertyInfo).ToArray();
             }
         }
 
@@ -63,12 +47,67 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Internals
         {
             using (DbContext dbContext = _dbContextFactory())
             {
-                string entityName = TypeExtensions.DisplayName(typeToCheck);
-                IEntityType efEntityType = dbContext.Model.FindEntityType(entityName);
+                IEntityType efEntityType = dbContext.Model.FindEntityType(typeToCheck);
                 IForeignKey[] foreignKeys = efEntityType.GetForeignKeys().ToArray();
                 return foreignKeys
                     .Select(x => x.PrincipalEntityType.ClrType)
+                    .Where(x => x != typeToCheck) //skip self reference by entity
                     .ToArray();
+            }
+        }
+
+        public virtual PropertyInfo[] GetPrimaryKeysManuallyGenerated(Type typeToCheck)
+        {
+            using (DbContext dbContext = _dbContextFactory())
+            {
+                IEntityType efEntityType = dbContext.Model.FindEntityType(typeToCheck);
+
+                IEnumerable<IKey> keys = efEntityType.GetKeys();
+                IEnumerable<IProperty> keyProperties = keys.SelectMany(x => x.Properties);
+                keyProperties = keyProperties.Where(x => x.ValueGenerated == ValueGenerated.Never); //skip auto generated keys
+                return keyProperties
+                    .Select(x => x.PropertyInfo)
+                    .Where(prop => prop != null)
+                    .ToArray();
+            }
+        }
+
+        public virtual PropertyInfo[] GetNavigationProperties(Type typeToCheck)
+        {
+            using (DbContext dbContext = _dbContextFactory())
+            {
+                IEntityType efEntityType = dbContext.Model.FindEntityType(typeToCheck);
+                INavigation[] navigationProps = efEntityType.GetNavigations().ToArray();
+                return navigationProps
+                    .Select(x => x.PropertyInfo)
+                    .Where(prop => prop != null)
+                    .ToArray();
+            }
+        }
+
+        public virtual PropertyInfo[] GetSelfReferenceForeignKeys(Type typeToCheck)
+        {
+            using (DbContext dbContext = _dbContextFactory())
+            {
+                IEntityType efEntityType = dbContext.Model.FindEntityType(typeToCheck);
+                if(efEntityType == null)
+                {
+                    return new PropertyInfo[0];
+                }
+
+                IEnumerable<IForeignKey> foreignKeys = efEntityType.GetForeignKeys();
+                IForeignKey[] foreignKeysToSelf = foreignKeys
+                    .Where(x => x.PrincipalEntityType.ClrType == typeToCheck)
+                    .ToArray();
+
+#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
+                return foreignKeysToSelf
+                    .SelectMany(foreignKey => foreignKey.Properties)
+                    .Select(property => property.PropertyInfo)
+                    .Where(propertyInfo => propertyInfo != null) //it not have to be declared on child entity
+                    .Distinct()
+                    .ToArray();
+#pragma warning restore CS8619
             }
         }
 
@@ -79,8 +118,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Internals
                 Type childType = childInstance.GetType();
                 Type parentType = parentInstance.GetType();
 
-                string entityName = TypeExtensions.DisplayName(childType);
-                IEntityType efEntityType = dbContext.Model.FindEntityType(entityName);
+                IEntityType efEntityType = dbContext.Model.FindEntityType(childType);
 
                 IEnumerable<IForeignKey> foreignKeys = efEntityType.GetForeignKeys();
                 IForeignKey[] foreignKeysToParent = foreignKeys
@@ -95,11 +133,16 @@ namespace Sanatana.DataGenerator.EntityFrameworkCore.Internals
                         object foreignKeyValue = parentProp.GetValue(parentInstance);
 
                         PropertyInfo childProp = foreignKey.Properties[i].PropertyInfo;
-                        childProp.SetValue(childInstance, foreignKeyValue);
+                        if (childProp != null)
+                        {
+                            //child entity does not have to declare foreign key
+                            childProp.SetValue(childInstance, foreignKeyValue);
+                        }
                     }
                 }
             }
-            
+
         }
+
     }
 }

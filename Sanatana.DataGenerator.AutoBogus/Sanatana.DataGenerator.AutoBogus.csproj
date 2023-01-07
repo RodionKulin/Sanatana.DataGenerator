@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <Description>AutoBogus generator for related entities generator</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
     <PackageTags>DataGenerator AutoBogus RandomPropertyFill</PackageTags>
@@ -10,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoBogus" Version="2.12.0" />
+    <PackageReference Include="AutoBogus" Version="2.13.1" />
   </ItemGroup>
 
   <ItemGroup>

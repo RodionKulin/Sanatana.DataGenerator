@@ -21,9 +21,10 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
 
 
         //init
-        public SubsetSupervisor(List<Type> targetEntitiesSubset)
+        public SubsetSupervisor(IEnumerable<Type> targetEntitiesSubset)
         {
-            _targetEntitiesSubset = targetEntitiesSubset;
+            targetEntitiesSubset = targetEntitiesSubset ?? throw new ArgumentNullException(nameof(targetEntitiesSubset));
+            _targetEntitiesSubset = targetEntitiesSubset.ToList();
         }
 
         public override void Setup(GeneratorServices generatorServices)

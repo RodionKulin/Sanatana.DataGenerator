@@ -16,6 +16,8 @@ namespace Sanatana.DataGenerator.Storages
     {
         //fields
         protected double _dropOutChance;
+        protected Random _random = new Random();
+
 
         //init
         /// <summary>
@@ -37,7 +39,8 @@ namespace Sanatana.DataGenerator.Storages
         {
             for (int i = nextItems.Count - 1; i >= 0; i--)
             {
-                bool drop = RandomPicker.NextBoolean(_dropOutChance);
+                double next = _random.NextDouble();
+                bool drop = next <= _dropOutChance;
                 if (drop)
                 {
                     nextItems.RemoveAt(i);

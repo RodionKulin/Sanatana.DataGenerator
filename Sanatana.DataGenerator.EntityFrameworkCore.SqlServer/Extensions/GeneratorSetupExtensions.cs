@@ -14,10 +14,10 @@ namespace Sanatana.DataGenerator
         /// <param name="dbContextFactory"></param>
         /// <param name="efSetup"></param>
         /// <returns></returns>
-        public static GeneratorSetup SetupWithEntityFrameworkCore(this GeneratorSetup generatorSetup, 
-            Func<DbContext> dbContextFactory, Func<EntityFrameworkSetup, EntityFrameworkSetup> efSetup)
+        public static GeneratorSetup SetupWithEntityFrameworkCoreSqlServer(this GeneratorSetup generatorSetup, 
+            Func<DbContext> dbContextFactory, Func<EntityFrameworkSetupSqlServer, EntityFrameworkSetupSqlServer> efSetup)
         {
-            var entityFrameworkSetup = new EntityFrameworkSetup(generatorSetup, dbContextFactory);
+            var entityFrameworkSetup = new EntityFrameworkSetupSqlServer(generatorSetup, dbContextFactory);
             entityFrameworkSetup = efSetup(entityFrameworkSetup);
             return entityFrameworkSetup.GeneratorSetup;
         }

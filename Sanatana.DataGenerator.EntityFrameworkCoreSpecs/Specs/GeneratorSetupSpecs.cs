@@ -13,6 +13,7 @@ using Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Tools.SpecsForAddons;
 using Sanatana.DataGenerator.AutoBogus;
 using System;
 using Sanatana.DataGenerator.Internals.Validators.AfterGenerate;
+using Sanatana.EntityFrameworkCore.Batch.PostgreSql.Repositories;
 
 namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 {
@@ -30,11 +31,14 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 
             protected override void When()
             {
+                Func<SampleDbContext> dbContextFactory = () => new SampleDbContext();
+                var repositoryFactory = new SqlRepositoryFactory(dbContextFactory);
+
                 var generatorSetup = new GeneratorSetup()
                     .SetValidators(val => val.RemoveValidator<InstancesCountGeneratedValidator>())
                     .SetDefaultSettings(defaults => defaults
                         .SetRequestCapacityProvider(new StrictRequestCapacityProvider(10))
-                        .AddPersistentStorage(new EfCorePersistentStorage(() => new SampleDbContext()))
+                        .AddPersistentStorage(new EfCorePersistentStorage(repositoryFactory))
                     )
                     .RegisterEntity<Category>(entity => entity
                         .SetTargetCount(25)
@@ -123,12 +127,15 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
 
             protected override void When()
             {
+                Func<SampleDbContext> dbContextFactory = () => new SampleDbContext();
+                var repositoryFactory = new SqlRepositoryFactory(dbContextFactory);
+
                 var generatorSetup = new GeneratorSetup()
                     .SetDefaultSettings(defaults => defaults
                         .SetRequestCapacityProvider(new StrictRequestCapacityProvider(10))
-                        .AddPersistentStorage(new EfCorePersistentStorage(() => new SampleDbContext()))
+                        .AddPersistentStorage(new EfCorePersistentStorage(repositoryFactory))
                         .SetDefaultEqualityComparer(new SimpleEqualityComparerFactory())
-                        .SetPersistentStorageSelector(new EfCorePersistentStorage(() => new SampleDbContext()))
+                        .SetPersistentStorageSelector(new EfCorePersistentStorage(repositoryFactory))
                     )
                     .RegisterEntity<Post>(entity => entity
                         .SetTargetCount(100)
@@ -210,7 +217,7 @@ namespace Sanatana.DataGenerator.EntityFrameworkCoreSpecs.Specs
                         .SetGenerator(new AutoBogusGenerator()) //will populate random values for entity instances
                         .SetTargetCount(100)    //set TargetCount for Category, other entities will override it
                     )
-                    .SetupWithEntityFrameworkCore(dbContextFactory, efSetup => efSetup
+                    .SetupWithEntityFrameworkCoreSqlServer(dbContextFactory, efSetup => efSetup
                         .SetupFullEfSettingsBundle()
                     )
                     .EditEntity<Post>(entity => entity

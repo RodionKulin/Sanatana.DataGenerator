@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Sanatana.EntityFrameworkCore.Batch.PostgreSql" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sanatana.DataGenerator.EntityFrameworkCore\Sanatana.DataGenerator.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Sanatana.DataGenerator\Sanatana.DataGenerator.csproj" />
+  </ItemGroup>
+
+</Project>

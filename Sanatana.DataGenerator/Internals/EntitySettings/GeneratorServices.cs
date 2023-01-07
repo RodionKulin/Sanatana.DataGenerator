@@ -89,12 +89,8 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         {
             //TargetCount for some entities depend from TargetCount of their Required entities.
             //So ordering them to set TargetCount for Required entities first.
-            var requiredOrderedList = new EntitiesOrderedList();
-            foreach (EntityContext entityCtx in EntityContexts.Values)
-            {
-                requiredOrderedList.Add(entityCtx);
-            }
-
+            var requiredOrderedList = new EntitiesOrderedList(EntityContexts);
+           
             //Set TargetCount
             foreach (Type type in requiredOrderedList)
             {

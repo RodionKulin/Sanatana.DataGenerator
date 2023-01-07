@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using AutoBogus;
 using Sanatana.DataGenerator.AutoBogusSpecs.Samples;
 using FluentAssertions;
+using System.Diagnostics;
 
 namespace Sanatana.DataGenerator.AutoBogusSpecs
 {
@@ -16,7 +17,10 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
         public void Generate_WhenCalledWithDefaults_ThenGeneratesEntityWithRandomValues()
         {
             //Arrange
-            var target = new AutoBogusGenerator();
+            var target = new AutoBogusGenerator()
+            {
+                GenerationBatchSize = 1
+            };
 
             //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
@@ -85,7 +89,9 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
             //Arrange
             var target = new AutoBogusGenerator<Post>(new AutoFaker<Post>()
                 .RuleFor(x => x.CategoryId, f => 5)
-                .RuleFor(x => x.PostText, f => f.Lorem.Text()));
+                .RuleFor(x => x.PostText, f => f.Lorem.Text())
+                .Ignore(x => x.ValueToIgnore)
+            );
 
             //Act
             List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
@@ -122,6 +128,36 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
             AssertPostNotEmpty(posts2);
 
             posts1[0].Should().BeEquivalentTo(posts2[0]);
+        }
+
+        [TestMethod]
+        public void Generate_WhenUsingHighGenerationBatchSize_ThenHasBetterPerformance()
+        {
+            //Arrange
+            var target = new AutoBogusGenerator()
+            {
+                GenerationBatchSize = 1
+            };
+            var context = new GeneratorContext
+            {
+                Description = new EntityDescription<Post>()
+            };
+
+            //Act
+            Stopwatch timer = Stopwatch.StartNew();
+            for (int i = 0; i < 100; i++)
+            {
+                List<Post> posts1 = (List<Post>)target.Generate(context);
+            }
+            TimeSpan iteratorGenerationTime = timer.Elapsed;
+
+            target.GenerationBatchSize = 100;
+            timer.Restart();
+            List<Post> posts2 = (List<Post>)target.Generate(context);
+            TimeSpan batchGenerationTime = timer.Elapsed;
+
+            //Assert
+            iteratorGenerationTime.Should().BeGreaterThan(batchGenerationTime);
         }
 
 

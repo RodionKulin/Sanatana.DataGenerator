@@ -20,7 +20,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
 
 
         //init
-        public SubsetGeneratorSetup(GeneratorSetup generatorSetup, List<Type> targetEntities)
+        public SubsetGeneratorSetup(GeneratorSetup generatorSetup, IEnumerable<Type> targetEntities)
         {
             _generatorSetup = generatorSetup;
 
