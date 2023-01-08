@@ -174,7 +174,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// Will return all generated entity instances for target entity.
         /// Use this method if target entity is inserted to InMemoryStorage, otherwise use Generate method that only inserts to database.
         /// Required entities will not be returned. If required have database PersistentStorage configured, they will be inserted to database.
-        /// To also return required entities use ReturnAll method.
+        /// To also return required entities use GetAll method.
         /// </summary>
         /// <returns></returns>
         public virtual IList GetMultipleTargets()
@@ -187,7 +187,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
         /// Will return first generated entity instance for target entity.
         /// Use this method if target entity is inserted to InMemoryStorage, otherwise use Generate method that only inserts to database.
         /// Required entities will not be returned. If required have database PersistentStorage configured, they will be inserted to database.
-        /// To also return required entities use ReturnAll method.
+        /// To also return required entities use GetAll method.
         /// </summary>
         /// <returns></returns>
         public virtual object GetSingleTarget()

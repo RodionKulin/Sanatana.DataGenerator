@@ -12,7 +12,12 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             EntitiesSelection selection, SubsetSettings subsetSettings)
         {
             IEnumerable<IEntityDescription> entitiesSelected = allEntityDescriptions;
-            if (selection == EntitiesSelection.Target)
+
+            if (selection == EntitiesSelection.None)
+            {
+                entitiesSelected = new IEntityDescription[0];
+            }
+            else if (selection == EntitiesSelection.Target)
             {
                 entitiesSelected = entitiesSelected.Where(x => subsetSettings.TargetEntities.Contains(x.Type));
             }

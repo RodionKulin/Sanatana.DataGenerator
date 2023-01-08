@@ -10,6 +10,10 @@ namespace Sanatana.DataGenerator.Supervisors.Subset
     public enum EntitiesSelection
     {
         /// <summary>
+        /// No entities will be effected
+        /// </summary>
+        None,
+        /// <summary>
         /// Includes target and required entities subset.
         /// </summary>
         All,

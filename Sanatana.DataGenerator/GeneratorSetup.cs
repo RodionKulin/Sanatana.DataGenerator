@@ -575,18 +575,18 @@ namespace Sanatana.DataGenerator
         /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
         public virtual SubsetGeneratorSetupMany ToSubsetSetup(IEnumerable<Type> targetEntities,
-            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
+            EntitiesSelection addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection targetCountSingleSelection = EntitiesSelection.All)
         {
             var subsetSetup = new SubsetGeneratorSetupMany(this, targetEntities);
 
             if (addInMemoryStorageSelection != null)
             {
-                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection);
             }
 
             if (targetCountSingleSelection != null)
             {
-                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection);
             }
 
             return subsetSetup;
@@ -601,18 +601,18 @@ namespace Sanatana.DataGenerator
         /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle ToSubsetSetup(Type targetEntity,
-            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
+            EntitiesSelection addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection targetCountSingleSelection = EntitiesSelection.All)
         {
             var subsetSetup = new SubsetGeneratorSetupSingle(this, targetEntity);
 
             if (addInMemoryStorageSelection != null)
             {
-                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection);
             }
 
             if (targetCountSingleSelection != null)
             {
-                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection);
             }
 
             return subsetSetup;
@@ -627,18 +627,18 @@ namespace Sanatana.DataGenerator
         /// <param name="targetCountSingleSelection">Set TargetCount to 1 for all entities matching entitiesSelection.</param>
         /// <returns></returns>
         public virtual SubsetGeneratorSetupSingle<TEntity> ToSubsetSetup<TEntity>(
-            EntitiesSelection? addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection? targetCountSingleSelection = EntitiesSelection.All)
+            EntitiesSelection addInMemoryStorageSelection = EntitiesSelection.All, EntitiesSelection targetCountSingleSelection = EntitiesSelection.All)
         {
             var subsetSetup = new SubsetGeneratorSetupSingle<TEntity>(this);
 
             if (addInMemoryStorageSelection != null)
             {
-                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection.Value);
+                subsetSetup = subsetSetup.AddInMemoryStorage(addInMemoryStorageSelection);
             }
 
             if (targetCountSingleSelection != null)
             {
-                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection.Value);
+                subsetSetup = subsetSetup.SetTargetCountSingle(targetCountSingleSelection);
             }
 
             return subsetSetup;

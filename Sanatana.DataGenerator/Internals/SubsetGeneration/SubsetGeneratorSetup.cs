@@ -130,7 +130,7 @@ namespace Sanatana.DataGenerator.Internals.SubsetGeneration
             IList instancesGenerated = storage.Select(targetEntityType);
             if (instancesGenerated.Count == 0)
             {
-                throw new ArgumentException($"No instances of type {targetEntityType.FullName} were found in {nameof(InMemoryStorage)}.");
+                throw new ArgumentException($"No instances of type {targetEntityType.FullName} found in {nameof(InMemoryStorage)}.");
             }
             return instancesGenerated;
         }

@@ -85,7 +85,7 @@ namespace Sanatana.DataGeneratorSpecs.Entities
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException), "No members were found for comparison. Please specify some members to include in the comparison or choose a more meaningful assertion.")]
+        [ExpectedException(typeof(InvalidOperationException), "No members found for comparison. Please specify some members to include in the comparison or choose a more meaningful assertion.")]
         public void CompleteSupervisorClone_WhenCalledOnFullClone_CopiesAllProperties()
         {
             //Arrange
@@ -100,7 +100,7 @@ namespace Sanatana.DataGeneratorSpecs.Entities
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException), "No members were found for comparison. Please specify some members to include in the comparison or choose a more meaningful assertion.")]
+        [ExpectedException(typeof(InvalidOperationException), "No members found for comparison. Please specify some members to include in the comparison or choose a more meaningful assertion.")]
         public void SubsetSupervisorClone_WhenCalledOnFullClone_CopiesAllProperties()
         {
             //Arrange
