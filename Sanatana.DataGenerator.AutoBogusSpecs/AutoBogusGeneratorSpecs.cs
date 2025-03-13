@@ -7,6 +7,10 @@ using AutoBogus;
 using Sanatana.DataGenerator.AutoBogusSpecs.Samples;
 using FluentAssertions;
 using System.Diagnostics;
+using Sanatana.DataGenerator.AutoBogus.Binders;
+using Bogus;
+using Newtonsoft.Json;
+using Sanatana.DataGenerator.AutoBogus.AutoGeneratorOverrides;
 
 namespace Sanatana.DataGenerator.AutoBogusSpecs
 {
@@ -117,17 +121,14 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
                 Description = new EntityDescription<Post>(),
                 CurrentCount = (long)int.MaxValue + 1
             });
-            List<Post> posts2 = (List<Post>)target.Generate(new GeneratorContext
-            {
-                Description = new EntityDescription<Post>(),
-                CurrentCount = (long)int.MaxValue + 1
-            });
-
             //Assert
             AssertPostNotEmpty(posts1);
-            AssertPostNotEmpty(posts2);
+            // Serialize posts1 to JSON
+            posts1[0].PostText.Should().Be("aut");
+            posts1[0].ValueToIgnore.Should().Be("withdrawal");
+            posts1[0].CommentId.Should().Be(1386074234);
+            // New DateTime is generated with context.Faker.Date.Recent() in UtcDateTimeGeneratorOverride
 
-            posts1[0].Should().BeEquivalentTo(posts2[0]);
         }
 
         [TestMethod]
@@ -160,6 +161,28 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
             iteratorGenerationTime.Should().BeGreaterThan(batchGenerationTime);
         }
 
+        [TestMethod]
+        public void Generate_WhenUsingUtcDateTimeGeneratorOverride_ThenGeneratesDateTimeWithUtcKind()
+        {
+            //Arrange
+            AutoFaker.Configure(builder =>
+            {
+                builder.WithOverride(new UtcDateTimeGeneratorOverride());
+            });
+            var target = new AutoBogusGenerator();
+
+            //Act
+            List<Post> posts = (List<Post>)target.Generate(new GeneratorContext
+            {
+                Description = new EntityDescription<Post>()
+            });
+
+            //Assert
+            posts.Should().NotBeNull();
+            posts.Count.Should().Be(1);
+            Post post = posts[0];
+            post.CreatedDate.Kind.Should().Be(DateTimeKind.Utc);
+        }
 
         //Assert help methods
         private void AssertPostNotEmpty(List<Post> posts)
@@ -172,6 +195,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs
             post.PostText.Should().NotBeNullOrWhiteSpace();
             post.CategoryId.Should().Be(5);
         }
+
     }
 
 }

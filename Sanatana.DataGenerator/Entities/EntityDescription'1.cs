@@ -82,7 +82,7 @@ namespace Sanatana.DataGenerator.Entities
         public bool InsertToPersistentStorageBeforeUse { get; set; }
         /// <summary>
         /// Selector from persistent storage, that will provide existing instances.
-        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// Only required if EnsureExistGenerator or EnsureExistRangeGenerator is used.
         /// If not specified will use PersistentStorageSelector from DefaultSettings.
         /// </summary>
         public IPersistentStorageSelector PersistentStorageSelector { get; set; }
@@ -407,7 +407,7 @@ namespace Sanatana.DataGenerator.Entities
 
         /// <summary>
         /// Set selector from persistent storage, that will provide existing instances.
-        /// Only required if EnsureExistGenerator or EnsureExistGenerator is used.
+        /// Only required if EnsureExistGenerator or EnsureExistRangeGenerator is used.
         /// If not specified will use PersistentStorageSelector from DefaultSettings.
         /// </summary>
         /// <param name="persistentStorageSelector"></param>

@@ -11,6 +11,7 @@ namespace Sanatana.DataGenerator.AutoBogusSpecs.Samples
         public string PostText { get; set; }
         public string ValueToIgnore { get; set; }
         public int CommentId { get; set; }
+        public DateTime CreatedDate { get; set; }
 
 
         //foreign keys

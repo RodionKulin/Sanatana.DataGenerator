@@ -1,13 +1,13 @@
 <Project>
   <PropertyGroup>
-    <Version>3.1.0</Version>
-    <Authors>Sanatana</Authors>
+    <Version>3.2.0</Version>
+    <Authors>RodionKulin</Authors>
     <NeutralLanguage>en</NeutralLanguage>
     <RepositoryUrl>https://github.com/RodionKulin/Sanatana.DataGenerator</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseUrl>https://github.com/RodionKulin/Sanatana.DataGenerator/blob/master/LICENSE</PackageLicenseUrl>
     <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
     <Copyright>Copyright ©2019 RodionKulin</Copyright>
-    <ReleaseNotes>Add EntitiesSelection.None enum value.</ReleaseNotes>
+    <ReleaseNotes>Add DateTime converter to Utc for AutoBogus and wrap exceptions in ef core layer.</ReleaseNotes>
   </PropertyGroup>
 </Project>
