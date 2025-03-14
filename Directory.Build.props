@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>3.2.0</Version>
+    <Version>3.3.0</Version>
     <Authors>RodionKulin</Authors>
     <NeutralLanguage>en</NeutralLanguage>
     <RepositoryUrl>https://github.com/RodionKulin/Sanatana.DataGenerator</RepositoryUrl>
@@ -8,6 +8,6 @@
     <PackageLicenseUrl>https://github.com/RodionKulin/Sanatana.DataGenerator/blob/master/LICENSE</PackageLicenseUrl>
     <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
     <Copyright>Copyright ©2019 RodionKulin</Copyright>
-    <ReleaseNotes>Add DateTime converter to Utc for AutoBogus and wrap exceptions in ef core layer.</ReleaseNotes>
+    <ReleaseNotes>Add KeepDefaultModifiers setting</ReleaseNotes>
   </PropertyGroup>
 </Project>

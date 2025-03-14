@@ -30,6 +30,12 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
+        /// If true, will execute default Modifiers before executing Entity specific modifiers.
+        /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
+        /// Default is false.
+        /// </summary>
+        public bool KeepDefaultModifiers { get; set; }
+        /// <summary>
         /// Default provider of total number of entity instances that need to be generated.
         /// Will be used for entity types that does not have a ITargetCountProvider specified.
         /// By default is not set.
@@ -90,6 +96,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
             {
                 Generator = Generator,
                 Modifiers = Modifiers == null ? null : new List<IModifier>(Modifiers),
+                KeepDefaultModifiers = KeepDefaultModifiers,
                 TargetCountProvider = TargetCountProvider,
                 PersistentStorages = PersistentStorages == null ? null : new List<IPersistentStorage>(PersistentStorages),
                 FlushStrategy = FlushStrategy,
@@ -126,6 +133,19 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         public virtual DefaultSettings AddModifier(IModifier modifier)
         {
             Modifiers.Add(modifier);
+            return this;
+        }
+
+        /// <summary>
+        /// If true, will execute default Modifiers before executing Entity specific modifiers.
+        /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
+        /// Default is false.
+        /// </summary>
+        /// <param name="keepDefaultModifiers"></param>
+        /// <returns></returns>
+        public virtual DefaultSettings SetKeepDefaultModifiers(bool keepDefaultModifiers)
+        {
+            KeepDefaultModifiers = keepDefaultModifiers;
             return this;
         }
 
@@ -272,7 +292,17 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         {
             if (entityDescription.Modifiers != null && entityDescription.Modifiers.Count > 0)
             {
-                return entityDescription.Modifiers;
+                if (Modifiers != null && Modifiers.Count > 0 && entityDescription.KeepDefaultModifiers)
+                {
+                    var combined = new List<IModifier>(Modifiers.Count + entityDescription.Modifiers.Count);
+                    combined.AddRange(Modifiers);
+                    combined.AddRange(entityDescription.Modifiers);
+                    return combined;
+                }
+                else
+                {
+                    return entityDescription.Modifiers;
+                }
             }
 
             if (Modifiers != null)
@@ -280,7 +310,7 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
                 return Modifiers;
             }
 
-            return new List<IModifier>();
+            return Enumerable.Empty<IModifier>().ToList();
         }
 
         public virtual ITargetCountProvider GetTargetCountProvider(IEntityDescription entityDescription)

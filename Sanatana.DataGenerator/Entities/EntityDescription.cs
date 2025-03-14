@@ -38,6 +38,12 @@ namespace Sanatana.DataGenerator.Entities
         /// </summary>
         public List<IModifier> Modifiers { get; set; }
         /// <summary>
+        /// If true, will execute default Modifiers before executing Entity specific modifiers.
+        /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
+        /// Default is false.
+        /// </summary>
+        public bool KeepDefaultModifiers { get; set; }
+        /// <summary>
         /// Database storages for generated entity instances.
         /// If not specified will use PersistentStorages from DefaultSettings.
         /// </summary>
@@ -95,6 +101,7 @@ namespace Sanatana.DataGenerator.Entities
                 Required = new List<RequiredEntity>(Required),
                 Generator = Generator,
                 Modifiers = new List<IModifier>(Modifiers),
+                KeepDefaultModifiers = KeepDefaultModifiers,
                 PersistentStorages = new List<IPersistentStorage>(PersistentStorages),
                 TargetCountProvider = TargetCountProvider,
                 FlushStrategy = FlushStrategy,
