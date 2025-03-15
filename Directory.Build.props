@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>3.3.1</Version>
+    <Version>3.3.2</Version>
     <Authors>RodionKulin</Authors>
     <NeutralLanguage>en</NeutralLanguage>
     <RepositoryUrl>https://github.com/RodionKulin/Sanatana.DataGenerator</RepositoryUrl>
@@ -8,6 +8,6 @@
     <PackageLicenseUrl>https://github.com/RodionKulin/Sanatana.DataGenerator/blob/master/LICENSE</PackageLicenseUrl>
     <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
     <Copyright>Copyright ©2019 RodionKulin</Copyright>
-    <ReleaseNotes>Set Entity.KeepDefaultModifiers null by default.</ReleaseNotes>
+    <ReleaseNotes>Remove EntityStorageException.cs from main DataGenerator lib.</ReleaseNotes>
   </PropertyGroup>
 </Project>
