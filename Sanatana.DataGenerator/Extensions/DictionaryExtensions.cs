@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sanatana.DataGenerator.Extensions
+namespace Sanatana.DataGenerator
 {
     /// <summary>
     /// Extentions for entity instance collections returned from SubsetGeneratorSetup.
@@ -37,7 +37,7 @@ namespace Sanatana.DataGenerator.Extensions
         }
 
         /// <summary>
-        /// Select list of TEntity from dictionary and return full list;
+        /// Select list of TEntity from dictionary;
         /// </summary>
         /// <typeparam name="TEntity">Entity type to return from instances dictionary.</typeparam>
         /// <param name="instances">Instances dictionary returned from SubsetGeneratorSetup.</param>
@@ -54,7 +54,7 @@ namespace Sanatana.DataGenerator.Extensions
         }
 
         /// <summary>
-        /// Select array of TEntity from dictionary and return full list;
+        /// Select array of TEntity from dictionary;
         /// </summary>
         /// <typeparam name="TEntity">Entity type to return from instances dictionary.</typeparam>
         /// <param name="instances">Instances dictionary returned from SubsetGeneratorSetup.</param>
