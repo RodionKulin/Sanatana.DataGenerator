@@ -32,7 +32,8 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         /// <summary>
         /// If true, will execute default Modifiers before executing Entity specific modifiers.
         /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
-        /// Default is false.
+        /// Entity setting has higher priority, than default: KeepDefaultModifiers = Entity.KeepDefaultModifiers ?? Default.KeepDefaultModifiers.
+        /// By default Default.KeepDefaultModifiers=false and Entity.KeepDefaultModifiers=null.
         /// </summary>
         public bool KeepDefaultModifiers { get; set; }
         /// <summary>
@@ -292,7 +293,8 @@ namespace Sanatana.DataGenerator.Internals.EntitySettings
         {
             if (entityDescription.Modifiers != null && entityDescription.Modifiers.Count > 0)
             {
-                if (Modifiers != null && Modifiers.Count > 0 && entityDescription.KeepDefaultModifiers)
+                bool keepDefaultModifiers = entityDescription.KeepDefaultModifiers ?? KeepDefaultModifiers;
+                if (Modifiers != null && Modifiers.Count > 0 && keepDefaultModifiers)
                 {
                     var combined = new List<IModifier>(Modifiers.Count + entityDescription.Modifiers.Count);
                     combined.AddRange(Modifiers);

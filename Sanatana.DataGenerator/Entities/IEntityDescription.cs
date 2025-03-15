@@ -16,7 +16,7 @@ namespace Sanatana.DataGenerator.Entities
         List<RequiredEntity> Required { get; set; }
         IGenerator Generator { get; set; }
         List<IModifier> Modifiers { get; set; }
-        public bool KeepDefaultModifiers { get; set; }
+        public bool? KeepDefaultModifiers { get; set; }
         ITargetCountProvider TargetCountProvider { get; set; }
         List<IPersistentStorage> PersistentStorages { get; set; }
         IFlushStrategy FlushStrategy { get; set; }

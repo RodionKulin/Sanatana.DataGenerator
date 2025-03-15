@@ -50,9 +50,10 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// If true, will execute default Modifiers before executing Entity specific modifiers.
         /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
-        /// Default is false.
+        /// Entity setting has higher priority, than default: KeepDefaultModifiers = Entity.KeepDefaultModifiers ?? Default.KeepDefaultModifiers.
+        /// By default Default.KeepDefaultModifiers=false and Entity.KeepDefaultModifiers=null.
         /// </summary>
-        public bool KeepDefaultModifiers { get; set; }
+        public bool? KeepDefaultModifiers { get; set; }
 
         /// <summary>
         /// Database storages for generated entity instances.
@@ -1841,10 +1842,12 @@ namespace Sanatana.DataGenerator.Entities
         /// <summary>
         /// If true, will execute default Modifiers before executing Entity specific modifiers.
         /// If false and if Entity specific modifiers provided, than will execute only Entity specific modifiers.
+        /// Entity setting has higher priority, than default: KeepDefaultModifiers = Entity.KeepDefaultModifiers ?? Default.KeepDefaultModifiers.
+        /// By default Default.KeepDefaultModifiers=false and Entity.KeepDefaultModifiers=null.
         /// </summary>
         /// <param name="keepDefaultModifiers"></param>
         /// <returns></returns>
-        public virtual EntityDescription<TEntity> SetKeepDefaultModifiers(bool keepDefaultModifiers)
+        public virtual EntityDescription<TEntity> SetKeepDefaultModifiers(bool? keepDefaultModifiers)
         {
             KeepDefaultModifiers = keepDefaultModifiers;
             return this;
